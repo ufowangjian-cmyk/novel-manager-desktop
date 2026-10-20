@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>配置管理 - 摸鱼书架</title>
+    <link rel="icon" href="{{ url_for('static', filename='images/novel-icon.png') }}" type="image/png">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/config.css') }}">
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+    
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>
+                <span>⚙️</span>
+                配置管理
+            </h1>
+            <div class="header-desc">
+                修改后需要重启程序或点击"重载配置"才能生效
+            </div>
+            <div class="button-group">
+                <a href="/tag_manager" class="btn btn-secondary">
+                    🏷️ 标签管理
+                </a>
+                <a href="/logs" class="btn btn-secondary" target="_blank">
+                    📋 查看日志
+                </a>
+                <a href="/" class="btn btn-secondary">
+                    🏠 返回首页
+                </a>
+            </div>
+        </div>
+        
+        <!-- 配置表单 -->
+        <form id="configForm">
+
+            <!-- 显示配置 -->
+            <div class="config-card">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <span class="card-icon">📄</span>
+                    <h2>显示配置</h2>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    <div class="form-group-inline">
+                        <!-- 显示配置中添加 -->
+                        <div class="form-group">
+                            <label>📊 默认排序方式</label>
+                            <select id="default_sort_by" name="default_sort_by">
+                                <option value="title" {% if config.default_sort_by == 'title' %}selected{% endif %}>书名 (A-Z)</option>
+                                <option value="author" {% if config.default_sort_by == 'author' %}selected{% endif %}>作者 (A-Z)</option>
+                                <option value="date" {% if config.default_sort_by == 'date' %}selected{% endif %}>发表日期 (最新)</option>
+                                <option value="word_count" {% if config.default_sort_by == 'word_count' %}selected{% endif %}>字数 (最多)</option>
+                                <option value="site" {% if config.default_sort_by == 'site' %}selected{% endif %}>发表网站 (A-Z)</option>
+                            </select>
+                            <div class="form-hint">选择主页默认的排序方式</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>⬆️⬇️ 默认排序方向</label>
+                            <select id="default_sort_order" name="default_sort_order">
+                                <option value="asc" {% if config.default_sort_order == 'asc' %}selected{% endif %}>升序 (A-Z, 从小到大)</option>
+                                <option value="desc" {% if config.default_sort_order == 'desc' %}selected{% endif %}>降序 (Z-A, 从大到小)</option>
+                            </select>
+                            <div class="form-hint">选择主页默认的排序方向</div>
+                        </div>
+                        <div class="form-group">
+                            <label>📊 每页显示数量</label>
+                            <input type="number" id="per_page" name="per_page" 
+                                   value="{{ config.per_page }}" min="20" max="500" step="10">
+                            <div class="form-hint">小说列表每页显示多少本，建议 50-200</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>📖 每页显示字数</label>
+                            <input type="number" id="words_per_page" name="words_per_page" 
+                                   value="{{ config.words_per_page }}" min="1000" max="50000" step="1000">
+                            <div class="form-hint">阅读时每页显示多少字，建议 5000-10000</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label title="小说列表中最多显示多少个标签，多余的会折叠">🏷️ 最大标签显示数</label>
+                        <input type="number" id="max_tags_display" name="max_tags_display" 
+                               value="{{ config.max_tags_display }}" min="1" max="10" step="1">
+                        <div class="form-hint hint-as-title">小说列表中最多显示多少个标签，多余的会折叠</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label title="选择日期显示格式">📅 日期格式</label>
+                        <select id="date_format" name="date_format">
+                            <option value="YYYY-MM-DD" {% if config.date_format == 'YYYY-MM-DD' %}selected{% endif %}>2024-01-01</option>
+                            <option value="YYYY/MM/DD" {% if config.date_format == 'YYYY/MM/DD' %}selected{% endif %}>2024/01/01</option>
+                            <option value="YYYY年MM月DD日" {% if config.date_format == 'YYYY年MM月DD日' %}selected{% endif %}>2024年01月01日</option>
+                        </select>
+                        <div class="form-hint hint-as-title">选择日期显示格式</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 阅读体验配置 -->
+            <div class="config-card">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <span class="card-icon">📖</span>
+                    <h2>阅读体验</h2>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    <div class="form-group-inline">
+                        <div class="form-group">
+                            <label>📝 字体大小</label>
+                            <input type="number" id="font_size" name="font_size" 
+                                   value="{{ config.font_size }}" min="12" max="32" step="1">
+                            <div class="form-hint">单位：像素 (px)，建议 14-20</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>📏 行高</label>
+                            <input type="number" id="line_height" name="line_height" 
+                                   value="{{ config.line_height }}" min="1.2" max="2.5" step="0.1">
+                            <div class="form-hint">建议 1.5-2.0</div>
+                        </div>
+                    </div>
+                    
+                        <div class="form-group">
+                            <label>🎨 主题</label>
+                            <select id="theme" name="theme" onchange="onThemeChange()">
+                                <option value="dark" {% if config.theme == 'dark' %}selected{% endif %}>🌙 暗色主题</option>
+                                <option value="light" {% if config.theme == 'light' %}selected{% endif %}>☀️ 亮色主题</option>
+                                <option value="auto" {% if config.theme == 'auto' %}selected{% endif %}>🔄 跟随系统</option>
+                            </select>
+                            <div class="form-hint">选择阅读页面的颜色主题</div>
+                        </div>
+
+                    {# ===== 自定义高亮标点符号字体（对齐 Docker 版：标题 + 7 类高亮各自可配字体，空=跟随正文）===== #}
+                    {% set hl_font_opts %}
+                            <option value="">跟随正文（默认）</option>
+                            <option value="'仓耳今楷01-9128-W04', '仓耳今楷01-9128 W04', sans-serif">仓耳今楷</option>
+                            <option value="'得意黑', sans-serif">得意黑</option>
+                            <option value="'FangSong', serif">仿宋</option>
+                            <option value="'方正粗圆_GBK', sans-serif">方正粗圆</option>
+                            <option value="'方正大标宋_GBK', sans-serif">方正大标宋</option>
+                            <option value="'方正大黑_GBK', sans-serif">方正大黑</option>
+                            <option value="'方正正大黑简体', sans-serif">方正正大黑</option>
+                            <option value="'兰亭黑-简  ', sans-serif">兰亭黑-简</option>
+                            <option value="'方正静蕾简体', sans-serif">方正静蕾简体</option>
+                            <option value="'方正楷体_GBK', serif">方正楷体</option>
+                            <option value="'方正仿宋_GBK', serif">方正仿宋</option>
+                            <option value="'方正兰亭黑_GBK', serif">方正兰亭黑</option>
+                            <option value="'方正兰亭中黑_GBK', serif">方正兰亭中黑</option>
+                            <option value="'方正隶变_GBK', sans-serif">方正隶变</option>
+                            <option value="'方正细等线_GBK', sans-serif">方正细等线</option>
+                            <option value="'方正准圆_GBK', serif">方正准圆</option>
+                            <option value="'方正细黑一_GBK', serif">方正细黑一</option>
+                            <option value="'汉仪润圆-55简', '汉仪润圆-55', sans-serif">汉仪润圆</option>
+                            <option value="'浪漫雅圆', sans-serif">浪漫雅圆</option>
+                            <option value="'HYWenHei-55W', '汉仪文黑-55W', sans-serif">汉仪文黑</option>
+                            <option value="'鸿蒙黑体-HarmonyOS Sans SC', 'HarmonyOS Sans SC', sans-serif">鸿蒙黑体</option>
+                            <option value="'华文仿宋', serif">华文仿宋</option>
+                            <option value="'STKaiti', serif">华文楷体</option>
+                            <option value="'华文隶书', serif">华文隶书</option>
+                            <option value="'华文细黑', serif">华文细黑</option>
+                            <option value="'华文行楷', serif">华文行楷</option>
+                            <option value="'华文中宋', serif">华文中宋</option>
+                            <option value="'京華老宋体v3.0', 'KingHwaOldSong', serif">京華老宋体v3.0</option>
+                            <option value="'斗鱼追光体2.0', 'DOUYUFont', serif">斗鱼追光体2.0</option>
+                            <option value="'KaiTi', '楷体', serif">楷体</option>
+                            <option value="'隶书', serif">隶书</option>
+                            <option value="'思源黑体 CN', sans-serif">思源黑体</option>
+                            <option value="'Songti SC', 'SimSun', serif">宋体</option>
+                            <option value="'未来圆SC Medium', 'WeiLaiYuanSC', sans-serif">未来圆SC</option>
+                            <option value="'Microsoft YaHei', sans-serif">微软雅黑</option>
+                            <option value="'霞鹜铭心宋', serif">霞鹜铭心宋</option>
+                            <option value="'霞鹜文楷等宽 Medium', 'LXGWWenKaiMono-Medium', sans-serif">霞鹜文楷</option>
+                    {% endset %}
+                    <div class="hl-font-grid">
+                    <div class="form-group">
+                        <label title="阅读正文基础字体（默认系统字体）">🔤 正文字体</label>
+                        <div class="set-font-ctrl">
+                            <select id="body_font_family" name="body_font_family">{{ hl_font_opts }}</select>
+                            <button type="button" class="set-bi" id="body_bold" data-style="bold" aria-pressed="{{ 'true' if config.body_bold else 'false' }}" onclick="toggleConfigBi(this)">B</button>
+                            <button type="button" class="set-bi" id="body_italic" data-style="italic" aria-pressed="{{ 'true' if config.body_italic else 'false' }}" onclick="toggleConfigBi(this)">I</button>
+                        </div>
+                        <div class="form-hint hint-as-title">阅读正文基础字体（默认系统字体）</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label title="阅读页章节标题字体">🔤 标题字体</label>
+                        <div class="set-font-ctrl">
+                            <select id="title_font_family" name="title_font_family">{{ hl_font_opts }}</select>
+                            <button type="button" class="set-bi" id="title_bold" data-style="bold" aria-pressed="{{ 'true' if config.title_bold else 'false' }}" onclick="toggleConfigBi(this)">B</button>
+                            <button type="button" class="set-bi" id="title_italic" data-style="italic" aria-pressed="{{ 'true' if config.title_italic else 'false' }}" onclick="toggleConfigBi(this)">I</button>
+                        </div>
+                        <div class="form-hint hint-as-title">阅读页章节标题字体</div>
+                    </div>
+                    <div class="form-group">
+                        <label title="「」等双引号">🔤 双引号字体</label>
+                        <div class="set-font-ctrl">
+                            <select id="double_quote_font_family" name="double_quote_font_family">{{ hl_font_opts }}</select>
+                            <button type="button" class="set-bi" id="double_quote_bold" data-style="bold" aria-pressed="{{ 'true' if config.double_quote_bold else 'false' }}" onclick="toggleConfigBi(this)">B</button>
+                            <button type="button" class="set-bi" id="double_quote_italic" data-style="italic" aria-pressed="{{ 'true' if config.double_quote_italic else 'false' }}" onclick="toggleConfigBi(this)">I</button>
+                        </div>
+                        <div class="form-hint hint-as-title">「」等双引号</div>
+                    </div>
+                    <div class="form-group">
+                        <label title="『』等单引号">🔤 单引号字体</label>
+                        <div class="set-font-ctrl">
+                            <select id="single_quote_font_family" name="single_quote_font_family">{{ hl_font_opts }}</select>
+                            <button type="button" class="set-bi" id="single_quote_bold" data-style="bold" aria-pressed="{{ 'true' if config.single_quote_bold else 'false' }}" onclick="toggleConfigBi(this)">B</button>
+                            <button type="button" class="set-bi" id="single_quote_italic" data-style="italic" aria-pressed="{{ 'true' if config.single_quote_italic else 'false' }}" onclick="toggleConfigBi(this)">I</button>
+                        </div>
+                        <div class="form-hint hint-as-title">『』等单引号</div>
+                    </div>
+                    <div class="form-group">
+                        <label title="（）() 等圆括号">🔤 圆括号字体</label>
+                        <div class="set-font-ctrl">
+                            <select id="bracket_font_family" name="bracket_font_family">{{ hl_font_opts }}</select>
+                            <button type="button" class="set-bi" id="bracket_bold" data-style="bold" aria-pressed="{{ 'true' if config.bracket_bold else 'false' }}" onclick="toggleConfigBi(this)">B</button>
+                            <button type="button" class="set-bi" id="bracket_italic" data-style="italic" aria-pressed="{{ 'true' if config.bracket_italic else 'false' }}" onclick="toggleConfigBi(this)">I</button>
+                        </div>
+                        <div class="form-hint hint-as-title">（）() 等圆括号</div>
+                    </div>
+                    <div class="form-group">
+                        <label title="【】等方头括号">🔤 方头括号字体</label>
+                        <div class="set-font-ctrl">
+                            <select id="square_bracket_font_family" name="square_bracket_font_family">{{ hl_font_opts }}</select>
+                            <button type="button" class="set-bi" id="square_bracket_bold" data-style="bold" aria-pressed="{{ 'true' if config.square_bracket_bold else 'false' }}" onclick="toggleConfigBi(this)">B</button>
+                            <button type="button" class="set-bi" id="square_bracket_italic" data-style="italic" aria-pressed="{{ 'true' if config.square_bracket_italic else 'false' }}" onclick="toggleConfigBi(this)">I</button>
+                        </div>
+                        <div class="form-hint hint-as-title">【】等方头括号</div>
+                    </div>
+                    <div class="form-group">
+                        <label title="[] ［］等方括号">🔤 方括号字体</label>
+                        <div class="set-font-ctrl">
+                            <select id="square_bracket_1_font_family" name="square_bracket_1_font_family">{{ hl_font_opts }}</select>
+                            <button type="button" class="set-bi" id="square_bracket_1_bold" data-style="bold" aria-pressed="{{ 'true' if config.square_bracket_1_bold else 'false' }}" onclick="toggleConfigBi(this)">B</button>
+                            <button type="button" class="set-bi" id="square_bracket_1_italic" data-style="italic" aria-pressed="{{ 'true' if config.square_bracket_1_italic else 'false' }}" onclick="toggleConfigBi(this)">I</button>
+                        </div>
+                        <div class="form-hint hint-as-title">[] ［］等方括号</div>
+                    </div>
+                    <div class="form-group">
+                        <label title="〖〗等空心括号">🔤 空心括号字体</label>
+                        <div class="set-font-ctrl">
+                            <select id="hollow_bracket_font_family" name="hollow_bracket_font_family">{{ hl_font_opts }}</select>
+                            <button type="button" class="set-bi" id="hollow_bracket_bold" data-style="bold" aria-pressed="{{ 'true' if config.hollow_bracket_bold else 'false' }}" onclick="toggleConfigBi(this)">B</button>
+                            <button type="button" class="set-bi" id="hollow_bracket_italic" data-style="italic" aria-pressed="{{ 'true' if config.hollow_bracket_italic else 'false' }}" onclick="toggleConfigBi(this)">I</button>
+                        </div>
+                        <div class="form-hint hint-as-title">〖〗等空心括号</div>
+                    </div>
+                    <div class="form-group">
+                        <label title="《》等书名号">🔤 书名号字体</label>
+                        <div class="set-font-ctrl">
+                            <select id="book_font_family" name="book_font_family">{{ hl_font_opts }}</select>
+                            <button type="button" class="set-bi" id="book_bold" data-style="bold" aria-pressed="{{ 'true' if config.book_bold else 'false' }}" onclick="toggleConfigBi(this)">B</button>
+                            <button type="button" class="set-bi" id="book_italic" data-style="italic" aria-pressed="{{ 'true' if config.book_italic else 'false' }}" onclick="toggleConfigBi(this)">I</button>
+                        </div>
+                        <div class="form-hint hint-as-title">《》等书名号</div>
+                    </div>
+                    </div>
+                    <script>
+                        (function () {
+                            var hlCfg = {
+                                body_font_family: {{ config.body_font_family|tojson }},
+                                title_font_family: {{ config.title_font_family|tojson }},
+                                double_quote_font_family: {{ config.double_quote_font_family|tojson }},
+                                single_quote_font_family: {{ config.single_quote_font_family|tojson }},
+                                bracket_font_family: {{ config.bracket_font_family|tojson }},
+                                square_bracket_font_family: {{ config.square_bracket_font_family|tojson }},
+                                square_bracket_1_font_family: {{ config.square_bracket_1_font_family|tojson }},
+                                hollow_bracket_font_family: {{ config.hollow_bracket_font_family|tojson }},
+                                book_font_family: {{ config.book_font_family|tojson }}
+                            };
+                            Object.keys(hlCfg).forEach(function (k) {
+                                var sel = document.getElementById(k);
+                                if (!sel) return;
+                                var val = hlCfg[k] || '';
+                                for (var i = 0; i < sel.options.length; i++) {
+                                    if (sel.options[i].value === val) { sel.options[i].selected = true; break; }
+                                }
+                            });
+                        })();
+                    
+
+                        window.toggleConfigBi = function (btn) {
+                            var pressed = btn.getAttribute('aria-pressed') === 'true';
+                            btn.setAttribute('aria-pressed', (!pressed) ? 'true' : 'false');
+                        };</script>
+                    
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="auto_save_progress" name="auto_save_progress" 
+                                   {% if config.auto_save_progress %}checked{% endif %}>
+                            💾 自动保存阅读进度
+                        </label>
+                        <div class="form-hint">关闭后需要手动记录阅读位置</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="show_word_count" name="show_word_count" 
+                                   {% if config.show_word_count %}checked{% endif %}>
+                            📊 显示字数统计
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="indent_paragraph" name="indent_paragraph"
+                                   {% if config.indent_paragraph %}checked{% endif %}>
+                            📐 首行缩进（网文一般保留）
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 网络配置 -->
+            <div class="config-card">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <span class="card-icon">🌐</span>
+                    <h2>网络配置</h2>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    <div class="form-group-inline">
+                        <div class="form-group">
+                            <label>🖥️ 监听地址</label>
+                            <select id="app_host" name="app_host">
+                                <option value="127.0.0.1" {% if config.app_host == '127.0.0.1' %}selected{% endif %}>
+                                    127.0.0.1 (仅本机访问)
+                                </option>
+                                <option value="0.0.0.0" {% if config.app_host == '0.0.0.0' %}selected{% endif %}>
+                                    0.0.0.0 (允许局域网访问) ⚠️
+                                </option>
+                            </select>
+                            <div class="form-hint text-warning">
+                                ⚠️ 设置为 0.0.0.0 时，局域网内其他设备可以访问
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>🔌 端口号</label>
+                            <input type="number" id="app_port" name="app_port" 
+                                   value="{{ config.app_port }}" min="1024" max="65535">
+                            <div class="form-hint">
+                                💡 访问地址: http://{{ config.app_host }}:{{ config.app_port }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 扫描配置 -->
+            <div class="config-card">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <span class="card-icon">🔄</span>
+                    <h2>扫描配置</h2>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    <div class="form-group">
+                        <label>⏰ 自动扫描间隔</label>
+                        <input type="number" id="scan_interval_hours" name="scan_interval_hours" 
+                               value="{{ config.scan_interval_hours }}" min="0" max="168" step="1">
+                        <div class="form-hint">
+                            💡 单位：小时，0 表示不自动扫描
+                            <span class="example">示例: 24 (每天扫描一次)</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>📦 最大文件大小</label>
+                        <input type="number" id="max_file_size_mb" name="max_file_size_mb" 
+                               value="{{ config.max_file_size_mb }}" min="1" max="500" step="10">
+                        <div class="form-hint">
+                            💡 单位：MB，超过此大小的文件将被跳过
+                            <span class="example">示例: 100 (只扫描100MB以下的文件)</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="scan_subdirectories" name="scan_subdirectories" 
+                                   {% if config.scan_subdirectories %}checked{% endif %}>
+                            📁 扫描子目录
+                        </label>
+                        <div class="form-hint">开启后会扫描小说目录下的所有子文件夹</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 基础配置 -->
+            <div class="config-card">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <span class="card-icon">📁</span>
+                    <h2>基础配置</h2>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    <div class="form-group">
+                        <label>📂 小说目录</label>
+                        <div class="path-input-group">
+                            <input type="text" id="novel_dir" name="novel_dir" 
+                                   value="{{ config.novel_dir }}" placeholder="D:\小说目录">
+                            <button type="button" class="btn btn-secondary" onclick="browseFolder('novel_dir')">
+                                📁 浏览
+                            </button>
+                        </div>
+                        <div class="form-hint">
+                            💡 程序会扫描该目录下所有 .txt 文件
+                            <span class="example">示例: C:\Users\你的用户名\Documents\novels</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>✏️ 文本编辑器</label>
+                        <div class="path-input-group">
+                            <input type="text" id="editor_path" name="editor_path" 
+                                   value="{{ config.editor_path }}" placeholder="C:\...\notepad.exe">
+                            <button type="button" class="btn btn-secondary" onclick="browseFile('editor_path')">
+                                🔍 浏览
+                            </button>
+                        </div>
+                        <div class="form-hint">
+                            💡 点击"打开"按钮时使用的编辑器
+                            <span class="example">示例: notepad.exe 或 C:\Program Files\Notepad++\notepad++.exe</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>🚫 排除文件模式</label>
+                        <input type="text" id="exclude_patterns" name="exclude_patterns" 
+                               value="{{ config.exclude_patterns | join(', ') }}" 
+                               placeholder="【废弃】, 【备份】, temp_">
+                        <div class="form-hint">
+                            💡 包含这些关键词的文件将被忽略（多个用逗号分隔）
+                            <span class="example">示例: 【废弃】, 【备份】, temp_</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 启动配置 -->
+            <div class="config-card">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <span class="card-icon">🚀</span>
+                    <h2>启动配置</h2>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="auto_scan_on_start" name="auto_scan_on_start" 
+                                   {% if config.auto_scan_on_start %}checked{% endif %}>
+                            🔄 启动时自动扫描小说目录
+                        </label>
+                        <div class="form-hint">首次启动建议勾选，之后可以取消以加快启动速度</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="auto_backup_enabled" name="auto_backup_enabled" 
+                                   {% if config.auto_backup_enabled %}checked{% endif %}>
+                            💾 启用自动备份
+                        </label>
+                        <div class="form-hint">定期备份配置和阅读记录</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label title="单位：天，建议 7 (每周备份一次)">📦 备份间隔</label>
+                        <input type="number" id="backup_interval_days" name="backup_interval_days" 
+                               value="{{ config.backup_interval_days }}" min="1" max="30" step="1">
+                        <div class="form-hint hint-as-title">单位：天，建议 7 (每周备份一次)</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>🗂️ 最大备份数</label>
+                        <input type="number" id="max_backups" name="max_backups" 
+                               value="{{ config.max_backups }}" min="1" max="20" step="1">
+                        <div class="form-hint">保留多少个备份文件，旧的会自动删除</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="debug_mode" name="debug_mode" 
+                                   {% if config.debug_mode %}checked{% endif %}>
+                            🐛 调试模式 (显示详细错误信息)
+                        </label>
+                        <div class="form-hint text-danger">
+                            ⚠️ 生产环境请勿开启，否则可能泄露敏感信息
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+        
+        <!-- 底部按钮 -->
+        <div class="button-group" style="margin-top: 20px; justify-content: center;">
+            <button class="btn btn-success" onclick="saveAllConfig()">
+                💾 保存全部配置
+            </button>
+            <button class="btn btn-warning" onclick="reloadConfig()">
+                🔄 重载配置
+            </button>
+            <button class="btn btn-primary" onclick="resetToDefault()">
+                🔄 恢复默认
+            </button>
+            <button class="btn btn-secondary" onclick="exportConfig()">
+                📤 导出配置
+            </button>
+            <button class="btn btn-secondary" onclick="importConfig()">
+                📥 导入配置
+            </button>
+        </div>
+    </div>
+
+
+    <script src="{{ url_for('static', filename='js/common.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/config.js') }}"></script>
+    <script>
+        // 配置页初始化（在 common.js 加载后执行）
+        (function() {
+            // 确保 DOM 已加载
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initConfigPage);
+            } else {
+                initConfigPage();
+            }
+            
+            function initConfigPage() {
+                console.log('🔧 配置页初始化开始');
+                
+                // 1. 主题
+                if (typeof loadAndApplyTheme === 'function') {
+                    loadAndApplyTheme();
+                    watchSystemTheme();
+                }
+                
+                // 2. 轮播图
+                if (typeof initCarousel === 'function') {
+                    initCarousel('.header', {
+                        autoSlideshow: true,
+                        intervalTime: 8000
+                    });
+                }
+                
+                // 默认折叠后 4 张卡片（保留前两张展开），减少首屏滚动长度
+                document.querySelectorAll('.config-card').forEach(function (card, i) {
+                    if (i >= 2) card.classList.add('collapsed');
+                });
+                
+                console.log('✅ 配置页初始化完成');
+            }
+        })();
+    </script>
+</body>
+</html>

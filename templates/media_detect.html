@@ -1,0 +1,1459 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>媒体检测 - 摸鱼书架</title>
+    <link rel="icon" href="{{ url_for('static', filename='images/novel-icon.png') }}" type="image/png">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="{{ url_for('static', filename='js/common.js') }}"></script>
+    <style>
+        .media-detect-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .media-header {
+            background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .media-header h1 {
+            font-size: 2em;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .media-header h1 small {
+            font-size: 0.5em;
+            opacity: 0.7;
+            font-weight: normal;
+        }
+        .media-header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .media-header-actions .btn-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 24px;
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 10px;
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .media-header-actions .btn-back:hover {
+            background: rgba(255,255,255,0.35);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .media-stats {
+            display: flex;
+            gap: 20px;
+            background: rgba(255,255,255,0.1);
+            padding: 10px 20px;
+            border-radius: 10px;
+        }
+        .media-stats span {
+            font-size: 0.95em;
+        }
+        .media-stats .num {
+            font-weight: bold;
+            color: #ffd700;
+        }
+        
+        .control-bar {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+        .control-bar label {
+            font-weight: 500;
+            color: #333;
+        }
+        .control-bar select, .control-bar input {
+            padding: 8px 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.95em;
+        }
+        .control-bar .btn {
+            padding: 8px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #728B47;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #5a7a3a;
+        }
+        .btn-danger {
+            background: #e53e3e;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #c53030;
+        }
+        .btn-warning {
+            background: #ed8936;
+            color: white;
+        }
+        .btn-warning:hover {
+            background: #dd6b20;
+        }
+        .btn-outline {
+            background: transparent;
+            color: #728B47;
+            border: 1px solid #728B47;
+        }
+        .btn-outline:hover {
+            background: #728B47;
+            color: white;
+        }
+        .btn-sm {
+            padding: 4px 12px;
+            font-size: 0.8em;
+            border-radius: 6px;
+        }
+        
+        /* ===== 进度条（与主页统一样式） ===== */
+        .progress-container {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            margin-top: 20px;
+            padding: 15px;
+            display: none;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            position: absolute;
+            left: 0;
+            top: 0;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 15px;
+            background-color: rgba(0, 150, 255, 0.85);
+            background-image: linear-gradient(135deg,
+                rgba(255, 255, 255, 0.4) 25%,
+                transparent 25%,
+                transparent 50%,
+                rgba(255, 255, 255, 0.4) 50%,
+                rgba(255, 255, 255, 0.4) 75%,
+                transparent 75%,
+                transparent
+            );
+            background-size: 40px 40px;
+            box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.3), 0 1px 1px rgba(0, 0, 0, 0.1);
+            animation: old-safari-stripes 1.2s linear infinite;
+        }
+        .progress-fill::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.1) 50%, transparent 100%);
+            border-radius: 15px 0 0 0;
+            pointer-events: none;
+        }
+        .progress-fill[style*="width: 0%"] {
+            animation-play-state: paused;
+        }
+        .progress-fill:not([style*="width: 100%"]) {
+            border-radius: 15px 0 0 15px;
+        }
+        @keyframes old-safari-stripes {
+            0% { background-position: 0 0; }
+            100% { background-position: 40px 0; }
+        }
+        .progress-text {
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            color: #1a202c;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+        
+        .results-table {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .results-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .results-table th {
+            background: #f7fafc;
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #2d3748;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        .results-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #edf2f7;
+            vertical-align: middle;
+        }
+        .results-table tr:hover td {
+            background: #f7fafc;
+        }
+        
+        .issue-tag {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            margin: 1px;
+        }
+        .issue-tag.missing {
+            background: #fed7d7;
+            color: #9b2c2c;
+        }
+        .issue-tag.extra {
+            background: #fefcbf;
+            color: #744210;
+        }
+        .issue-tag.duplicate {
+            background: #e9d8fd;
+            color: #553c9a;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #a0aec0;
+        }
+        .empty-state .icon {
+            font-size: 4em;
+            margin-bottom: 15px;
+        }
+        .empty-state h3 {
+            color: #4a5568;
+            margin-bottom: 8px;
+        }
+        
+        /* 操作按钮组 */
+        .action-buttons {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .action-buttons .btn {
+            padding: 4px 12px;
+            font-size: 0.8em;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .action-buttons .btn-detail {
+            background: #4299e1;
+            color: white;
+        }
+        .action-buttons .btn-detail:hover {
+            background: #3182ce;
+        }
+        .action-buttons .btn-folder {
+            background: #ed8936;
+            color: white;
+        }
+        .action-buttons .btn-folder:hover {
+            background: #dd6b20;
+        }
+        .action-buttons .btn-open {
+            background: #48bb78;
+            color: white;
+        }
+        .action-buttons .btn-open:hover {
+            background: #38a169;
+        }
+        
+        /* 深色模式适配 */
+        body.dark-mode .control-bar {
+            background: #1e2a1e;
+        }
+        body.dark-mode .control-bar label {
+            color: #cbd5e1;
+        }
+        body.dark-mode .control-bar select,
+        body.dark-mode .control-bar input {
+            background: #0f1a0f;
+            border-color: #334d33;
+            color: #cbd5e1;
+        }
+        body.dark-mode .results-table {
+            background: #1e2a1e;
+        }
+        body.dark-mode .results-table th {
+            background: #0f1a0f;
+            color: #cbd5e1;
+            border-bottom-color: #334d33;
+        }
+        body.dark-mode .results-table td {
+            border-bottom-color: #334d33;
+            color: #cbd5e1;
+        }
+        body.dark-mode .results-table tr:hover td {
+            background: #2a3a2a;
+        }
+        body.dark-mode .progress-container {
+            background: rgba(0, 0, 0, 0.35);
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+        body.dark-mode .progress-text {
+            color: #cbd5e1;
+        }
+        body.dark-mode .empty-state h3 {
+            color: #cbd5e1;
+        }
+        body.dark-mode .empty-state .icon {
+            opacity: 0.5;
+        }
+        body.dark-mode .media-header-actions .btn-back {
+            background: rgba(0,0,0,0.3);
+            border-color: rgba(255,255,255,0.15);
+        }
+        body.dark-mode .media-header-actions .btn-back:hover {
+            background: rgba(0,0,0,0.5);
+        }
+        
+        /* 媒体检测头部 - 支持轮播图背景 */
+        .media-header {
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 轮播图容器在底层 */
+        .media-header .header-bg-container {
+            z-index: 0 !important;
+            pointer-events: none !important;
+        }
+
+        /* 轮播图图层 */
+        .media-header .header-bg-layer {
+            pointer-events: none !important;
+        }
+
+        /* 头部所有内容在顶层 */
+        .media-header > *:not(.header-bg-container) {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* 头部标题和按钮确保可点击 */
+        .media-header h1,
+        .media-header .media-header-actions,
+        .media-header .media-stats,
+        .media-header .btn-back {
+            position: relative;
+            z-index: 2;
+        }      
+
+        /* 忽略按钮 */
+        .btn-ignore {
+            background: #9b59b6;
+            color: white;
+        }
+        .btn-ignore:hover {
+            background: #8e44ad;
+        }
+
+        /* 忽略管理弹窗 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            max-width: 1000px;
+            width: 90%;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 25px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.5em;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+            padding: 0 8px;
+        }
+        .modal-close:hover {
+            color: #333;
+        }
+        .modal-body {
+            padding: 20px 25px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .ignore-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            background: #f7fafc;
+            border-radius: 8px;
+        }
+        .ignore-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .ignore-table th {
+            text-align: left;
+            padding: 10px 12px;
+            background: #f7fafc;
+            border-bottom: 2px solid #e2e8f0;
+            font-weight: 600;
+            color: #2d3748;
+        }
+        .ignore-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #edf2f7;
+            vertical-align: middle;
+        }
+        .ignore-table tr:hover td {
+            background: #f7fafc;
+        }
+        .ignore-reason {
+            color: #718096;
+            font-size: 0.9em;
+            max-width: 200px;
+            display: inline-block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        /* 设置表格列宽，确保布局合理 */
+        .ignore-table th:nth-child(1) { width: 45%; }  /* 小说 */
+        .ignore-table th:nth-child(2) { width: 15%; }  /* 原因 */
+        .ignore-table th:nth-child(3) { width: 20%; }  /* 时间 */
+        .ignore-table th:nth-child(4) { width: 20%; }  /* 操作 */
+
+        
+        /* 正常结果表格列宽 */
+        .results-table th:nth-child(1) { width: 30%; }  /* 小说 */
+        .results-table th:nth-child(2) { width: 10%; }  /* 图片 */
+        .results-table th:nth-child(3) { width: 10%; }  /* 视频 */
+        .results-table th:nth-child(4) { width: 10%; }  /* 音频 */
+        .results-table th:nth-child(5) { width: 20%; }  /* 问题详情 */
+        .results-table th:nth-child(6) { width: 20%; }  /* 操作 */
+
+        /* 详情弹窗 */
+        .detail-summary {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .summary-card {
+            background: #f7fafc;
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+        }
+        .summary-card.has-issue {
+            background: #fff5f5;
+            border: 1px solid #feb2b2;
+        }
+        .summary-label {
+            font-size: 0.8em;
+            color: #718096;
+            margin-bottom: 4px;
+        }
+        .summary-value {
+            font-size: 1.6em;
+            font-weight: bold;
+            color: #2d3748;
+        }
+        .detail-section {
+            margin-bottom: 20px;
+        }
+        .section-title {
+            font-size: 1em;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        .missing-title { color: #c53030; }
+        .extra-title { color: #b7791f; }
+        .duplicate-title { color: #6b46c1; }
+        .detail-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .detail-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            background: #f7fafc;
+            border-radius: 8px;
+            font-size: 0.9em;
+        }
+        .detail-type {
+            flex-shrink: 0;
+            font-size: 0.85em;
+            color: #4a5568;
+            min-width: 70px;
+        }
+        .detail-item code {
+            flex: 1;
+            background: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            color: #2d3748;
+            word-break: break-all;
+        }
+        .dup-count {
+            flex-shrink: 0;
+            background: #e9d8fd;
+            color: #553c9a;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        /* 深色模式 */
+        body.dark-mode .summary-card { background: #0f1a0f; }
+        body.dark-mode .summary-card.has-issue { background: #2a1a1a; border-color: #742a2a; }
+        body.dark-mode .summary-label { color: #94a3b8; }
+        body.dark-mode .summary-value { color: #cbd5e1; }
+        body.dark-mode .detail-item { background: #0f1a0f; }
+        body.dark-mode .detail-item code { background: #1e2a1e; color: #cbd5e1; }
+        body.dark-mode .section-title { border-bottom-color: #334d33; }
+        body.dark-mode .detail-section p { color: #94a3b8 !important; }
+        
+        /* 深色模式 */
+        body.dark-mode .modal-content {
+            background: #1e2a1e;
+        }
+        body.dark-mode .modal-header {
+            border-bottom-color: #334d33;
+        }
+        body.dark-mode .modal-header h2 {
+            color: #cbd5e1;
+        }
+        body.dark-mode .modal-close {
+            color: #94a3b8;
+        }
+        body.dark-mode .modal-close:hover {
+            color: #e2e8f0;
+        }
+        body.dark-mode .ignore-stats {
+            background: #0f1a0f;
+        }
+        body.dark-mode .ignore-stats span {
+            color: #cbd5e1;
+        }
+        body.dark-mode .ignore-table th {
+            background: #0f1a0f;
+            color: #cbd5e1;
+            border-bottom-color: #334d33;
+        }
+        body.dark-mode .ignore-table td {
+            border-bottom-color: #334d33;
+            color: #cbd5e1;
+        }
+        body.dark-mode .ignore-table tr:hover td {
+            background: #2a3a2a;
+        }
+        body.dark-mode .ignore-reason {
+            color: #94a3b8;
+        }
+        .ignore-reason-empty {
+            color: #a0aec0;
+            font-style: italic;
+            font-size: 0.9em;
+        }
+
+        body.dark-mode .ignore-reason-empty {
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+    <div class="media-detect-container">
+        <!-- 头部 - 添加返回按钮 -->
+        <div class="media-header">
+            <h1>
+                📷 媒体检测
+                <small>检测图片/视频/音频标记遗漏</small>
+            </h1>
+            <div class="media-header-actions">
+                <a href="/" class="btn-back">🏠 返回主页</a>
+                <div class="media-stats">
+                    <span>📁 小说总数: <span class="num" id="totalNovels">{{ novel_data|length }}</span></span>
+                    <span>⚠️ 问题: <span class="num" id="problemCount">0</span></span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 控制栏 -->
+        <div class="control-bar">
+            <label>📂 检测类型:</label>
+            <select id="mediaType">
+                <option value="all">全部 (图片/视频/音频)</option>
+                <option value="image">仅图片</option>
+                <option value="video">仅视频</option>
+                <option value="audio">仅音频</option>
+            </select>
+            
+            <button class="btn btn-primary" onclick="startFullScan()">🔍 全量扫描</button>
+            <button class="btn btn-outline" onclick="filterResults()">🔎 筛选</button>
+            <span style="flex:1;"></span>
+            <button class="btn btn-warning" onclick="openIgnoreManager()">🚫 忽略管理</button>
+            <button class="btn btn-warning" onclick="clearCache()">🔄 清除缓存</button>
+            <button class="btn btn-danger" onclick="confirmClearAll()">🗑️ 清空结果</button>
+        </div>
+        
+        <!-- 进度条 -->
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text">
+                <span id="progressMessage">正在扫描...</span>
+                <span id="progressCount">0 / 0</span>
+            </div>
+        </div>
+        
+        <!-- 结果表格 -->
+        <div class="results-table" id="resultsContainer">
+            <div class="empty-state">
+                <div class="icon">📋</div>
+                <h3>暂无检测结果</h3>
+                <p>点击「全量扫描」开始检测所有小说的媒体标记</p>
+                <p style="font-size:0.85em;color:#a0aec0;margin-top:8px;">支持检测图片 [img:xxx]、视频 [video:xxx]、音频 [audio:xxx]</p>
+            </div>
+        </div>
+
+        <!-- 忽略管理弹窗 -->
+        <div class="modal-overlay" id="ignoreModal" style="display:none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>🚫 忽略列表管理</h2>
+                    <button class="modal-close" onclick="closeIgnoreModal()">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="ignore-stats">
+                        <span>已忽略: <strong id="ignoreCount">0</strong> 项</span>
+                        <button class="btn btn-danger btn-sm" onclick="clearAllIgnores()">清空全部</button>
+                    </div>
+                    <div id="ignoreListContainer">
+                        <div class="empty-state" style="padding:20px;">
+                            <div class="icon">📋</div>
+                            <p>暂无忽略项</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 媒体详情弹窗 -->
+        <div class="modal-overlay" id="detailModal" style="display:none;">
+            <div class="modal-content" style="max-width:900px;">
+                <div class="modal-header">
+                    <h2 id="detailModalTitle">📊 检测详情</h2>
+                    <button class="modal-close" onclick="closeDetailModal()">×</button>
+                </div>
+                <div class="modal-body" id="detailModalBody"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let scanResults = [];
+        let isScanning = false;
+
+        function getBasename(filePath) {
+            if (!filePath) return '未知';
+            const name = filePath.split(/[\\/]/).pop();
+            return name.replace(/\.txt$/i, '');
+        }
+
+        function getMediaType() {
+            return document.getElementById('mediaType').value;
+        }
+        
+        function updateProgress(percent, message, current, total) {
+            const container = document.getElementById('progressContainer');
+            const fill = document.getElementById('progressFill');
+            const msg = document.getElementById('progressMessage');
+            const count = document.getElementById('progressCount');
+            
+            container.style.display = 'block';
+            fill.style.width = percent + '%';
+            msg.textContent = message;
+            count.textContent = `${current} / ${total}`;
+        }
+        
+        function hideProgress() {
+            document.getElementById('progressContainer').style.display = 'none';
+        }
+        
+
+        function renderResults(results) {
+            const container = document.getElementById('resultsContainer');
+            const problemCount = document.getElementById('problemCount');
+
+            if (!results || results.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">✅</div>
+                        <h3>所有小说媒体标记正常</h3>
+                        <p>没有发现遗漏、多余或重复的标记</p>
+                    </div>
+                `;
+                problemCount.textContent = '0';
+                return;
+            }
+
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>📖 小说</th>
+                            <th>📷 图片</th>
+                            <th>🎬 视频</th>
+                            <th>🎵 音频</th>
+                            <th>问题详情</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            let totalProblems = 0;
+
+            results.forEach(item => {
+                // ===== 🔥 缺少 TXT 的孤立配图文件夹 =====
+                if (item.error === 'missing_txt') {
+                    totalProblems += 1;
+                    const encodedFolder = encodeURIComponent(item.img_folder || item.file_path)
+                        .replace(/'/g, '%27');
+                    html += `
+                        <tr style="background:rgba(237,137,54,0.08);">
+                            <td>
+                                <strong>${escapeHtml(item.title)}</strong>
+                                <span class="issue-tag extra" style="margin-left:6px;">缺少TXT</span>
+                            </td>
+                            <td colspan="4" style="color:#b7791f;">
+                                有配图文件夹但找不到对应的 TXT 文件
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-folder"
+                                            onclick="openFolder('${encodedFolder}')">📁 打开配图</button>
+                                    <button class="btn btn-ignore"
+                                            onclick="ignoreNovel('${encodedFolder}')">🚫 忽略</button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                // ===== 常规条目 =====
+                const totalIssues = item.missing + item.extra + item.duplicate;
+                totalProblems += totalIssues;
+
+                let missingCount = {image: 0, video: 0, audio: 0};
+                let extraCount = {image: 0, video: 0, audio: 0};
+                let duplicateCount = {image: 0, video: 0, audio: 0};
+
+                if (item.missing_detail) {
+                    item.missing_detail.forEach(d => {
+                        const type = Array.isArray(d) ? d[0] : d.type;
+                        if (missingCount[type] !== undefined) missingCount[type]++;
+                    });
+                }
+                if (item.extra_detail) {
+                    item.extra_detail.forEach(d => {
+                        const type = Array.isArray(d) ? d[0] : d.type;
+                        if (extraCount[type] !== undefined) extraCount[type]++;
+                    });
+                }
+                if (item.duplicate_detail) {
+                    item.duplicate_detail.forEach(d => {
+                        const type = Array.isArray(d) ? d[0] : d.type;
+                        if (duplicateCount[type] !== undefined) duplicateCount[type]++;
+                    });
+                }
+
+                const encodedPath = encodeURIComponent(item.file_path).replace(/'/g, '%27');
+
+                html += `
+                    <tr>
+                        <td>
+                            <a href="/novel_detail/${encodedPath}" target="_blank" style="color:#4B6D0F;text-decoration:none;">
+                                <strong>${escapeHtml(item.title)}</strong>
+                            </a>
+                        </td>
+                        <td>
+                            ${missingCount.image > 0 ? `<span class="issue-tag missing">遗漏${missingCount.image}</span>` : ''}
+                            ${extraCount.image > 0 ? `<span class="issue-tag extra">多余${extraCount.image}</span>` : ''}
+                            ${duplicateCount.image > 0 ? `<span class="issue-tag duplicate">重复${duplicateCount.image}</span>` : ''}
+                            ${missingCount.image === 0 && extraCount.image === 0 && duplicateCount.image === 0 ? '✅' : ''}
+                        </td>
+                        <td>
+                            ${missingCount.video > 0 ? `<span class="issue-tag missing">遗漏${missingCount.video}</span>` : ''}
+                            ${extraCount.video > 0 ? `<span class="issue-tag extra">多余${extraCount.video}</span>` : ''}
+                            ${duplicateCount.video > 0 ? `<span class="issue-tag duplicate">重复${duplicateCount.video}</span>` : ''}
+                            ${missingCount.video === 0 && extraCount.video === 0 && duplicateCount.video === 0 ? '✅' : ''}
+                        </td>
+                        <td>
+                            ${missingCount.audio > 0 ? `<span class="issue-tag missing">遗漏${missingCount.audio}</span>` : ''}
+                            ${extraCount.audio > 0 ? `<span class="issue-tag extra">多余${extraCount.audio}</span>` : ''}
+                            ${duplicateCount.audio > 0 ? `<span class="issue-tag duplicate">重复${duplicateCount.audio}</span>` : ''}
+                            ${missingCount.audio === 0 && extraCount.audio === 0 && duplicateCount.audio === 0 ? '✅' : ''}
+                        </td>
+                        <td>
+                            ${item.missing > 0 ? `<span class="issue-tag missing">📄 遗漏 ${item.missing} 个</span>` : ''}
+                            ${item.extra > 0 ? `<span class="issue-tag extra">📝 多余 ${item.extra} 个</span>` : ''}
+                            ${item.duplicate > 0 ? `<span class="issue-tag duplicate">🔄 重复 ${item.duplicate} 个</span>` : ''}
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn btn-detail" onclick="detailDetect('${encodedPath}')">🔍 详情</button>
+                                <button class="btn btn-open" onclick="openFile('${encodedPath}')">📂 文件</button>
+                                <button class="btn btn-folder" onclick="openFolder('${encodedPath}')">📁 配图</button>
+                                <button class="btn btn-ignore" onclick="ignoreNovel('${encodedPath}')">🚫 忽略</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                    </tbody>
+                </table>
+            `;
+
+            container.innerHTML = html;
+            problemCount.textContent = results.length;
+        }
+
+
+        async function startFullScan() {
+            if (isScanning) {
+                showNotification('扫描正在进行中...', 'warning');
+                return;
+            }
+
+            isScanning = true;
+            const mediaType = getMediaType();
+
+            try {
+                updateProgress(0, '开始扫描...', 0, 0);
+
+                const startResp = await fetch('/api/media/scan_all', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({media_type: mediaType})
+                });
+                const startData = await startResp.json();
+
+                if (!startData.success || !startData.task_id) {
+                    showNotification('扫描启动失败: ' + (startData.message || '未知错误'), 'error');
+                    return;
+                }
+
+                const taskId = startData.task_id;
+
+                while (true) {
+                    await new Promise(resolve => setTimeout(resolve, 700));
+
+                    const progressResp = await fetch(`/api/task/${taskId}/progress`);
+                    const progress = await progressResp.json();
+
+                    if (!progress.success) {
+                        showNotification('获取扫描进度失败: ' + (progress.message || '未知错误'), 'error');
+                        break;
+                    }
+
+                    updateProgress(
+                        progress.progress || 0,
+                        progress.message || '扫描中...',
+                        progress.current || 0,
+                        progress.total || 0
+                    );
+
+                    if (progress.status === 'completed' || progress.status === 'error') {
+                        const resultResp = await fetch(`/api/task/${taskId}/result`);
+                        const data = await resultResp.json();
+
+                        if (data.success) {
+                            scanResults = data.results || [];
+                            renderResults(scanResults);
+                            updateProgress(100, '扫描完成！', data.total_checked, data.total_checked);
+                            showNotification(`扫描完成！发现 ${data.problem_count} 个问题`, 'success');
+                            setTimeout(hideProgress, 2000);
+                        } else {
+                            showNotification('扫描失败: ' + (data.message || '未知错误'), 'error');
+                        }
+                        break;
+                    }
+                }
+            } catch (error) {
+                showNotification('扫描出错: ' + error.message, 'error');
+            } finally {
+                isScanning = false;
+            }
+        }
+
+        async function detailDetect(filePath) {
+            const decodedPath = decodeURIComponent(filePath);
+            try {
+                const response = await fetch('/api/media/detect', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({file_path: decodedPath, media_type: getMediaType()})
+                });
+
+                const data = await response.json();
+                if (!data.success) {
+                    showNotification('检测失败: ' + (data.message || '未知错误'), 'error');
+                    return;
+                }
+
+                document.getElementById('detailModalTitle').textContent =
+                    `📊 ${getBasename(decodedPath)} — 检测详情`;
+
+                const typeName = {image: '📷 图片', video: '🎬 视频', audio: '🎵 音频'};
+
+                // 缺少 TXT 的孤立文件夹
+                if (data.missing_txt) {
+                    document.getElementById('detailModalBody').innerHTML = `
+                        <div class="detail-summary">
+                            <div class="summary-card">
+                                <div class="summary-label">媒体文件</div>
+                                <div class="summary-value">${data.media_files_count || 0}</div>
+                            </div>
+                            <div class="summary-card has-issue">
+                                <div class="summary-label">TXT 状态</div>
+                                <div class="summary-value">缺失</div>
+                            </div>
+                        </div>
+                        <div class="detail-section">
+                            <h3 class="section-title extra-title">⚠️ 缺少对应的 TXT 文件</h3>
+                            <p style="color:#718096;">该配图文件夹里有媒体文件，但同目录下找不到同名 TXT 文件。</p>
+                        </div>
+                    `;
+                    document.getElementById('detailModal').style.display = 'flex';
+                    return;
+                }
+
+                let html = `
+                    <div class="detail-summary">
+                        <div class="summary-card">
+                            <div class="summary-label">媒体文件</div>
+                            <div class="summary-value">${data.media_files_count || 0}</div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-label">标记数量</div>
+                            <div class="summary-value">${data.markers_count || 0}</div>
+                        </div>
+                        <div class="summary-card ${data.missing?.length ? 'has-issue' : ''}">
+                            <div class="summary-label">遗漏</div>
+                            <div class="summary-value">${data.missing?.length || 0}</div>
+                        </div>
+                        <div class="summary-card ${data.extra?.length ? 'has-issue' : ''}">
+                            <div class="summary-label">多余</div>
+                            <div class="summary-value">${data.extra?.length || 0}</div>
+                        </div>
+                        <div class="summary-card ${data.duplicate?.length ? 'has-issue' : ''}">
+                            <div class="summary-label">重复</div>
+                            <div class="summary-value">${data.duplicate?.length || 0}</div>
+                        </div>
+                    </div>
+                `;
+
+                if (!data.has_issues) {
+                    html += `<div class="empty-state" style="padding:30px;">
+                                <div class="icon">✅</div>
+                                <h3>所有媒体标记完整</h3>
+                                <p>没有发现问题</p>
+                            </div>`;
+                } else {
+                    if (data.missing && data.missing.length > 0) {
+                        html += `<div class="detail-section">
+                            <h3 class="section-title missing-title">❌ 遗漏的文件 (${data.missing.length})</h3>
+                            <div class="detail-list">`;
+                        data.missing.forEach(m => {
+                            const tn = typeName[m.type] || m.type;
+                            html += `<div class="detail-item">
+                                        <span class="detail-type">${tn}</span>
+                                        <code>${escapeHtml(m.filename)}</code>
+                                    </div>`;
+                        });
+                        html += `</div></div>`;
+                    }
+
+                    if (data.extra && data.extra.length > 0) {
+                        html += `<div class="detail-section">
+                            <h3 class="section-title extra-title">⚠️ 多余的标记 (${data.extra.length})</h3>
+                            <div class="detail-list">`;
+                        data.extra.forEach(m => {
+                            const tn = typeName[m.type] || m.type;
+                            html += `<div class="detail-item">
+                                        <span class="detail-type">${tn}</span>
+                                        <code>${escapeHtml(m.marker)}</code>
+                                    </div>`;
+                        });
+                        html += `</div></div>`;
+                    }
+
+                    if (data.duplicate && data.duplicate.length > 0) {
+                        html += `<div class="detail-section">
+                            <h3 class="section-title duplicate-title">🔄 重复的标记 (${data.duplicate.length})</h3>
+                            <div class="detail-list">`;
+                        data.duplicate.forEach(m => {
+                            const tn = typeName[m.type] || m.type;
+                            html += `<div class="detail-item">
+                                        <span class="detail-type">${tn}</span>
+                                        <code>${escapeHtml(m.marker)}</code>
+                                        <span class="dup-count">×${m.count}</span>
+                                    </div>`;
+                        });
+                        html += `</div></div>`;
+                    }
+                }
+
+                document.getElementById('detailModalBody').innerHTML = html;
+                document.getElementById('detailModal').style.display = 'flex';
+            } catch (error) {
+                showNotification('检测失败: ' + error.message, 'error');
+            }
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detailModal').style.display = 'none';
+        }
+        
+        async function openFolder(filePath) {
+            const decodedPath = decodeURIComponent(filePath);
+            try {
+                const response = await fetch('/api/media/get_folder', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({file_path: decodedPath})
+                });
+
+                const data = await response.json();
+                if (data.success && data.folder) {
+                    const r2 = await fetch('/api/media/open_folder', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({folder: data.folder})
+                    });
+                    const d2 = await r2.json();
+                    if (d2.success) {
+                        showNotification('配图文件夹已打开', 'success');
+                    } else {
+                        showNotification('打开失败: ' + (d2.message || ''), 'error');
+                    }
+                } else {
+                    showNotification('配图文件夹不存在', 'error');
+                }
+            } catch (error) {
+                showNotification('打开失败: ' + error.message, 'error');
+            }
+        }
+        
+        function filterResults() {
+            const typeChoice = prompt(
+                '筛选媒体类型：\n1 = 图片\n2 = 视频\n3 = 音频\n0 = 全部',
+                '0'
+            );
+            if (typeChoice === null) return;
+            const typeMap = {'1': 'image', '2': 'video', '3': 'audio', '0': 'all'};
+            const filterType = typeMap[typeChoice] || 'all';
+
+            const issueChoice = prompt(
+                '筛选问题种类：\n1 = 仅看遗漏\n2 = 仅看多余\n3 = 仅看重复\n0 = 全部问题',
+                '0'
+            );
+            if (issueChoice === null) return;
+            const issueMap = {'1': 'missing', '2': 'extra', '3': 'duplicate', '0': 'all'};
+            const filterIssue = issueMap[issueChoice] || 'all';
+
+            const minIssues = prompt('问题数量 >= 多少？(默认 1)', '1');
+            if (minIssues === null) return;
+            const threshold = parseInt(minIssues) || 1;
+
+            const filtered = scanResults.filter(item => {
+                // 缺少 TXT 的孤立文件夹始终保留（除非用户只想看某类具体问题）
+                if (item.error === 'missing_txt') {
+                    return filterIssue === 'all' && threshold <= 1;
+                }
+
+                const details = {
+                    missing: item.missing_detail || [],
+                    extra: item.extra_detail || [],
+                    duplicate: item.duplicate_detail || []
+                };
+
+                const matchType = (d) => {
+                    if (filterType === 'all') return true;
+                    const t = Array.isArray(d) ? d[0] : d.type;
+                    return t === filterType;
+                };
+
+                let count = 0;
+                if (filterIssue === 'all') {
+                    count = details.missing.filter(matchType).length
+                        + details.extra.filter(matchType).length
+                        + details.duplicate.filter(matchType).length;
+                } else {
+                    count = details[filterIssue].filter(matchType).length;
+                }
+
+                return count >= threshold;
+            });
+
+            if (filtered.length === 0) {
+                showNotification('没有符合条件的小说', 'warning');
+            } else {
+                renderResults(filtered);
+                const typeName = {all: '全部', image: '图片', video: '视频', audio: '音频'}[filterType];
+                const issueName = {all: '全部问题', missing: '遗漏', extra: '多余', duplicate: '重复'}[filterIssue];
+                showNotification(`显示 ${filtered.length} 个结果（${typeName} · ${issueName}）`, 'success');
+            }
+        }
+        
+        function clearCache() {
+            if (confirm('清除媒体检测缓存？')) {
+                fetch('/clear_chapter_cache', {method: 'POST'})
+                    .then(() => showNotification('缓存已清除', 'success'))
+                    .catch(() => showNotification('清除失败', 'error'));
+            }
+        }
+        
+        function confirmClearAll() {
+            if (confirm('清空所有检测结果？')) {
+                scanResults = [];
+                renderResults([]);
+                showNotification('已清空结果', 'success');
+            }
+        }
+                
+        // 注入动画
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+            .notification-container {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 9999;
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // 忽略功能相关代码
+        let ignoreList = [];
+
+        // 加载忽略列表
+        async function loadIgnoreList() {
+            try {
+                const response = await fetch('/api/media/ignore/list');
+                const data = await response.json();
+                if (data.success) {
+                    ignoreList = data.ignore_list || [];
+                }
+            } catch (error) {
+                console.error('加载忽略列表失败:', error);
+            }
+        }
+
+        // 忽略小说（无弹窗，直接添加）
+        async function ignoreNovel(filePath) {
+            const decodedPath = decodeURIComponent(filePath);
+
+            try {
+                const response = await fetch('/api/media/ignore/add', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({file_path: decodedPath, reason: ''})
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showNotification('已忽略', 'success');
+                    // 从 scanResults 中移除该项
+                    scanResults = scanResults.filter(item => {
+                        const p = item.file_path || item.img_folder;
+                        return !p || p !== decodedPath;
+                    });
+                    renderResults(scanResults);
+                    await loadIgnoreList();
+                    updateIgnoreStats();
+                } else {
+                    showNotification('添加失败: ' + (data.message || ''), 'error');
+                }
+            } catch (error) {
+                showNotification('操作失败: ' + error.message, 'error');
+            }
+        }
+
+        // 打开忽略管理弹窗
+        async function openIgnoreManager() {
+            const modal = document.getElementById('ignoreModal');
+            modal.style.display = 'flex';
+            await loadIgnoreList();
+            renderIgnoreList();
+            updateIgnoreStats();
+        }
+
+        // 关闭忽略管理弹窗
+        function closeIgnoreModal() {
+            document.getElementById('ignoreModal').style.display = 'none';
+        }
+
+        // 渲染忽略列表
+        function renderIgnoreList() {
+            const container = document.getElementById('ignoreListContainer');
+            
+            if (!ignoreList || ignoreList.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state" style="padding:20px;">
+                        <div class="icon">📋</div>
+                        <p>暂无忽略项</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = `
+                <table class="ignore-table">
+                    <thead>
+                        <tr>
+                            <th>📖 小说</th>
+                            <th>📝 原因</th>
+                            <th>📅 添加时间</th>
+                            <th style="width:180px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            ignoreList.forEach((item) => {
+                const filePath = item.file_path || '';
+                const title = getBasename(filePath);
+                const reason = item.reason || '';
+                const addedAt = item.added_at ? new Date(item.added_at).toLocaleString() : '未知';
+                const encodedPath = encodeURIComponent(filePath).replace(/'/g, '%27');
+                
+                const reasonHtml = reason
+                    ? `<span class="ignore-reason">${escapeHtml(reason)}</span>`
+                    : `<span class="ignore-reason-empty">未填写</span>`;
+                
+                html += `
+                    <tr>
+                        <td><strong>${escapeHtml(title)}</strong></td>
+                        <td>${reasonHtml}</td>
+                        <td>${addedAt}</td>
+                        <td>
+                            <button class="btn btn-detail btn-sm" onclick="editIgnoreReason('${encodedPath}')">✏️ 编辑</button>
+                            <button class="btn btn-danger btn-sm" onclick="removeIgnore('${encodedPath}')">取消忽略</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+            `;
+            
+            container.innerHTML = html;
+        }
+
+        // 更新忽略统计
+        function updateIgnoreStats() {
+            document.getElementById('ignoreCount').textContent = ignoreList.length;
+        }
+        // HTML 转义，防止 XSS / 布局错乱
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // 编辑忽略原因
+        async function editIgnoreReason(filePath) {
+            const decodedPath = decodeURIComponent(filePath);
+            const item = ignoreList.find(i => i.file_path === decodedPath);
+            if (!item) {
+                showNotification('未找到忽略项', 'error');
+                return;
+            }
+            
+            const newReason = prompt('编辑忽略备注（可留空）：', item.reason || '');
+            if (newReason === null) return;  // 用户取消
+            
+            try {
+                const response = await fetch('/api/media/ignore/update', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({file_path: decodedPath, reason: newReason})
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    showNotification('备注已更新', 'success');
+                    await loadIgnoreList();
+                    renderIgnoreList();
+                    updateIgnoreStats();
+                } else {
+                    showNotification('更新失败: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showNotification('操作失败: ' + error.message, 'error');
+            }
+        }
+
+        // 移除忽略
+        async function removeIgnore(filePath) {
+            const decodedPath = decodeURIComponent(filePath);
+            if (!confirm(`确定要取消忽略 "${getBasename(decodedPath)}" 吗？`)) return;
+            
+            try {
+                const response = await fetch('/api/media/ignore/remove', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({file_path: decodedPath})
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    showNotification('已取消忽略', 'success');
+                    await loadIgnoreList();
+                    renderIgnoreList();
+                    updateIgnoreStats();
+                } else {
+                    showNotification('操作失败: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showNotification('操作失败: ' + error.message, 'error');
+            }
+        }
+
+        // 清空所有忽略
+        async function clearAllIgnores() {
+            if (!confirm('确定要清空所有忽略项吗？')) return;
+            
+            try {
+                const response = await fetch('/api/media/ignore/clear', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    showNotification('已清空忽略列表', 'success');
+                    await loadIgnoreList();
+                    renderIgnoreList();
+                    updateIgnoreStats();
+                } else {
+                    showNotification('操作失败: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showNotification('操作失败: ' + error.message, 'error');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadIgnoreList();
+            setTimeout(startFullScan, 2000);
+            if (typeof initCarousel === 'function') {
+                initCarousel('.media-header', {
+                    autoSlideshow: true,
+                    intervalTime: 8000
+                });
+            }
+        });
+    </script>
+</body>
+</html>

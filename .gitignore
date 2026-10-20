@@ -1,0 +1,44 @@
+# 运行时数据 —— 不要提交/分享这些
+data/
+!data/.gitkeep
+
+# 日志
+*.log
+data/*.log
+
+# 缓存的扫描结果（体积大，可重建）
+data/novel_cache.json
+data/*.bak
+
+# 阅读记录与个人配置
+data/reading_records.json
+data/config.json
+data/secret_key
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 系统
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 编辑器
+.vscode/
+.idea/
+
+# ========== 版权受限素材（不随仓库分发）==========
+# 表情包与头图来源网络、授权不明，公开仓库不包含；缺了不影响功能
+static/emojis/
+static/images/
+
+# 本地备份（含真实路径与原始文件）
+_local_backup/
+
+# 中文名启动脚本不入库（跨系统文件名编码易出问题），
+# 仓库内提供等价的 start_emoji_editor.bat
+启动表情映射编辑器.bat

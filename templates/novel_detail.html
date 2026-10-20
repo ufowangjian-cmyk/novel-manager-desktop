@@ -1,0 +1,270 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - 小说详情</title>
+    <link rel="icon" href="{{ url_for('static', filename='images/novel-icon.png') }}" type="image/png">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/novel-icon.png') }}" type="image/png">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/detail.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/viewer.min.css') }}">
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{{ title }}</h1>
+            <div class="meta-info">
+                <div class="meta-item">👤 {{ author }}</div>
+                <div class="meta-item">📅 {{ publish_date }}</div>
+                <div class="meta-item">
+                    🌐
+                    {% if link %}
+                    <a href="{% if not link.startswith('http://') and not link.startswith('https://') %}https://{% endif %}{{ link }}"
+                        target="_blank" rel="noopener noreferrer"
+                        style="color: inherit; text-decoration: underline; text-underline-offset: 2px;">
+                        {{ site }}
+                    </a>
+                    {% else %}
+                    <span>{{ site }}</span>
+                    {% endif %}
+                </div>
+                <div class="meta-item">📝 {{ "{:,}".format(word_count) }}字</div>
+
+                {% if tags and tags != '无' %}
+                <div class="meta-item" style="display: flex; flex-wrap: wrap; gap: 5px;">
+                    <span style="font-weight: 600; margin-right: 5px;">🏷️</span>
+                    {% for tag in tags.split(',') %}
+                    <a href="/?tag={{ tag }}" class="tag-badge"
+                        style="text-decoration: none; padding: 2px 8px; background: #e2e8f0; color: #4a5568; border-radius: 20px; font-size: 0.9em; transition: all 0.2s;">
+                        {{ tag }}
+                    </a>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            <!-- 修改返回按钮，携带页码参数 -->
+            <a href="/?page={{ back_page }}{% if search_text %}&search={{ search_text }}{% endif %}{% if search_author %}&author={{ search_author }}{% endif %}{% if search_tag %}&tag={{ search_tag }}{% endif %}{% if search_site %}&site={{ search_site }}{% endif %}"
+                class="back-btn">🔙 返回列表</a>
+        </div>
+
+        <!-- 简介部分：有简介显示简介，没简介显示预览 -->
+        {% if intro and intro != '无简介' %}
+        <div class="detail-card" id="introCard" data-mode="intro">
+            <div class="card-title">📖 内容简介</div>
+            <div class="intro-content">{{ intro }}</div>
+        </div>
+        {% elif preview %}
+        <div class="detail-card" id="introCard" data-mode="preview">
+            <div class="card-title">👀 正文预览</div>
+            <div class="intro-content preview-content">{{ preview }}</div>
+            <div class="preview-hint">ℹ️ 本文未提供简介，以上为正文开头</div>
+        </div>
+        {% endif %}
+
+        <div class="detail-card">
+            <div class="card-title">📑 章节目录</div>
+
+            {% if all_chapters %}
+            {% set empty_count = all_chapters | selectattr('is_empty') | list | length %}
+            <div class="stats">
+                <span>📊 共 {{ all_chapters|length }} 个章节{% if empty_count %}（{{ empty_count }} 个空白章节，灰色不可点击）{% endif %}</span>
+                <span>📌 一级: {{ chapters_level1|length }}</span>
+                <span>📄 二级: {{ chapters_level2|length }}</span>
+                <span>📑 三级: {{ chapters_level3|length }}</span>
+            </div>
+
+            <div class="chapters-tree">
+                {# 空章节（仅标题、无正文）在目录里显示但灰度不可点击，与 Docker 版一致；
+                    点进去是空白页，所以不该可点。阅读页 ◀▶ 仍会跳过它（路过空白章节）。 #}
+                {% for chapter in all_chapters %}
+                {% if chapter.get('is_empty') %}
+                <span class="chapter-item chapter-level{{ chapter.level }}" style="opacity:0.5;cursor:not-allowed;" title="空白章节（仅标题，无正文）">
+                    <span class="chapter-title">{{ chapter.text }}</span>
+                    <span class="chapter-line">第{{ chapter.line_number }}行 · 空白</span>
+                </span>
+                {% else %}
+                <a href="{{ url_for('read_chapter', file_path=file_path, line_number=chapter.line_number, list_page=back_page, search=search_text, author=search_author, tag=search_tag, site=search_site) }}"
+                    class="chapter-item chapter-level{{ chapter.level }}">
+                    <span class="chapter-title">{{ chapter.text }}</span>
+                    <span class="chapter-line">第{{ chapter.line_number }}行</span>
+                </a>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="no-chapters">
+                <p>📭 本文暂无章节结构</p>
+                <p style="font-size: 0.9em; color: #a0aec0;">可直接从开头阅读</p>
+            </div>
+            {% endif %}
+
+            <div class="action-buttons">
+                <a href="{{ url_for('read_chapter', file_path=file_path, line_number=(all_chapters[0].line_number if all_chapters else 1), list_page=back_page, search=search_text, author=search_author, tag=search_tag, site=search_site) }}"
+                    class="action-btn secondary">
+                    📖 从头阅读
+                </a>
+                <a href="javascript:void(0);" class="action-btn open-btn" data-file-path="{{ file_path|urlencode }}">
+                    📝 编辑器打开
+                </a>
+                <!-- 🔥 配图文件夹按钮，只在有配图时显示 -->
+                {% if has_images %}
+                <a href="javascript:void(0);" class="action-btn folder-btn" data-file-path="{{ file_path }}">
+                    📁 打开配图文件夹
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <!-- novel_detail.html 底部 -->
+    <script src="{{ url_for('static', filename='js/common.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/reader/reader-core.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/reader/reader-viewer.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/viewer.min.js') }}"></script>
+    <script>
+        // ===== 打开配图文件夹（复用 media_detect 的逻辑） =====
+        async function openFolder(filePath) {
+            try {
+                const response = await fetch('/api/media/get_folder', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({file_path: filePath})
+                });
+                
+                const data = await response.json();
+                if (data.success && data.folder) {
+                    await fetch('/api/media/open_folder', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({folder: data.folder})
+                    });
+                    showNotification('✅ 配图文件夹已打开', 'success');
+                } else {
+                    showNotification('配图文件夹不存在', 'error');
+                }
+            } catch (error) {
+                console.error('打开配图文件夹失败:', error);
+                showNotification('打开失败: ' + error.message, 'error');
+            }
+        }
+
+        // ===== 绑定按钮事件 =====
+        document.addEventListener('DOMContentLoaded', function () {
+            // 编辑器打开按钮
+            const openBtn = document.querySelector('.open-btn');
+            if (openBtn) {
+                openBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const filePath = this.getAttribute('data-file-path');
+                    if (filePath) {
+                        openFile(filePath);
+                    }
+                });
+            }
+
+            // 🔥 配图文件夹按钮
+            const folderBtn = document.querySelector('.folder-btn');
+            if (folderBtn) {
+                folderBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const filePath = this.getAttribute('data-file-path');
+                    if (filePath) {
+                        // filePath 已经过 urlencode，需要解码
+                        openFolder(decodeURIComponent(filePath));
+                    }
+                });
+            }
+        });
+
+
+
+        document.addEventListener('DOMContentLoaded', async function () {
+            // ===== 1. 初始化主题（common.js）=====
+            if (typeof loadAndApplyTheme === 'function') {
+                loadAndApplyTheme();
+                watchSystemTheme();
+            }
+
+            // ===== 2. 初始化轮播图（common.js）=====
+            if (typeof initCarousel === 'function') {
+                initCarousel('.header', {
+                    autoSlideshow: true,
+                    intervalTime: 8000
+                });
+            }
+
+            // ===== 3. 等待表情映射加载（reader-core.js）=====
+            if (typeof loadEmojiMapping === 'function') {
+                await loadEmojiMapping();
+            }
+
+            // ===== 4. 初始化配图路径（reader-core.js）=====
+            if (typeof initLocalImagesAsync === 'function' && '{{ file_path }}') {
+                await initLocalImagesAsync('{{ file_path }}');
+            }
+
+            // ===== 5. 处理简介内容 =====
+            const introDiv = document.querySelector('.intro-content');
+            if (introDiv) {
+                let processed = introDiv.innerHTML;
+
+                if (processed && processed !== '无简介' && processed.trim() !== '') {
+                    // 处理分隔符
+                    processed = processed.replace(/^([-—–~]{3,})$/gm, function (match) {
+                        return '<div class="separator" data-type="line"></div>';
+                    });
+                    processed = processed.replace(/^([*＊]{3,})$/gm, function (match) {
+                        return '<div class="separator" data-type="star">✦ ✦ ✦ ✦ ✦</div>';
+                    });
+                    processed = processed.replace(/^([·•]{3,})$/gm, function (match) {
+                        return '<div class="separator" data-type="dot">· · · · · ·</div>';
+                    });
+
+                    // 1. 转换图片链接
+                    if (typeof convertImageLinks === 'function') {
+                        processed = convertImageLinks(processed);
+                    }
+
+                    // 2. 本地图片转换
+                    if (typeof convertLocalImages === 'function') {
+                        processed = convertLocalImages(processed);
+                    }
+
+                    // 🔥 3. 新增：转换表情（括号表情 + 文字表情）
+                    if (typeof convertTextEmoji === 'function') {
+                        processed = convertTextEmoji(processed);
+                    }
+
+                    // 4. 高亮引号和括号
+                    if (typeof highlightQuotesAndBrackets === 'function') {
+                        processed = highlightQuotesAndBrackets(processed);
+                    }
+
+                    // 5. 换行处理
+                    if (!processed.includes('<br') && !processed.includes('<p') && !processed.includes('<img')) {
+                        processed = processed.replace(/\n/g, '<br>');
+                    }
+
+                    introDiv.innerHTML = processed;
+
+                    // 初始化图片查看器
+                    if (typeof initViewerJS === 'function') {
+                        setTimeout(function () {
+                            initViewerJS('.intro-content');
+                        }, 100);
+                    }
+                } else {
+                    const card = introDiv.closest('.detail-card');
+                    if (card) card.style.display = 'none';
+                }
+            }
+
+            console.log('📄 详情页初始化完成');
+        });
+
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta id="app-data"
+      data-total-lines="{{ total_lines }}"
+      data-current-line="{{ current_chapter.line_number if current_chapter else 0 }}">
+    <title>{{ title }} - {{ current_chapter.text if current_chapter else '阅读' }}</title>
+    <link rel="icon" href="{{ url_for('static', filename='images/novel-icon.png') }}" type="image/png">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/novel-icon.png') }}" type="image/png">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/reader.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/viewer.min.css') }}">
+
+    <!-- 关键：立即应用字体和字号，防止闪烁 -->
+    <script>
+        const filePath = {{ file_path|tojson }};
+        // 服务端 CONFIG 通用阅读设置。config.json 是单一真相源：阅读抽屉改动会防抖写回 config.json，配置页保存也会镜像到 localStorage，二者双向同步。
+        window.readerCfgFontSize = {{ user_prefs.font_size|tojson }};
+        window.readerCfgLineHeight = {{ user_prefs.line_height|tojson }};
+        window.readerCfgIndent = {{ user_prefs.indent_paragraph|tojson }};
+        (function () {
+            try {
+                var savedSize = localStorage.getItem('reader_font_size');
+                var savedLh = localStorage.getItem('reader_line_height');
+                var savedPs = localStorage.getItem('reader_paragraph_spacing');
+                var savedIndent = localStorage.getItem('reader_indent_paragraph');
+                var savedTheme = localStorage.getItem('reader_theme');
+
+                // 桌面版没有移动端，默认字号固定 24（不再按 innerWidth 判断）
+                // 字号：localStorage 优先，缺省回退服务端 CONFIG（再缺省 24）
+                var fontSize = savedSize !== null ? savedSize
+                             : (window.readerCfgFontSize != null ? String(window.readerCfgFontSize) : '24');
+
+                var styles = [];
+
+                styles.push('.reading-content { font-size: ' + fontSize + 'px !important; }');
+
+                if (styles.length > 0) {
+                    var styleTag = document.createElement('style');
+                    styleTag.textContent = styles.join('\n');
+                    styleTag.setAttribute('data-font-style', 'preload');
+                    document.head.appendChild(styleTag);
+                }
+
+                // 排版变量：行高 / 段距 / 首行缩进，首屏就要定下来免得跳一下
+                var rootCss = '';
+                var lh = savedLh !== null ? savedLh
+                       : (window.readerCfgLineHeight != null ? String(window.readerCfgLineHeight) : null);
+                if (lh) { rootCss += '--reader-line-height: ' + lh + ';'; }
+                if (savedPs !== null && savedPs !== '') { rootCss += '--reader-paragraph-spacing: ' + savedPs + 'rem;'; }
+                // 首行缩进：localStorage 优先，缺省回退服务端 CONFIG 默认（默认缩进）
+                if (savedIndent !== null) {
+                    if (savedIndent === '0') { rootCss += '--reader-text-indent: 0;'; }
+                } else if (window.readerCfgIndent === false) {
+                    rootCss += '--reader-text-indent: 0;';
+                }
+                if (rootCss) {
+                    var layoutTag = document.createElement('style');
+                    layoutTag.textContent = ':root {' + rootCss + '}';
+                    document.head.appendChild(layoutTag);
+                }
+
+                // 背景主题：先标在根元素上，body 出来后再转移过去
+                if (savedTheme && savedTheme !== 'default') {
+                    document.documentElement.setAttribute('data-reader-theme', savedTheme);
+                }
+
+                if (savedSize === null) { localStorage.setItem('reader_font_size', fontSize); }
+            } catch (e) { }
+        })();
+    </script>
+</head>
+
+<body>
+
+    <!-- 自定义高亮标点符号字体 + 加粗/斜体（对齐 Docker 版：每个作用域可单独配字体/加粗/斜体） -->
+    <script>
+        window.hlCfg = {
+            body: {{ user_prefs.body_font_family|tojson }},
+            title: {{ user_prefs.title_font_family|tojson }},
+            double_quote: {{ user_prefs.double_quote_font_family|tojson }},
+            single_quote: {{ user_prefs.single_quote_font_family|tojson }},
+            bracket: {{ user_prefs.bracket_font_family|tojson }},
+            square_bracket: {{ user_prefs.square_bracket_font_family|tojson }},
+            square_bracket_1: {{ user_prefs.square_bracket_1_font_family|tojson }},
+            hollow_bracket: {{ user_prefs.hollow_bracket_font_family|tojson }},
+            book: {{ user_prefs.book_font_family|tojson }}
+        };
+        window.hlCfgBold = {
+            body: {{ user_prefs.body_bold|tojson }},
+            title: {{ user_prefs.title_bold|tojson }},
+            double_quote: {{ user_prefs.double_quote_bold|tojson }},
+            single_quote: {{ user_prefs.single_quote_bold|tojson }},
+            bracket: {{ user_prefs.bracket_bold|tojson }},
+            square_bracket: {{ user_prefs.square_bracket_bold|tojson }},
+            square_bracket_1: {{ user_prefs.square_bracket_1_bold|tojson }},
+            hollow_bracket: {{ user_prefs.hollow_bracket_bold|tojson }},
+            book: {{ user_prefs.book_bold|tojson }}
+        };
+        window.hlCfgItalic = {
+            body: {{ user_prefs.body_italic|tojson }},
+            title: {{ user_prefs.title_italic|tojson }},
+            double_quote: {{ user_prefs.double_quote_italic|tojson }},
+            single_quote: {{ user_prefs.single_quote_italic|tojson }},
+            bracket: {{ user_prefs.bracket_italic|tojson }},
+            square_bracket: {{ user_prefs.square_bracket_italic|tojson }},
+            square_bracket_1: {{ user_prefs.square_bracket_1_italic|tojson }},
+            hollow_bracket: {{ user_prefs.hollow_bracket_italic|tojson }},
+            book: {{ user_prefs.book_italic|tojson }}
+        };
+        window.hlSelMap = {
+            body: '.reading-content, .content-line',
+            title: '.reader-book-title, .chapter-title-level1, .chapter-title-level2, .chapter-title-level3',
+            double_quote: '.highlight-quote-double',
+            single_quote: '.highlight-quote-single',
+            bracket: '.highlight-bracket',
+            square_bracket: '.highlight-square-bracket',
+            square_bracket_1: '.highlight-square-bracket-1',
+            hollow_bracket: '.highlight-hollow-bracket',
+            book: '.highlight-book'
+        };
+        // 读取某作用域有效值：localStorage 显式覆盖优先，否则取 CONFIG 默认
+        function hlEffective(scope) {
+            var lsFont = localStorage.getItem('reader_hl_' + scope + '_font');
+            var font = (lsFont === null) ? (window.hlCfg[scope] || '')
+                                         : (lsFont === '__default__' ? '' : lsFont);
+            var lsBold = localStorage.getItem('reader_hl_' + scope + '_bold');
+            var bold = (lsBold === null) ? (window.hlCfgBold[scope] === true)
+                                         : (lsBold === '1');
+            var lsIt = localStorage.getItem('reader_hl_' + scope + '_italic');
+            var italic = (lsIt === null) ? (window.hlCfgItalic[scope] === true)
+                                         : (lsIt === '1');
+            return { font: font, bold: bold, italic: italic };
+        }
+        // 始终按生效值注入 font-weight / font-style（!important），配置（及阅读抽屉/localStorage）全权驱动，
+        // reader.css 高亮类不再写死字重/字形，避免配置与 CSS 互相打架
+        window.applyHlStyle = function (scope) {
+            var st = hlEffective(scope);
+            var sel = window.hlSelMap[scope];
+            if (!sel) return;
+            var parts = [];
+            if (st.font) parts.push('font-family: ' + st.font + ' !important;');
+            parts.push('font-weight: ' + (st.bold ? 'bold' : 'normal') + ' !important;');
+            parts.push('font-style: ' + (st.italic ? 'italic' : 'normal') + ' !important;');
+            var id = 'hl-font-' + scope;
+            var tag = document.getElementById(id);
+            if (parts.length === 0) {
+                if (tag && tag.parentNode) tag.parentNode.removeChild(tag);
+                return;
+            }
+            if (!tag) { tag = document.createElement('style'); tag.id = id; document.head.appendChild(tag); }
+            tag.textContent = sel + ' { ' + parts.join(' ') + ' }';
+        };
+        // 字体下拉：value 空 = 显式跟随正文（覆盖 CONFIG 默认）
+        window.setScopeFont = function (scope, value) {
+            var lsKey = 'reader_hl_' + scope + '_font';
+            localStorage.setItem(lsKey, value ? value : '__default__');
+            if (window.novelPatchConfig) {
+                var _p1 = {};
+                _p1[scope + '_font_family'] = value ? value : '';
+                window.novelPatchConfig(_p1);
+            }
+            window.applyHlStyle(scope);
+            var selEl = document.getElementById(scope + '_font_family');
+            if (selEl) {
+                var target = value || '';
+                for (var i = 0; i < selEl.options.length; i++) {
+                    if (selEl.options[i].value === target) { selEl.options[i].selected = true; break; }
+                }
+            }
+        };
+        // 加粗/斜体切换按钮
+        window.toggleScopeStyle = function (btn) {
+            var scope = btn.getAttribute('data-scope');
+            var style = btn.getAttribute('data-style');
+            var pressed = btn.getAttribute('aria-pressed') === 'true';
+            var newVal = !pressed;
+            btn.setAttribute('aria-pressed', newVal ? 'true' : 'false');
+            localStorage.setItem('reader_hl_' + scope + '_' + style, newVal ? '1' : '0');
+            if (window.novelPatchConfig) {
+                var _p2 = {};
+                _p2[scope + '_' + style] = newVal;
+                window.novelPatchConfig(_p2);
+            }
+            window.applyHlStyle(scope);
+        };
+        (function () {
+            try {
+                Object.keys(window.hlCfg).forEach(function (scope) { window.applyHlStyle(scope); });
+                document.addEventListener('DOMContentLoaded', function () {
+                    Object.keys(window.hlCfg).forEach(function (scope) {
+                        var st = hlEffective(scope);
+                        var selEl = document.getElementById(scope + '_font_family');
+                        if (selEl) {
+                            var target = st.font || '';
+                            for (var i = 0; i < selEl.options.length; i++) {
+                                if (selEl.options[i].value === target) { selEl.options[i].selected = true; break; }
+                            }
+                        }
+                        ['bold', 'italic'].forEach(function (s) {
+                            var b = document.querySelector('.set-bi[data-scope="' + scope + '"][data-style="' + s + '"]');
+                            if (b) b.setAttribute('aria-pressed', (s === 'bold' ? st.bold : st.italic) ? 'true' : 'false');
+                        });
+                    });
+                });
+            } catch (e) {}
+        })();
+    </script>
+
+    <div class="reader-container" data-reader-theme="default">
+        {# ===== 顶部栏：极简一行 ===== #}
+        <div class="top-bar" id="readerTop">
+            <a href="/?page={{ back_page }}{% if search_text %}&search={{ search_text }}{% endif %}{% if search_author %}&author={{ search_author }}{% endif %}{% if search_tag %}&tag={{ search_tag }}{% endif %}{% if search_site %}&site={{ search_site }}{% endif %}"
+                class="reader-ic" title="返回列表" aria-label="返回列表">🔙</a>
+            {# 顶栏中部显示当前章节名（原为书名）。全文阅读模式下 current_chapter.text 即「全文阅读」，
+               非虚拟章节无匹配时后端已兜底到第一章，这里再兜底一次避免顶栏空白。 #}
+            {% set _chapter_label = '全文阅读' if is_virtual_chapter else (current_chapter.text if current_chapter else '正文') %}
+            <span class="reader-book-title" title="{{ _chapter_label }}">{{ _chapter_label }}</span>
+            <div class="reader-top-actions">
+                <a href="{{ url_for('novel_detail', file_path=file_path, page=back_page, search=search_text, author=search_author, tag=search_tag, site=search_site) }}"
+                    class="reader-ic" title="返回详情页" aria-label="返回详情页">📑</a>
+                <button class="reader-ic speech-btn" id="speechBtn" onclick="speakCurrentPage()"
+                    title="朗读本章" aria-label="朗读本章">🔊</button>
+                <button class="reader-ic reader-ic--aa" onclick="openSetDrawer()" title="阅读设置" aria-label="阅读设置">⚙️</button>
+            </div>
+        </div>
+
+        {# ===== 沉浸模式提示 ===== #}
+        <div class="reader-immersive-hint" id="immersiveHint">点击正文中间可隐藏 / 显示工具栏</div>
+
+        <!-- 📑 目录抽屉 -->
+        <div class="toc-drawer-mask" id="tocDrawerMask" onclick="closeTocDrawer()"></div>
+        <aside class="toc-drawer" id="tocDrawer">
+            <div class="toc-drawer-header">
+                <span class="toc-drawer-title">📑 目录</span>
+                <div class="toc-drawer-actions">
+                    <a href="{{ url_for('novel_detail', file_path=file_path, page=back_page, search=search_text, author=search_author, tag=search_tag, site=search_site) }}"
+                        class="toc-drawer-detail-btn" title="查看详情">📖 详情</a>
+                    <button class="toc-drawer-close" onclick="closeTocDrawer()" aria-label="关闭">✖</button>
+                </div>
+            </div>
+            <div class="toc-drawer-stats">
+                共 {{ all_chapters|length }} 章
+            </div>
+            <div class="toc-drawer-body" id="tocDrawerBody">
+                {% for chapter in all_chapters %}
+                <a href="{{ url_for('read_chapter', file_path=file_path, line_number=chapter.line_number, list_page=back_page, search=search_text, author=search_author, tag=search_tag, site=search_site) }}"
+                    class="toc-item toc-level{{ chapter.level }}"
+                    data-line="{{ chapter.line_number }}"
+                    data-text="{{ chapter.text }}">
+                    {{ chapter.text }}
+                </a>
+                {% endfor %}
+            </div>
+        </aside>
+
+        {# ===== 📖 阅读设置抽屉（原 top-controls 全部收进这里）===== #}
+        <div class="set-drawer-mask" id="setDrawerMask" onclick="closeSetDrawer()"></div>
+        <aside class="set-drawer" id="setDrawer" role="dialog" aria-modal="true" aria-label="阅读设置">
+            <div class="set-head">
+                <span class="set-grip" aria-hidden="true"></span>
+                <div class="set-head-row">
+                    <span class="set-title">阅读设置</span>
+                    <button type="button" class="set-reset" onclick="resetReaderSettings()">恢复默认</button>
+                    <button type="button" class="set-close" onclick="closeSetDrawer()" aria-label="关闭">✕</button>
+                </div>
+            </div>
+
+            <div class="set-body">
+                {# ---- 背景主题 ---- #}
+                <div class="set-row">
+                    <div class="set-lab">背景主题</div>
+                    <div class="set-themes" id="setThemes">
+                        <button type="button" class="set-theme" data-rt="default" title="跟随站点"></button>
+                        <button type="button" class="set-theme" data-rt="paper" title="羊皮纸"></button>
+                        <button type="button" class="set-theme" data-rt="white" title="纯白"></button>
+                        <button type="button" class="set-theme" data-rt="green" title="护眼绿"></button>
+                        <button type="button" class="set-theme" data-rt="sepia" title="暖黄"></button>
+                        <button type="button" class="set-theme" data-rt="gray" title="青灰"></button>
+                        <button type="button" class="set-theme" data-rt="night" title="夜间"></button>
+                    </div>
+                </div>
+
+                {# ---- 字号 ---- #}
+                <div class="set-row">
+                    <div class="set-lab">字号</div>
+                    <div class="set-size">
+                        <button type="button" onclick="stepFontSize(-2)" aria-label="减小字号">A−</button>
+                        <span class="set-val" id="setSizeVal">24</span>
+                        <button type="button" onclick="stepFontSize(2)" aria-label="增大字号">A+</button>
+                    </div>
+                </div>
+
+                {# ---- 自定义高亮标点符号字体（对齐 Docker 版：每种高亮类型可单独配字体）---- #}
+                {% set hl_font_opts %}
+                        <option value="">跟随正文（默认）</option>
+                        <option value="'仓耳今楷01-9128-W04', '仓耳今楷01-9128 W04', sans-serif">仓耳今楷</option>
+                        <option value="'得意黑', sans-serif">得意黑</option>
+                        <option value="'FangSong', serif">仿宋</option>
+                        <option value="'方正粗圆_GBK', sans-serif">方正粗圆</option>
+                        <option value="'方正大标宋_GBK', sans-serif">方正大标宋</option>
+                        <option value="'方正大黑_GBK', sans-serif">方正大黑</option>
+                        <option value="'方正正大黑简体', sans-serif">方正正大黑</option>
+                        <option value="'兰亭黑-简  ', sans-serif">兰亭黑-简</option>
+                        <option value="'方正静蕾简体', sans-serif">方正静蕾简体</option>
+                        <option value="'方正楷体_GBK', serif">方正楷体</option>
+                        <option value="'方正仿宋_GBK', serif">方正仿宋</option>
+                        <option value="'方正兰亭黑_GBK', serif">方正兰亭黑</option>
+                        <option value="'方正兰亭中黑_GBK', serif">方正兰亭中黑</option>
+                        <option value="'方正隶变_GBK', sans-serif">方正隶变</option>
+                        <option value="'方正细等线_GBK', sans-serif">方正细等线</option>
+                        <option value="'方正准圆_GBK', serif">方正准圆</option>
+                        <option value="'方正细黑一_GBK', serif">方正细黑一</option>
+                        <option value="'汉仪润圆-55简', '汉仪润圆-55', sans-serif">汉仪润圆</option>
+                        <option value="'浪漫雅圆', sans-serif">浪漫雅圆</option>
+                        <option value="'HYWenHei-55W', '汉仪文黑-55W', sans-serif">汉仪文黑</option>
+                        <option value="'鸿蒙黑体-HarmonyOS Sans SC', 'HarmonyOS Sans SC', sans-serif">鸿蒙黑体</option>
+                        <option value="'华文仿宋', serif">华文仿宋</option>
+                        <option value="'STKaiti', serif">华文楷体</option>
+                        <option value="'华文隶书', serif">华文隶书</option>
+                        <option value="'华文细黑', serif">华文细黑</option>
+                        <option value="'华文行楷', serif">华文行楷</option>
+                        <option value="'华文中宋', serif">华文中宋</option>
+                        <option value="'京華老宋体v3.0', 'KingHwaOldSong', serif">京華老宋体v3.0</option>
+                        <option value="'斗鱼追光体2.0', 'DOUYUFont', serif">斗鱼追光体2.0</option>
+                        <option value="'KaiTi', '楷体', serif">楷体</option>
+                        <option value="'隶书', serif">隶书</option>
+                        <option value="'思源黑体 CN', sans-serif">思源黑体</option>
+                        <option value="'Songti SC', 'SimSun', serif">宋体</option>
+                        <option value="'未来圆SC Medium', 'WeiLaiYuanSC', sans-serif">未来圆SC</option>
+                        <option value="'Microsoft YaHei', sans-serif">微软雅黑</option>
+                        <option value="'霞鹜铭心宋', serif">霞鹜铭心宋</option>
+                        <option value="'霞鹜文楷等宽 Medium', 'LXGWWenKaiMono-Medium', sans-serif">霞鹜文楷</option>
+                {% endset %}
+                <div class="set-row">
+                    <div class="set-lab">正文字体</div>
+                    <div class="set-font-ctrl">
+                        <select id="body_font_family" class="set-select" onchange="setScopeFont('body', this.value)">{{ hl_font_opts }}</select>
+                        <button type="button" class="set-bi" data-scope="body" data-style="bold" aria-pressed="{{ 'true' if user_prefs.body_bold else 'false' }}" onclick="toggleScopeStyle(this)">B</button>
+                        <button type="button" class="set-bi" data-scope="body" data-style="italic" aria-pressed="{{ 'true' if user_prefs.body_italic else 'false' }}" onclick="toggleScopeStyle(this)">I</button>
+                    </div>
+                </div>
+
+                <div class="set-row">
+                    <div class="set-lab">标题字体</div>
+                    <div class="set-font-ctrl">
+                        <select id="title_font_family" class="set-select" onchange="setScopeFont('title', this.value)">{{ hl_font_opts }}</select>
+                        <button type="button" class="set-bi" data-scope="title" data-style="bold" aria-pressed="{{ 'true' if user_prefs.title_bold else 'false' }}" onclick="toggleScopeStyle(this)">B</button>
+                        <button type="button" class="set-bi" data-scope="title" data-style="italic" aria-pressed="{{ 'true' if user_prefs.title_italic else 'false' }}" onclick="toggleScopeStyle(this)">I</button>
+                    </div>
+                </div>
+                <div class="set-row">
+                    <div class="set-lab">双引号字体</div>
+                    <div class="set-font-ctrl">
+                        <select id="double_quote_font_family" class="set-select" onchange="setScopeFont('double_quote', this.value)">{{ hl_font_opts }}</select>
+                        <button type="button" class="set-bi" data-scope="double_quote" data-style="bold" aria-pressed="{{ 'true' if user_prefs.double_quote_bold else 'false' }}" onclick="toggleScopeStyle(this)">B</button>
+                        <button type="button" class="set-bi" data-scope="double_quote" data-style="italic" aria-pressed="{{ 'true' if user_prefs.double_quote_italic else 'false' }}" onclick="toggleScopeStyle(this)">I</button>
+                    </div>
+                </div>
+                <div class="set-row">
+                    <div class="set-lab">单引号字体</div>
+                    <div class="set-font-ctrl">
+                        <select id="single_quote_font_family" class="set-select" onchange="setScopeFont('single_quote', this.value)">{{ hl_font_opts }}</select>
+                        <button type="button" class="set-bi" data-scope="single_quote" data-style="bold" aria-pressed="{{ 'true' if user_prefs.single_quote_bold else 'false' }}" onclick="toggleScopeStyle(this)">B</button>
+                        <button type="button" class="set-bi" data-scope="single_quote" data-style="italic" aria-pressed="{{ 'true' if user_prefs.single_quote_italic else 'false' }}" onclick="toggleScopeStyle(this)">I</button>
+                    </div>
+                </div>
+                <div class="set-row">
+                    <div class="set-lab">圆括号字体</div>
+                    <div class="set-font-ctrl">
+                        <select id="bracket_font_family" class="set-select" onchange="setScopeFont('bracket', this.value)">{{ hl_font_opts }}</select>
+                        <button type="button" class="set-bi" data-scope="bracket" data-style="bold" aria-pressed="{{ 'true' if user_prefs.bracket_bold else 'false' }}" onclick="toggleScopeStyle(this)">B</button>
+                        <button type="button" class="set-bi" data-scope="bracket" data-style="italic" aria-pressed="{{ 'true' if user_prefs.bracket_italic else 'false' }}" onclick="toggleScopeStyle(this)">I</button>
+                    </div>
+                </div>
+                <div class="set-row">
+                    <div class="set-lab">方头括号字体</div>
+                    <div class="set-font-ctrl">
+                        <select id="square_bracket_font_family" class="set-select" onchange="setScopeFont('square_bracket', this.value)">{{ hl_font_opts }}</select>
+                        <button type="button" class="set-bi" data-scope="square_bracket" data-style="bold" aria-pressed="{{ 'true' if user_prefs.square_bracket_bold else 'false' }}" onclick="toggleScopeStyle(this)">B</button>
+                        <button type="button" class="set-bi" data-scope="square_bracket" data-style="italic" aria-pressed="{{ 'true' if user_prefs.square_bracket_italic else 'false' }}" onclick="toggleScopeStyle(this)">I</button>
+                    </div>
+                </div>
+                <div class="set-row">
+                    <div class="set-lab">方括号字体</div>
+                    <div class="set-font-ctrl">
+                        <select id="square_bracket_1_font_family" class="set-select" onchange="setScopeFont('square_bracket_1', this.value)">{{ hl_font_opts }}</select>
+                        <button type="button" class="set-bi" data-scope="square_bracket_1" data-style="bold" aria-pressed="{{ 'true' if user_prefs.square_bracket_1_bold else 'false' }}" onclick="toggleScopeStyle(this)">B</button>
+                        <button type="button" class="set-bi" data-scope="square_bracket_1" data-style="italic" aria-pressed="{{ 'true' if user_prefs.square_bracket_1_italic else 'false' }}" onclick="toggleScopeStyle(this)">I</button>
+                    </div>
+                </div>
+                <div class="set-row">
+                    <div class="set-lab">空心括号字体</div>
+                    <div class="set-font-ctrl">
+                        <select id="hollow_bracket_font_family" class="set-select" onchange="setScopeFont('hollow_bracket', this.value)">{{ hl_font_opts }}</select>
+                        <button type="button" class="set-bi" data-scope="hollow_bracket" data-style="bold" aria-pressed="{{ 'true' if user_prefs.hollow_bracket_bold else 'false' }}" onclick="toggleScopeStyle(this)">B</button>
+                        <button type="button" class="set-bi" data-scope="hollow_bracket" data-style="italic" aria-pressed="{{ 'true' if user_prefs.hollow_bracket_italic else 'false' }}" onclick="toggleScopeStyle(this)">I</button>
+                    </div>
+                </div>
+                <div class="set-row">
+                    <div class="set-lab">书名号字体</div>
+                    <div class="set-font-ctrl">
+                        <select id="book_font_family" class="set-select" onchange="setScopeFont('book', this.value)">{{ hl_font_opts }}</select>
+                        <button type="button" class="set-bi" data-scope="book" data-style="bold" aria-pressed="{{ 'true' if user_prefs.book_bold else 'false' }}" onclick="toggleScopeStyle(this)">B</button>
+                        <button type="button" class="set-bi" data-scope="book" data-style="italic" aria-pressed="{{ 'true' if user_prefs.book_italic else 'false' }}" onclick="toggleScopeStyle(this)">I</button>
+                    </div>
+                </div>
+
+                {# ---- 行高 ---- #}
+                <div class="set-row">
+                    <div class="set-lab">行高</div>
+                    <div class="set-slider">
+                        <input type="range" id="setLineHeight" min="1.2" max="2.6" step="0.1" value="1.8"
+                            oninput="setLineHeight(this.value)">
+                        <span class="set-val" id="setLineHeightVal">1.8</span>
+                    </div>
+                </div>
+
+                {# ---- 段间距 ---- #}
+                <div class="set-row">
+                    <div class="set-lab">段间距</div>
+                    <div class="set-slider">
+                        <input type="range" id="setParaSpacing" min="0" max="2" step="0.1" value="0.8"
+                            oninput="setParagraphSpacing(this.value)">
+                        <span class="set-val" id="setParaSpacingVal">0.8</span>
+                    </div>
+                </div>
+
+                {# ---- 首行缩进 ---- #}
+                <div class="set-row set-toggle">
+                    <span class="set-lab2">首行缩进</span>
+                    <button type="button" class="set-switch on" id="setIndent" role="switch" aria-label="首行缩进"
+                        aria-checked="true" onclick="toggleIndent(this)"></button>
+                </div>
+                {# ---- 按住拖动翻页（抓手）---- #}
+                <div class="set-row set-toggle">
+                    <span class="set-lab2">按住拖动翻页</span>
+                    <button type="button" class="set-switch on" id="setDragScroll" role="switch" aria-label="按住拖动翻页"
+                        aria-checked="true" onclick="toggleDragScroll(this)"></button>
+                </div>
+                {# ---- 圈选文字（与按住拖动翻页互斥）---- #}
+                <div class="set-row set-toggle">
+                    <span class="set-lab2">圈选文字</span>
+                    <button type="button" class="set-switch" id="setTextSelect" role="switch" aria-label="圈选文字"
+                        aria-checked="false" onclick="toggleTextSelect(this)"></button>
+                </div>
+
+                {# ---- 朗读（开关在顶栏，这里只留语速/音调）---- #}
+                <div class="set-row set-row--speech">
+                    <div class="set-lab">朗读</div>
+                    <div class="speech-controls">
+                        <select id="speechRateSelect" class="set-select set-select--sm" onchange="setSpeechRate(this.value)" aria-label="语速">
+                            <option value="0.5">0.5x 慢速</option>
+                            <option value="0.8">0.8x 较慢</option>
+                            <option value="1.0" selected>1.0x 正常</option>
+                            <option value="1.2">1.2x 较快</option>
+                            <option value="1.5">1.5x 快速</option>
+                            <option value="2.0">2.0x 极速</option>
+                        </select>
+                        <select id="speechPitchSelect" class="set-select set-select--sm" onchange="setSpeechPitch(this.value)" aria-label="音调">
+                            <option value="0.5">0.5 低沉</option>
+                            <option value="0.8">0.8 较低</option>
+                            <option value="1.0" selected>1.0 正常</option>
+                            <option value="1.2">1.2 较高</option>
+                            <option value="1.5">1.5 高亢</option>
+                            <option value="2.0">2.0 尖锐</option>
+                        </select>
+                    </div>
+                </div>
+
+                {# ---- 跳行 ---- #}
+                <div class="set-row" id="setJumpRow">
+                    <div class="set-lab">跳转行号</div>
+                    <div class="line-jump">
+                        <input type="number" id="jumpLine" class="jump-input" placeholder="行号" min="1"
+                            max="{{ total_lines }}" value="{{ start_line }}">
+                        <button type="button" class="jump-btn" onclick="jumpToLine()">跳转</button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="content-wrapper" id="contentWrapper">
+            <div class="reading-content" id="readingContent">
+                {% for line in content_lines %}
+                {% if line.strip() %}
+                <div class="content-line">{{ line|safe }}</div>
+                {% else %}
+                <div class="empty-line"></div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+
+    {# ===== 悬浮跳顶/跳底 ===== #}
+    <div class="reader-jump" id="readerJump" hidden>
+        <button type="button" id="jumpTopBtn" onclick="jumpToTop()" aria-label="回到最顶">▲</button>
+        <button type="button" id="jumpBottomBtn" onclick="jumpToBottom()" aria-label="到最底">▼</button>
+    </div>
+
+    <div class="bottom-bar transparent" id="readerBottom">
+        <div>
+            <!-- 上一页/上一章（同理合并） -->
+            {% if prev_page %}
+            <!-- 有上一页：显示上一页 -->
+            {% set chapter_line = current_chapter.line_number if current_chapter else 1 %}
+            <a href="{{ url_for('read_chapter', file_path=file_path, line_number=chapter_line) }}?page={{ prev_page }}&list_page={{ back_page }}{% if search_text %}&search={{ search_text }}{% endif %}{% if search_author %}&author={{ search_author }}{% endif %}{% if search_tag %}&tag={{ search_tag }}{% endif %}{% if search_site %}&site={{ search_site }}{% endif %}"
+                class="chapter-switch-btn page-nav" title="上一页" aria-label="上一页"><svg class="nav-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 5 8.5 12l7 7"/></svg></a>
+            {% elif prev_chapter %}
+            <!-- 没有上一页，但有上一章：显示上一章 -->
+            <a href="{{ url_for('read_chapter', file_path=file_path, line_number=prev_chapter.line_number) }}?list_page={{ back_page }}{% if search_text %}&search={{ search_text }}{% endif %}{% if search_author %}&author={{ search_author }}{% endif %}{% if search_tag %}&tag={{ search_tag }}{% endif %}{% if search_site %}&site={{ search_site }}{% endif %}"
+                class="chapter-switch-btn chapter-nav" title="上一章" aria-label="上一章"><svg class="nav-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 5 8.5 12l7 7"/></svg></a>
+            {% else %}
+            <!-- 都没有：禁用 -->
+            <span class="chapter-switch-btn chapter-nav disabled" aria-hidden="true"><svg class="nav-arrow" viewBox="0 0 24 24"><path d="M15.5 5 8.5 12l7 7"/></svg></span>
+            {% endif %}
+
+            <!-- 目录 -->
+            <button type="button" class="chapter-switch-btn bottom-cat-btn" onclick="openTocDrawer()"
+                title="目录" aria-label="目录">☰</button>
+
+            <!-- 页码（如果有分页才显示） -->
+            {% if total_pages > 1 %}
+            <span class="page-indicator">{{ page }}/{{ total_pages }}</span>
+            {% endif %}
+
+            <!-- 下一页/下一章（合并） -->
+            {% if next_page %}
+            <!-- 有下一页：显示下一页 -->
+            {% set chapter_line = current_chapter.line_number if current_chapter else 1 %}
+            <a href="{{ url_for('read_chapter', file_path=file_path, line_number=chapter_line) }}?page={{ next_page }}&list_page={{ back_page }}{% if search_text %}&search={{ search_text }}{% endif %}{% if search_author %}&author={{ search_author }}{% endif %}{% if search_tag %}&tag={{ search_tag }}{% endif %}{% if search_site %}&site={{ search_site }}{% endif %}"
+                class="chapter-switch-btn page-nav" title="下一页" aria-label="下一页"><svg class="nav-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m8.5 5 7 7-7 7"/></svg></a>
+            {% elif next_chapter %}
+            <!-- 没有下一页，但有下一章：显示下一章 -->
+            <a href="{{ url_for('read_chapter', file_path=file_path, line_number=next_chapter.line_number) }}?list_page={{ back_page }}{% if search_text %}&search={{ search_text }}{% endif %}{% if search_author %}&author={{ search_author }}{% endif %}{% if search_tag %}&tag={{ search_tag }}{% endif %}{% if search_site %}&site={{ search_site }}{% endif %}"
+                class="chapter-switch-btn chapter-nav" title="下一章" aria-label="下一章"><svg class="nav-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m8.5 5 7 7-7 7"/></svg></a>
+            {% else %}
+            <!-- 都没有：禁用 -->
+            <span class="chapter-switch-btn chapter-nav disabled" aria-hidden="true"><svg class="nav-arrow" viewBox="0 0 24 24"><path d="m8.5 5 7 7-7 7"/></svg></span>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if file_size > 10 * 1024 * 1024 %}
+    <div style="text-align: center; font-size: 0.8rem; color: #999; padding: 5px;">
+        📁 大文件 ({{ (file_size / 1024 / 1024)|round(1) }} MB) - 已完整加载
+    </div>
+    {% endif %}
+
+    <!-- read_chapter.html 底部 -->
+    <script src="{{ url_for('static', filename='js/common.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/reader/reader-core.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/reader/reader-viewer.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/reader/reader-ui.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/reader/reader-toc.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/viewer.min.js') }}"></script>
+    <script>
+        // ===== 传递全局变量 =====
+        const TOTAL_LINES = parseInt(document.getElementById('app-data').dataset.totalLines) || 0;
+
+        // ===== 页面加载初始化 =====
+        document.addEventListener('DOMContentLoaded', async function () {
+            console.log('📖 阅读页初始化开始...');
+
+            // 1. 主题（common.js）
+            if (typeof loadAndApplyTheme === 'function') {
+                loadAndApplyTheme();
+                watchSystemTheme();
+            }
+
+            // 2. 轮播图（common.js）
+            if (typeof initCarousel === 'function') {
+                initCarousel('.header', {
+                    autoSlideshow: true,
+                    intervalTime: 8000
+                });
+            }
+
+            // 3. 初始化配图路径（reader-core.js）
+            if (typeof filePath !== 'undefined' && filePath && typeof initLocalImagesAsync === 'function') {
+                await initLocalImagesAsync(filePath);
+            }
+
+            // 4. 加载表情映射（reader-core.js）
+            if (typeof loadEmojiMapping === 'function') {
+                await loadEmojiMapping();
+            }
+
+            // ===== 5. 先转换内容 =====
+            const readingContent = document.getElementById('readingContent');
+            if (readingContent) {
+                const lines = readingContent.querySelectorAll('.content-line');
+                let convertedCount = 0;
+
+                lines.forEach(line => {
+                    let text = line.innerHTML;
+                    let originalText = text;
+
+                    if (typeof convertLocalImages === 'function') { text = convertLocalImages(text); }
+                    if (typeof convertLocalVideos === 'function') { text = convertLocalVideos(text); }
+                    if (typeof convertLocalAudios === 'function') { text = convertLocalAudios(text); }
+                    if (typeof convertImageLinks === 'function') { text = convertImageLinks(text); }
+                    if (typeof convertTextEmoji === 'function') { text = convertTextEmoji(text); }
+                    if (typeof highlightQuotesAndBrackets === 'function') { text = highlightQuotesAndBrackets(text); }
+                    if (typeof convertEndingMark === 'function') { text = convertEndingMark(text); }
+
+                    if (text !== originalText) {
+                        line.innerHTML = text;
+                        convertedCount++;
+                    }
+                });
+
+                console.log(`✅ 转换完成，${convertedCount} 行有变化`);
+            }
+
+            // ===== 6. 章节标题美化（放在转换之后）=====
+            if (typeof styleChapterTitles === 'function') {
+                styleChapterTitles();
+            }
+
+            // 7. 初始化图片查看器（reader-viewer.js）
+            if (typeof initViewerJS === 'function') {
+                setTimeout(() => initViewerJS('#readingContent'), 300);
+            }
+
+            // 8. 初始化朗读（reader-ui.js）
+            if (typeof initSpeech === 'function') {
+                initSpeech();
+            }
+
+            // 9. 应用字体与排版设置（reader-ui.js）
+            if (typeof applySavedFontSettings === 'function') {
+                applySavedFontSettings();
+            }
+
+            // 10. 初始化键盘快捷键（reader-ui.js）
+            if (typeof initKeyboardShortcuts === 'function') {
+                initKeyboardShortcuts();
+            }
+
+            // 11. 预加载语音列表
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.getVoices();
+                if (window.speechSynthesis.onvoiceschanged) {
+                    window.speechSynthesis.onvoiceschanged = () => {
+                        window.speechSynthesis.getVoices();
+                    };
+                }
+            }
+
+            // 12. 目录抽屉
+            if (typeof initTocDrawer === 'function') {
+                initTocDrawer();
+            }
+
+            // 13. 阅读设置抽屉 + 背景主题（reader-ui.js）
+            if (typeof initSetDrawer === 'function') {
+                initSetDrawer();
+            }
+
+            // 14. 沉浸模式 + 浮动跳转按钮（reader-ui.js）
+            if (typeof initImmersive === 'function') {
+                initImmersive();
+            }
+            // 15. 按住拖动翻页（抓手，reader-ui.js）
+            if (typeof initDragScroll === 'function') {
+                initDragScroll();
+            }
+
+            console.log('✅ 阅读页初始化完成');
+        });
+    </script>
+</body>
+
+</html>

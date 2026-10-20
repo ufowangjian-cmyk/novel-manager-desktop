@@ -1,0 +1,97 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件已变更 - {{ title or '提示' }}</title>
+    <link rel="icon" href="{{ url_for('static', filename='images/novel-icon.png') }}" type="image/png">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/font.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .missing-container {
+            max-width: 640px;
+            margin: 80px auto;
+            padding: 40px 30px;
+            background: #E0E8D0;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .missing-icon { font-size: 64px; margin-bottom: 20px; }
+        .missing-title {
+            font-size: 1.6em; font-weight: 700; color: #2B4A0A;
+            margin-bottom: 15px;
+        }
+        .missing-desc {
+            font-size: 1em; color: #4a5568; line-height: 1.8;
+            margin-bottom: 25px;
+        }
+        .missing-path {
+            display: inline-block;
+            background: rgba(0,0,0,0.06);
+            padding: 6px 14px; border-radius: 8px;
+            font-family: monospace; font-size: 0.85em;
+            color: #4B6D0F; word-break: break-all;
+            margin-bottom: 25px;
+        }
+        .missing-actions {
+            display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+        }
+        .missing-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 12px 26px; border-radius: 40px;
+            text-decoration: none; font-size: 1em; font-weight: 500;
+            border: none; cursor: pointer; transition: all 0.2s;
+        }
+        .missing-btn.primary { background: #728B47; color: #fff; }
+        .missing-btn.primary:hover { background: #4B6D0F; transform: translateY(-2px); }
+        .missing-btn.secondary { background: #BDC8A8; color: #333; }
+        .missing-btn.secondary:hover { background: #A2BC75; transform: translateY(-2px); }
+        .reason-badge {
+            display: inline-block; padding: 4px 12px; border-radius: 20px;
+            font-size: 0.85em; margin-bottom: 15px;
+        }
+        .reason-badge.deleted { background: #fed7d7; color: #742a2a; }
+        .reason-badge.modified { background: #feebc8; color: #7b341e; }
+        .reason-badge.error { background: #e2e8f0; color: #4a5568; }
+
+        body.dark-mode { background: #1a2a1a; }
+        body.dark-mode .missing-container { background: #1e2a1e; }
+        body.dark-mode .missing-title { color: #9ab87a; }
+        body.dark-mode .missing-desc { color: #cbd5e1; }
+        body.dark-mode .missing-path { background: rgba(255,255,255,0.08); color: #9ab87a; }
+    </style>
+</head>
+<body>
+    <div class="missing-container">
+        <div class="missing-icon">📭</div>
+        <div class="missing-title">{{ page_title }}</div>
+        <div class="reason-badge {{ reason_class }}">{{ reason_text }}</div>
+        <div class="missing-desc">{{ page_desc|safe }}</div>
+        <div class="missing-path">📁 {{ file_path }}</div>
+        <div class="missing-actions">
+            <a href="{{ back_url }}" class="missing-btn primary">🏠 返回首页</a>
+            {% if is_admin %}
+            <button class="missing-btn secondary" onclick="rescan()">🔄 立即扫描</button>
+            {% endif %}
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/common.js') }}"></script>
+    <script>
+        function rescan() {
+            fetch('/api/start_scan', {method: 'POST'})
+                .then(r => r.json())
+                .then(d => {
+                    if (d.status === 'started' || d.status === 'already_scanning') {
+                        alert('扫描已启动，完成后请刷新首页查看最新列表');
+                        window.location.href = '/';
+                    } else {
+                        alert('扫描启动失败');
+                    }
+                })
+                .catch(() => alert('请求失败'));
+        }
+    </script>
+</body>
+</html>

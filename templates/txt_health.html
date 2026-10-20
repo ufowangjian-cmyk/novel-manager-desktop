@@ -1,0 +1,1390 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TXT 文件体检 - 摸鱼书架</title>
+    <link rel="icon" href="{{ url_for('static', filename='images/novel-icon.png') }}" type="image/png">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="{{ url_for('static', filename='js/common.js') }}"></script>
+    <style>
+        .health-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* ===== 统一头部样式（参考媒体检测） ===== */
+        .health-header {
+            background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            position: relative;
+            overflow: hidden;
+        }
+        .health-header h1 {
+            font-size: 2em;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .health-header h1 small {
+            font-size: 0.5em;
+            opacity: 0.7;
+            font-weight: normal;
+        }
+        .health-header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .health-header-actions .btn-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 24px;
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 10px;
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .health-header-actions .btn-back:hover {
+            background: rgba(255,255,255,0.35);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .health-stats {
+            display: flex;
+            gap: 20px;
+            background: rgba(255,255,255,0.1);
+            padding: 10px 20px;
+            border-radius: 10px;
+        }
+        .health-stats span {
+            font-size: 0.95em;
+        }
+        .health-stats .num {
+            font-weight: bold;
+            color: #ffd700;
+        }
+        
+        /* 轮播图容器在底层 */
+        .health-header .header-bg-container {
+            z-index: 0 !important;
+            pointer-events: none !important;
+        }
+        .health-header .header-bg-layer {
+            pointer-events: none !important;
+        }
+        /* 头部所有内容在顶层 */
+        .health-header > *:not(.header-bg-container) {
+            position: relative;
+            z-index: 1;
+        }
+        .health-header h1,
+        .health-header .health-header-actions,
+        .health-header .health-stats,
+        .health-header .btn-back {
+            position: relative;
+            z-index: 2;
+        }
+        
+        /* ===== 控制栏 ===== */
+        .control-bar {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+        .control-bar label {
+            font-weight: 500;
+            color: #333;
+        }
+        .control-bar select, .control-bar input {
+            padding: 8px 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.95em;
+        }
+        .control-bar .btn {
+            padding: 8px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #728B47;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #5a7a3a;
+        }
+        .btn-danger {
+            background: #e53e3e;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #c53030;
+        }
+        .btn-warning {
+            background: #ed8936;
+            color: white;
+        }
+        .btn-warning:hover {
+            background: #dd6b20;
+        }
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+        .btn-outline {
+            background: transparent;
+            color: #728B47;
+            border: 1px solid #728B47;
+        }
+        .btn-outline:hover {
+            background: #728B47;
+            color: white;
+        }
+        .btn-open {
+            background: #48bb78;
+            color: white;
+        }
+        .btn-open:hover {
+            background: #38a169;
+        }
+
+        /* 深色模式 */
+        body.dark-mode .btn-open {
+            background: #2a5a3a;
+        }
+        body.dark-mode .btn-open:hover {
+            background: #1a4a2a;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* ===== 进度条（与主页统一样式） ===== */
+        .progress-container {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            margin-top: 20px;
+            padding: 15px;
+            display: none;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            position: absolute;
+            left: 0;
+            top: 0;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 15px;
+            background-color: rgba(0, 150, 255, 0.85);
+            background-image: linear-gradient(135deg,
+                rgba(255, 255, 255, 0.4) 25%,
+                transparent 25%,
+                transparent 50%,
+                rgba(255, 255, 255, 0.4) 50%,
+                rgba(255, 255, 255, 0.4) 75%,
+                transparent 75%,
+                transparent
+            );
+            background-size: 40px 40px;
+            box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.3), 0 1px 1px rgba(0, 0, 0, 0.1);
+            animation: old-safari-stripes 1.2s linear infinite;
+        }
+        .progress-fill::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.1) 50%, transparent 100%);
+            border-radius: 15px 0 0 0;
+            pointer-events: none;
+        }
+        .progress-fill[style*="width: 0%"] {
+            animation-play-state: paused;
+        }
+        .progress-fill:not([style*="width: 100%"]) {
+            border-radius: 15px 0 0 15px;
+        }
+        @keyframes old-safari-stripes {
+            0% { background-position: 0 0; }
+            100% { background-position: 40px 0; }
+        }
+        .progress-text {
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            color: #1a202c;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+        
+        /* ===== 筛选栏 ===== */
+        .filter-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .filter-btn {
+            padding: 6px 15px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.2s;
+        }
+        .filter-btn:hover {
+            border-color: #728B47;
+            color: #728B47;
+        }
+        .filter-btn.active {
+            background: #728B47;
+            color: white;
+            border-color: #728B47;
+        }
+        
+        /* ===== 结果卡片 ===== */
+        .results-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .result-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border-left: 4px solid #48bb78;
+        }
+        .result-card.has-error {
+            border-left-color: #f56565;
+        }
+        .result-card.has-warning {
+            border-left-color: #ed8936;
+        }
+        .result-header {
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .result-header:hover {
+            background: #f7fafc;
+        }
+        .result-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            color: #2d3748;
+        }
+        .result-badges {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .badge {
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.75em;
+            font-weight: 500;
+        }
+        .badge-error {
+            background: #fed7d7;
+            color: #c53030;
+        }
+        .badge-warning {
+            background: #feebc8;
+            color: #c05621;
+        }
+        .badge-info {
+            background: #bee3f8;
+            color: #2b6cb0;
+        }
+        .badge-success {
+            background: #c6f6d5;
+            color: #276749;
+        }
+        .badge-encoding {
+            background: #e9d8fd;
+            color: #6b46c1;
+        }
+        .result-body {
+            padding: 0 20px 20px;
+            display: none;
+        }
+        .result-card.expanded .result-body {
+            display: block;
+        }
+        .result-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .result-actions button {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.2s;
+        }
+        
+        .issue-list {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0;
+        }
+        .issue-item {
+            padding: 8px 12px;
+            margin-bottom: 5px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .issue-item.error {
+            background: #fff5f5;
+            color: #c53030;
+        }
+        .issue-item.warning {
+            background: #fffaf0;
+            color: #c05621;
+        }
+        .issue-item.info {
+            background: #ebf8ff;
+            color: #2b6cb0;
+        }
+        
+        .file-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .info-item {
+            background: #f7fafc;
+            padding: 12px 15px;
+            border-radius: 8px;
+        }
+        .info-label {
+            font-size: 0.8em;
+            color: #718096;
+            margin-bottom: 4px;
+        }
+        .info-value {
+            font-weight: 600;
+            color: #2d3748;
+            word-break: break-all;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #a0aec0;
+        }
+        .empty-state .icon {
+            font-size: 4em;
+            margin-bottom: 15px;
+        }
+        .empty-state h3 {
+            color: #4a5568;
+            margin-bottom: 8px;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* ===== 修复弹窗 ===== */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal {
+            background: white;
+            border-radius: 15px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .modal-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-header h3 {
+            color: #2d3748;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #a0aec0;
+        }
+        .modal-close:hover {
+            color: #333;
+        }
+        .modal-body {
+            padding: 25px;
+        }
+        .modal-footer {
+            padding: 15px 25px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .fix-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .fix-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            background: #f7fafc;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .fix-option input {
+            width: 18px;
+            height: 18px;
+        }
+        .backup-option {
+            background: #f0fff4;
+            border: 1px solid #c6f6d5;
+        }
+
+        body.dark-mode .backup-option {
+            background: #1a3a1a;
+            border-color: #2a5a3a;
+        }
+        /* ===== 深色模式 ===== */
+        body.dark-mode {
+            background: #1a2a1a;
+        }
+        body.dark-mode .control-bar,
+        body.dark-mode .result-card,
+        body.dark-mode .modal {
+            background: #1e2a1e;
+        }
+        body.dark-mode .progress-container {
+            background: rgba(0, 0, 0, 0.35);
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+        body.dark-mode .progress-text {
+            color: #cbd5e1;
+        }
+        body.dark-mode .control-bar label {
+            color: #cbd5e1;
+        }
+        body.dark-mode .control-bar select,
+        body.dark-mode .control-bar input {
+            background: #0f1a0f;
+            border-color: #334d33;
+            color: #cbd5e1;
+        }
+        body.dark-mode .result-title {
+            color: #cbd5e1;
+        }
+        body.dark-mode .result-header:hover {
+            background: #2a3a2a;
+        }
+        body.dark-mode .info-item {
+            background: #0f1a0f;
+        }
+        body.dark-mode .info-value {
+            color: #cbd5e1;
+        }
+        body.dark-mode .info-label {
+            color: #94a3b8;
+        }
+        body.dark-mode .filter-btn {
+            background: #0f1a0f;
+            border-color: #334d33;
+            color: #94a3b8;
+        }
+        body.dark-mode .filter-btn:hover {
+            border-color: #728B47;
+            color: #728B47;
+        }
+        body.dark-mode .filter-btn.active {
+            background: #5a8f4c;
+            color: white;
+        }
+        body.dark-mode .modal-header {
+            border-bottom-color: #334d33;
+        }
+        body.dark-mode .modal-header h3 {
+            color: #cbd5e1;
+        }
+        body.dark-mode .modal-footer {
+            border-top-color: #334d33;
+        }
+        body.dark-mode .fix-option {
+            background: #0f1a0f;
+            color: #cbd5e1;
+        }
+        body.dark-mode .btn-secondary {
+            background: #2a3a2a;
+            color: #cbd5e1;
+        }
+        body.dark-mode .btn-secondary:hover {
+            background: #3a4d3a;
+        }
+        body.dark-mode .progress-text {
+            color: #94a3b8;
+        }
+        body.dark-mode .empty-state h3 {
+            color: #cbd5e1;
+        }
+        body.dark-mode .result-actions {
+            border-top-color: #334d33;
+        }
+        body.dark-mode .health-header-actions .btn-back {
+            background: rgba(0,0,0,0.3);
+            border-color: rgba(255,255,255,0.15);
+        }
+        body.dark-mode .health-header-actions .btn-back:hover {
+            background: rgba(0,0,0,0.5);
+        }
+        body.dark-mode .issue-item code {
+            background: rgba(255,255,255,0.1) !important;
+            color: #cbd5e1;
+        }
+    </style>
+</head>
+<body>
+    <!-- 加载遮罩 -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+    <div class="health-container">
+        <!-- 头部 - 统一风格 -->
+        <div class="health-header">
+            <h1>
+                📝 TXT 文件体检
+                <small>检测编码/乱码/换行符问题</small>
+            </h1>
+            <div class="health-header-actions">
+                <a href="/" class="btn-back">🏠 返回主页</a>
+                <div class="health-stats">
+                    <span>📁 小说总数: <span class="num" id="totalNovels">{{ novel_data|length }}</span></span>
+                    <span>⚠️ 问题: <span class="num" id="problemCount">0</span></span>
+                    <span>✅ 已选中: <span class="num" id="selectedCount">0</span></span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 控制栏 -->
+        <div class="control-bar">
+            <button class="btn btn-primary" id="scanAllBtn" onclick="scanAll()">
+                🔍 扫描全部
+            </button>
+            <button class="btn btn-warning" id="fixAllBtn" onclick="fixAll()" disabled>
+                🔧 一键修复
+            </button>
+            <button class="btn btn-warning" onclick="showBackups()">
+                ♻️ 恢复备份
+            </button>
+            <button class="btn btn-outline" onclick="expandAll()">展开全部</button>
+            <button class="btn btn-outline" onclick="collapseAll()">折叠全部</button>
+            <span style="flex:1;"></span>
+            <button class="btn btn-danger" onclick="confirmClearAll()">🗑️ 清空结果</button>
+        </div>
+        
+        <!-- 筛选栏 -->
+        <div class="filter-bar" id="filterBar" style="display:none;">
+            <button class="filter-btn active" data-filter="all">全部</button>
+            <button class="filter-btn" data-filter="error">❌ 错误</button>
+            <button class="filter-btn" data-filter="warning">⚠️ 警告</button>
+            <button class="filter-btn" data-filter="encoding">🔤 编码问题</button>
+            <button class="filter-btn" data-filter="needfix">🔧 需修复</button>
+            <button class="filter-btn" data-filter="readable">✅ 正常</button>
+        </div>
+        
+        <!-- 进度条 -->
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text">
+                <span id="progressText">准备中...</span>
+                <span id="progressCount"></span>
+            </div>
+        </div>
+        
+        <!-- 结果容器 -->
+        <div class="results-container" id="resultsContainer">
+            <div class="empty-state">
+                <div class="icon">📝</div>
+                <h3>暂无检测结果</h3>
+                <p>点击「扫描全部」开始检测 TXT 文件健康状态</p>
+                <p style="font-size:0.85em;color:#a0aec0;margin-top:8px;">
+                    将检测：编码格式、BOM头、混合换行符、乱码字符、零宽与异常控制字符
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 修复选项弹窗 -->
+    <div class="modal-overlay" id="fixModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>🔧 修复选项</h3>
+                <button class="modal-close" onclick="closeFixModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom:15px;color:#666;">选择要执行的修复操作：</p>
+                <div class="fix-options">
+                    <label class="fix-option">
+                        <input type="checkbox" id="fixEncoding" checked>
+                        <span>转换为 UTF-8 编码（去除 BOM）</span>
+                    </label>
+                    <label class="fix-option">
+                        <input type="checkbox" id="fixLineEndings" checked>
+                        <span>统一换行符为 LF</span>
+                    </label>
+                    <label class="fix-option">
+                        <input type="checkbox" id="fixSuspicious" checked>
+                        <span>清理可疑字符（零宽字符、空字符等）</span>
+                    </label>
+                    <label class="fix-option">
+                        <input type="checkbox" id="fixFullwidth">
+                        <span>全角字母/数字/符号转半角（保留中文标点与段首缩进）</span>
+                    </label>
+                    <label class="fix-option">
+                        <input type="checkbox" id="fixWhitespace">
+                        <span>移除行尾空白（不影响阅读，可选）</span>
+                    </label>
+                </div>
+                
+                <!-- 🔥 新增：备份开关 -->
+                <div style="margin-top:20px;padding-top:15px;border-top:1px solid #e2e8f0;">
+                    <label class="fix-option backup-option">
+                        <input type="checkbox" id="createBackup" checked>
+                        <span>💾 修复前创建备份文件（推荐）</span>
+                    </label>
+                    <p style="margin-top:8px;font-size:0.8em;color:#a0aec0;padding-left:5px;">
+                        备份文件命名为 <code>原文件名.backup_时间戳</code>，可随时恢复
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeFixModal()">取消</button>
+                <button class="btn btn-primary" onclick="confirmFix()">开始修复</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let allResults = [];
+        let selectedFiles = new Set();
+        let currentFilter = 'all';
+        let filesToFix = [];
+        
+        // 扫描全部
+        // 同一时间只允许一个扫描进行（前端守卫，后端另有硬约束）
+        let isScanning = false;
+
+        // 轮询扫描进度直到完成；扫描结果直接渲染到界面
+        async function pollScanResult(taskId) {
+            while (true) {
+                await new Promise(resolve => setTimeout(resolve, 700));
+
+                const progressResp = await fetch(`/api/task/${taskId}/progress`);
+                const progress = await progressResp.json();
+
+                if (!progress.success) {
+                    throw new Error(progress.message || '获取扫描进度失败');
+                }
+
+                document.getElementById('progressFill').style.width = (progress.progress || 0) + '%';
+                document.getElementById('progressText').textContent = progress.message || '正在扫描...';
+                document.getElementById('progressCount').textContent =
+                    `${progress.current || 0} / ${progress.total || 0}`;
+
+                if (progress.status !== 'completed' && progress.status !== 'error') {
+                    continue;
+                }
+
+                const resultResp = await fetch(`/api/task/${taskId}/result`);
+                const data = await resultResp.json();
+
+                if (!data.success) {
+                    throw new Error(data.message || '扫描失败');
+                }
+
+                allResults = data.results || [];
+                document.getElementById('problemCount').textContent = data.problem_count || 0;
+
+                renderResults();
+                document.getElementById('filterBar').style.display = 'flex';
+                document.getElementById('fixAllBtn').disabled = (data.problem_count || 0) === 0;
+
+                document.getElementById('progressFill').style.width = '100%';
+                document.getElementById('progressText').textContent =
+                    `扫描完成！共检测 ${data.total_checked || 0} 个文件，发现 ${data.problem_count || 0} 个问题文件`;
+                document.getElementById('progressCount').textContent =
+                    `${data.total_checked || 0} / ${data.total_checked || 0}`;
+
+                if (typeof showNotification === 'function') {
+                    showNotification(`扫描完成！发现 ${data.problem_count || 0} 个问题文件`, 'success');
+                }
+                return;
+            }
+        }
+
+        async function scanAll() {
+            if (isScanning) {
+                if (typeof showNotification === 'function') {
+                    showNotification('扫描正在进行中，请勿重复点击', 'warning');
+                }
+                return;
+            }
+            isScanning = true;
+
+            const btn = document.getElementById('scanAllBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner"></span>扫描中...';
+
+            const container = document.getElementById('progressContainer');
+            container.style.display = 'block';
+            document.getElementById('progressFill').style.width = '0%';
+            document.getElementById('progressText').textContent = '正在扫描...';
+            document.getElementById('progressCount').textContent = '';
+
+            try {
+                const startResp = await fetch('/api/txt/health_scan_all', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                const startData = await startResp.json();
+
+                // 后端判定为重复请求：已有扫描在跑，直接改为跟踪已有任务
+                if (startData.duplicate) {
+                    if (typeof showNotification === 'function') {
+                        showNotification(startData.message || '扫描已在进行中', 'warning');
+                    }
+                    if (startData.task_id) {
+                        await pollScanResult(startData.task_id);
+                        return;
+                    }
+                    throw new Error(startData.message || '扫描已在进行中');
+                }
+
+                if (!startData.success || !startData.task_id) {
+                    throw new Error(startData.message || '扫描启动失败');
+                }
+
+                const taskId = startData.task_id;
+                await pollScanResult(taskId);
+            } catch (error) {
+                console.error('扫描失败:', error);
+                if (typeof showNotification === 'function') {
+                    showNotification('扫描失败: ' + error.message, 'error');
+                } else {
+                    alert('扫描失败: ' + error.message);
+                }
+            } finally {
+                isScanning = false;
+                btn.disabled = false;
+                btn.innerHTML = '🔍 扫描全部';
+                setTimeout(() => {
+                    document.getElementById('progressContainer').style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // 渲染结果
+        function escapeHtml(str) {
+            return String(str ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function renderResults() {
+            const container = document.getElementById('resultsContainer');
+            
+            let filtered = allResults;
+            
+            if (currentFilter !== 'all') {
+                filtered = allResults.filter(item => {
+                    if (currentFilter === 'error') {
+                        return item.issues.some(i => i.level === 'error') || 
+                               item.suspicious_chars.some(s => s.severity === 'error') ||
+                               !item.is_readable;
+                    }
+                    if (currentFilter === 'warning') {
+                        return item.issues.some(i => i.level === 'warning') ||
+                               item.suspicious_chars.some(s => s.severity === 'warning');
+                    }
+                    if (currentFilter === 'encoding') {
+                        return item.issues.some(i => i.type === 'encoding' || i.type === 'encoding_non_utf8' || i.type === 'bom');
+                    }
+                    if (currentFilter === 'needfix') {
+                        // 只列出真正需要处理的问题（error / warning）
+                        return item.is_readable && (item.issues.length > 0 || item.suspicious_chars.length > 0);
+                    }
+                    if (currentFilter === 'readable') {
+                        return item.is_readable && item.issues.length === 0 && item.suspicious_chars.length === 0;
+                    }
+                    return true;
+                });
+            }
+            
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">✅</div>
+                        <h3>${allResults.length === 0 ? '暂无检测结果' : '没有符合条件的文件'}</h3>
+                        <p>${allResults.length === 0 ? '点击「扫描全部」开始检测' : '尝试切换筛选条件'}</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = filtered.map(item => {
+                const hasError = item.issues.some(i => i.level === 'error') || 
+                                 item.suspicious_chars.some(s => s.severity === 'error') ||
+                                 !item.is_readable;
+                const hasWarning = item.issues.some(i => i.level === 'warning') ||
+                                   item.suspicious_chars.some(s => s.severity === 'warning');
+                
+                let cardClass = 'result-card';
+                if (hasError) cardClass += ' has-error';
+                else if (hasWarning) cardClass += ' has-warning';
+                
+                const isSelected = selectedFiles.has(item.file_path);
+                
+                let badges = '';
+                if (item.encoding) {
+                    badges += `<span class="badge badge-encoding">${item.encoding}</span>`;
+                }
+                if (item.has_bom) {
+                    badges += `<span class="badge badge-warning">BOM</span>`;
+                }
+                if (item.line_endings === 'mixed') {
+                    badges += `<span class="badge badge-warning">混合换行</span>`;
+                }
+                if (item.encoding_info && item.encoding_info.is_utf8 === false) {
+                    badges += `<span class="badge badge-warning">非UTF-8</span>`;
+                }
+                
+                const errorCount = item.issues.filter(i => i.level === 'error').length + 
+                                   item.suspicious_chars.filter(s => s.severity === 'error').length;
+                const warningCount = item.issues.filter(i => i.level === 'warning').length +
+                                     item.suspicious_chars.filter(s => s.severity === 'warning').length;
+                
+                if (errorCount > 0) {
+                    badges += `<span class="badge badge-error">${errorCount} 错误</span>`;
+                }
+                if (warningCount > 0) {
+                    badges += `<span class="badge badge-warning">${warningCount} 警告</span>`;
+                }
+                if (errorCount === 0 && warningCount === 0 && item.is_readable) {
+                    badges += `<span class="badge badge-success">正常</span>`;
+                }
+                if (!item.is_readable) {
+                    badges += `<span class="badge badge-error">无法读取</span>`;
+                }
+                
+                let issuesHtml = '';
+                if (item.issues.length > 0) {
+                    issuesHtml = '<ul class="issue-list">';
+                    item.issues.forEach(issue => {
+                        issuesHtml += `<li class="issue-item ${issue.level}">
+                            ${issue.level === 'error' ? '❌' : issue.level === 'warning' ? '⚠️' : 'ℹ️'}
+                            ${escapeHtml(issue.message)}
+                        </li>`;
+                    });
+                    issuesHtml += '</ul>';
+                }
+                
+                if (item.suspicious_chars.length > 0) {
+                    issuesHtml += '<div style="margin-top:12px;"><strong style="color:#4a5568;font-size:0.9em;">可疑字符检测：</strong></div>';
+                    issuesHtml += '<ul class="issue-list">';
+                    item.suspicious_chars.forEach(sc => {
+                        const severityIcon = sc.severity === 'error' ? '❌' : '⚠️';
+                        issuesHtml += `<li class="issue-item ${sc.severity}" style="flex-direction:column;align-items:flex-start;gap:4px;">
+                            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                                ${severityIcon}
+                                <strong>${escapeHtml(sc.name)}</strong>
+                                <span style="opacity:0.8;">× ${sc.count} 个</span>
+                                ${sc.code ? `<code style="font-size:0.85em;background:rgba(0,0,0,0.06);padding:1px 6px;border-radius:4px;">${escapeHtml(sc.code)}</code>` : ''}
+                            </div>
+                            ${sc.description ? `<div style="font-size:0.85em;opacity:0.85;padding-left:24px;">📖 ${escapeHtml(sc.description)}</div>` : ''}
+                            ${sc.suggestion ? `<div style="font-size:0.85em;opacity:0.85;padding-left:24px;">💡 ${escapeHtml(sc.suggestion)}</div>` : ''}
+                        </li>`;
+                    });
+                    issuesHtml += '</ul>';
+                }
+                
+                if (!issuesHtml && item.is_readable) {
+                    issuesHtml = '<p style="color:#48bb78;">✅ 文件健康，未发现问题</p>';
+                }
+                
+                if (item.error) {
+                    issuesHtml = `<p style="color:#f56565;">❌ ${escapeHtml(item.error)}</p>`;
+                }
+                
+                const escapedPath = item.file_path.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                
+                return `
+                    <div class="${cardClass}" data-file-path="${escapeHtml(item.file_path)}">
+                        <div class="result-header" onclick="toggleCard(this)">
+                            <div class="result-title">
+                                <input type="checkbox" ${isSelected ? 'checked' : ''} 
+                                       onclick="event.stopPropagation(); toggleSelect('${escapedPath}', this)"
+                                       style="width:18px;height:18px;cursor:pointer;">
+                                <span>${escapeHtml(item.title || item.filename)}</span>
+                            </div>
+                            <div class="result-badges">
+                                ${badges}
+                            </div>
+                        </div>
+                        <div class="result-body">
+                            <div class="file-info-grid">
+                                <div class="info-item">
+                                    <div class="info-label">文件名</div>
+                                    <div class="info-value">${escapeHtml(item.filename)}</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-label">文件大小</div>
+                                    <div class="info-value">${formatSize(item.file_size)}</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-label">总行数</div>
+                                    <div class="info-value">${item.total_lines.toLocaleString()}</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-label">编码格式</div>
+                                    <div class="info-value">${item.encoding || '未知'}</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-label">换行符</div>
+                                    <div class="info-value">${item.line_endings || '未知'}</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-label">BOM 头</div>
+                                    <div class="info-value">${item.has_bom ? '有' : '无'}</div>
+                                </div>
+                            </div>
+                            
+                            <h4 style="margin-bottom:10px;color:#4a5568;">检测结果</h4>
+                            ${issuesHtml}
+                            
+                            <div class="result-actions">
+                                <button class="btn btn-primary" onclick="fixSingle('${escapedPath}')">
+                                    🔧 修复此文件
+                                </button>
+                                <button class="btn btn-secondary" onclick="checkSingle('${escapedPath}')">
+                                    🔍 重新检测
+                                </button>
+                                <button class="btn btn-open" onclick="openTxtFile('${escapedPath}')">
+                                    📂 打开文件
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / 1024 / 1024).toFixed(2) + ' MB';
+        }
+        
+        function toggleCard(header) {
+            const card = header.closest('.result-card');
+            card.classList.toggle('expanded');
+        }
+        
+        function expandAll() {
+            document.querySelectorAll('.result-card').forEach(card => {
+                card.classList.add('expanded');
+            });
+        }
+        
+        function collapseAll() {
+            document.querySelectorAll('.result-card').forEach(card => {
+                card.classList.remove('expanded');
+            });
+        }
+        
+        function toggleSelect(filePath, checkbox) {
+            if (checkbox.checked) {
+                selectedFiles.add(filePath);
+            } else {
+                selectedFiles.delete(filePath);
+            }
+            document.getElementById('selectedCount').textContent = selectedFiles.size;
+        }
+        
+        // 筛选
+        document.getElementById('filterBar')?.addEventListener('click', function(e) {
+            const btn = e.target.closest('.filter-btn');
+            if (!btn) return;
+            
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            currentFilter = btn.dataset.filter;
+            renderResults();
+        });
+        
+        async function showBackups() {
+            if (selectedFiles.size !== 1) {
+                alert('请先只选中一个文件');
+                return;
+            }
+
+            const filePath = Array.from(selectedFiles)[0];
+            try {
+                const response = await fetch('/api/txt/backup_list', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file_path: filePath })
+                });
+                const data = await response.json();
+                if (!data.success || !data.backups || data.backups.length === 0) {
+                    alert(data.message || '没有可用备份');
+                    return;
+                }
+
+                const lines = data.backups.map((b, i) => `${i + 1}. ${b.filename} (${b.created})`).join('\n');
+                const input = prompt(`选择要恢复的备份编号：\n${lines}`);
+                if (!input) return;
+
+                const backup = data.backups[parseInt(input, 10) - 1];
+                if (!backup) {
+                    alert('编号无效');
+                    return;
+                }
+                if (!confirm(`确定用备份 ${backup.filename} 恢复？`)) return;
+
+                const restoreResp = await fetch('/api/txt/restore_backup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ backup_path: backup.path })
+                });
+                const restoreData = await restoreResp.json();
+                if (restoreData.success) {
+                    if (typeof showNotification === 'function') {
+                        showNotification('恢复成功', 'success');
+                    } else {
+                        alert('恢复成功');
+                    }
+                } else {
+                    alert('恢复失败: ' + (restoreData.message || '未知错误'));
+                }
+            } catch (e) {
+                alert('恢复失败: ' + e.message);
+            }
+        }
+
+        function fixSingle(filePath) {
+            showFixModal([filePath]);
+        }
+        
+        async function checkSingle(filePath) {
+            try {
+                const response = await fetch('/api/txt/health_check', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file_path: filePath })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    const index = allResults.findIndex(r => r.file_path === filePath);
+                    if (index >= 0) {
+                        allResults[index] = {
+                            ...allResults[index],
+                            ...data.result
+                        };
+                    }
+                    renderResults();
+                    if (typeof showNotification === 'function') {
+                        showNotification('检测完成', 'success');
+                    }
+                }
+            } catch (error) {
+                if (typeof showNotification === 'function') {
+                    showNotification('检测失败: ' + error.message, 'error');
+                }
+            }
+        }
+        
+        // 打开 TXT 文件（用默认编辑器打开）
+        function openTxtFile(filePath) {
+            // 复用 common.js 中的 openFile 函数
+            if (typeof openFile === 'function') {
+                openFile(filePath);
+            } else {
+                // 兜底：直接调用 API
+                const loadingOverlay = document.getElementById('loadingOverlay');
+                if (loadingOverlay) loadingOverlay.style.display = 'flex';
+                
+                let encodedPath = filePath;
+                if (!filePath.includes('%')) {
+                    encodedPath = encodeURIComponent(filePath);
+                }
+                
+                fetch(`/open_file_ajax/${encodedPath}`, {method: 'POST'})
+                    .then(response => response.json())
+                    .then(data => {
+                        if (loadingOverlay) loadingOverlay.style.display = 'none';
+                        if (data.success) {
+                            if (typeof showNotification === 'function') {
+                                showNotification('文件已打开', 'success');
+                            }
+                        } else {
+                            if (typeof showNotification === 'function') {
+                                showNotification(`打开失败：${data.error || '未知错误'}`, 'error');
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        if (loadingOverlay) loadingOverlay.style.display = 'none';
+                        if (typeof showNotification === 'function') {
+                            showNotification(`请求失败：${error.message}`, 'error');
+                        }
+                    });
+            }
+        }
+
+        function fixAll() {
+            if (allResults.length === 0) {
+                if (typeof showNotification === 'function') {
+                    showNotification('请先扫描文件', 'warning');
+                }
+                return;
+            }
+            
+            let filesToFixList;
+            if (selectedFiles.size > 0) {
+                filesToFixList = Array.from(selectedFiles);
+            } else {
+                filesToFixList = allResults
+                    .filter(item => item.issues.length > 0 || item.suspicious_chars.length > 0 || !item.is_readable)
+                    .map(item => item.file_path);
+            }
+            
+            if (filesToFixList.length === 0) {
+                if (typeof showNotification === 'function') {
+                    showNotification('没有需要修复的文件', 'warning');
+                }
+                return;
+            }
+            
+            if (!confirm(`确定要修复 ${filesToFixList.length} 个文件吗？\n\n修复前会自动创建备份。`)) {
+                return;
+            }
+            
+            showFixModal(filesToFixList);
+        }
+        
+        function showFixModal(files) {
+            filesToFix = files;
+            document.getElementById('fixModal').classList.add('active');
+        }
+        
+        function closeFixModal() {
+            document.getElementById('fixModal').classList.remove('active');
+        }
+        
+        async function confirmFix() {
+            const fixes = [];
+            if (document.getElementById('fixEncoding').checked) fixes.push('encoding', 'bom');
+            if (document.getElementById('fixLineEndings').checked) fixes.push('line_endings');
+            if (document.getElementById('fixSuspicious').checked) fixes.push('suspicious_chars');
+            if (document.getElementById('fixFullwidth') && document.getElementById('fixFullwidth').checked) fixes.push('fullwidth');
+            if (document.getElementById('fixWhitespace').checked) fixes.push('trailing_whitespace');
+            
+            if (fixes.length === 0) {
+                alert('请至少选择一项修复操作');
+                return;
+            }
+            
+            // 🔥 新增：读取备份开关
+            const createBackup = document.getElementById('createBackup').checked;
+            
+            // 如果关闭备份，二次确认
+            if (!createBackup) {
+                if (!confirm('⚠️ 你已关闭备份功能！\n\n修复后如果出现问题，将无法自动恢复原文件。\n\n确定要继续吗？')) {
+                    return;
+                }
+            }
+
+            closeFixModal();
+            
+            const btn = document.getElementById('fixAllBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner"></span>修复中...';
+            
+            document.getElementById('progressContainer').style.display = 'block';
+            document.getElementById('progressFill').style.width = '0%';
+            document.getElementById('progressText').textContent = '正在修复...';
+            
+            try {
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    progress += Math.random() * 10;
+                    if (progress > 90) progress = 90;
+                    document.getElementById('progressFill').style.width = progress + '%';
+                }, 300);
+                
+                const response = await fetch('/api/txt/fix_all', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        file_paths: filesToFix,
+                        fixes: fixes,
+                        create_backup: createBackup
+                    })
+                });
+                
+                clearInterval(progressInterval);
+                document.getElementById('progressFill').style.width = '100%';
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('progressText').textContent = 
+                        `修复完成！成功 ${data.success_count} 个，失败 ${data.fail_count} 个`;
+                    
+                    let message = `修复完成！\n\n成功: ${data.success_count} 个\n失败: ${data.fail_count} 个\n\n`;
+                    if (data.fail_count > 0) {
+                        message += '失败的文件：\n';
+                        data.results.filter(r => !r.success).forEach(r => {
+                            message += `- ${r.filename}: ${r.message}\n`;
+                        });
+                    }
+                    alert(message);
+                    
+                    setTimeout(() => scanAll(), 1000);
+                }
+            } catch (error) {
+                console.error('修复失败:', error);
+                alert('修复失败: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '🔧 一键修复';
+                setTimeout(() => {
+                    document.getElementById('progressContainer').style.display = 'none';
+                }, 3000);
+            }
+        }
+        
+        function confirmClearAll() {
+            if (confirm('清空所有检测结果？')) {
+                allResults = [];
+                selectedFiles.clear();
+                document.getElementById('problemCount').textContent = '0';
+                document.getElementById('selectedCount').textContent = '0';
+                document.getElementById('filterBar').style.display = 'none';
+                document.getElementById('fixAllBtn').disabled = true;
+                renderResults();
+            }
+        }
+        
+        // 页面加载初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化轮播图
+            if (typeof initCarousel === 'function') {
+                initCarousel('.health-header', {
+                    autoSlideshow: true,
+                    intervalTime: 8000
+                });
+            }
+            
+            // 自动开始扫描
+            setTimeout(scanAll, 2000);
+        });
+    </script>
+</body>
+</html>

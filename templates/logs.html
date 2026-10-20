@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>运行日志 - 摸鱼书架</title>
+    <link rel="icon" href="{{ url_for('static', filename='images/novel-icon.png') }}" type="image/png">
+    <script src="{{ url_for('static', filename='js/common.js') }}"></script>
+    <style> 
+        /* logs.css - 日志页面样式（仅修改头部） */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* ===== 统一头部样式（田园绿渐变 + 轮播图支持） ===== */
+        .header {
+            background: linear-gradient(135deg, #2d4a2d 0%, #4a7a3a 30%, #5a8f4c 60%, #3a6a3a 100%);
+            color: white;
+            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+            border-radius: 20px;
+            padding: 25px 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header h2 {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            font-family: 'Segoe UI', '微软雅黑', Roboto, sans-serif;
+        }
+
+        .header-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 8px;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .header-info span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* 轮播图支持 */
+        .header .header-bg-container {
+            z-index: 0 !important;
+            pointer-events: none !important;
+        }
+
+        .header .header-bg-layer {
+            pointer-events: none !important;
+        }
+
+        .header>*:not(.header-bg-container) {
+            position: relative;
+            z-index: 2;
+        }
+
+        /* ===== 按钮组（保持原样，只调整位置） ===== */
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 8px 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .btn-refresh {
+            background: #007acc;
+            color: white;
+        }
+
+        .btn-refresh:hover {
+            background: #0098ff;
+            transform: translateY(-1px);
+        }
+
+        .btn-clear {
+            background: #d32f2f;
+            color: white;
+        }
+
+        .btn-clear:hover {
+            background: #f44336;
+            transform: translateY(-1px);
+        }
+
+        .btn-home {
+            background: #4caf50;
+            color: white;
+        }
+
+        .btn-home:hover {
+            background: #66bb6a;
+            transform: translateY(-1px);
+        }
+
+        .btn-download {
+            background: #ff9800;
+            color: white;
+        }
+
+        .btn-download:hover {
+            background: #ffb74d;
+            transform: translateY(-1px);
+        }
+
+        .btn-auto {
+            background: #9c27b0;
+            color: white;
+        }
+
+        .btn-auto.active {
+            background: #4caf50;
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        /* ===== 日志内容区域（保持原样） ===== */
+        .log-container {
+            background: #2d2d2d;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .log-header {
+            background: #252525;
+            padding: 10px 15px;
+            border-bottom: 1px solid #3d3d3d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #888;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .log-stats {
+            display: flex;
+            gap: 20px;
+        }
+
+        .log-stats span {
+            color: #4caf50;
+            font-weight: bold;
+        }
+
+        pre {
+            background: #1e1e1e;
+            padding: 20px;
+            margin: 0;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        /* 滚动条样式 */
+        pre::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        pre::-webkit-scrollbar-track {
+            background: #1e1e1e;
+        }
+
+        pre::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 5px;
+        }
+
+        pre::-webkit-scrollbar-thumb:hover {
+            background: #777;
+        }
+
+        /* 空状态 */
+        .empty-log {
+            text-align: center;
+            padding: 60px 20px;
+            color: #888;
+        }
+
+        .empty-log .icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        /* 错误提示 */
+        .error-message {
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #d32f2f;
+        }
+
+        /* 动画 */
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .auto-refresh-badge {
+            background: #4caf50;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            animation: pulse 2s infinite;
+        }
+
+        /* 关键词高亮 */
+        .log-error {
+            color: #f44336;
+        }
+
+        .log-warning {
+            color: #ff9800;
+        }
+
+        .log-success {
+            color: #4caf50;
+        }
+
+        .log-info {
+            color: #2196f3;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h2>
+                📋 运行日志
+            </h2>
+            <div class="header-info">
+                <span>📁 日志文件: {{ log_file }}</span>
+                <span>📊 文件大小: {{ file_size }}</span>
+                <span>📝 总行数: {{ total_lines }}</span>
+            </div>
+        </div>
+
+        <!-- 按钮组 -->
+        <div class="button-group">
+            <button onclick="location.reload()" class="btn-refresh">🔄 刷新</button>
+            <button onclick="clearLog()" class="btn-clear">🗑️ 清空日志</button>
+            <button onclick="downloadLog()" class="btn-download">📥 下载日志</button>
+            <a href="/"><button class="btn-home">🏠 返回首页</button></a>
+            <button id="autoRefreshBtn" class="btn-auto" onclick="toggleAutoRefresh()">⏸️ 自动刷新</button>
+        </div>
+
+        <!-- 日志内容 -->
+        <div class="log-container">
+            <div class="log-header">
+                <div class="log-stats">
+                    <span>📌 显示最后 {{ display_lines }} 行</span>
+                    {% if auto_refresh %}
+                    <span class="auto-refresh-badge">🔄 自动刷新中 (10秒)</span>
+                    {% endif %}
+                </div>
+                <div>
+                    {% if log_content %}
+                    <span>✅ 日志加载成功</span>
+                    {% else %}
+                    <span>⚠️ 日志为空</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if log_content %}
+            <pre id="logContent">{{ log_content }}</pre>
+            {% elif error_message %}
+            <div class="error-message">
+                <strong>❌ 错误</strong><br>
+                {{ error_message }}
+            </div>
+            {% else %}
+            <div class="empty-log">
+                <div class="icon">📭</div>
+                <div>暂无日志内容</div>
+                <div style="font-size: 12px; margin-top: 10px;">程序运行后会自动生成日志</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        let autoRefresh = false;
+        let refreshInterval = null;
+
+        // 清空日志
+        function clearLog() {
+            if (confirm('确定要清空日志文件吗？此操作不可恢复！')) {
+                fetch('/clear_logs', { method: 'POST' })
+                    .then(r => r.json())
+                    .then(d => {
+                        if (d.success) {
+                            alert('日志已清空');
+                            location.reload();
+                        } else {
+                            alert('清空失败: ' + (d.message || '未知错误'));
+                        }
+                    })
+                    .catch(e => {
+                        alert('请求失败: ' + e.message);
+                    });
+            }
+        }
+
+        // 下载日志
+        function downloadLog() {
+            window.location.href = '/logs/download';
+        }
+
+        // 切换自动刷新
+        function toggleAutoRefresh() {
+            autoRefresh = !autoRefresh;
+            const btn = document.getElementById('autoRefreshBtn');
+
+            if (autoRefresh) {
+                btn.textContent = '⏸️ 暂停刷新';
+                btn.classList.add('active');
+                refreshInterval = setInterval(() => {
+                    location.reload();
+                }, 10000);
+            } else {
+                btn.textContent = '▶️ 自动刷新';
+                btn.classList.remove('active');
+                if (refreshInterval) {
+                    clearInterval(refreshInterval);
+                    refreshInterval = null;
+                }
+            }
+        }
+
+        // 键盘快捷键
+        document.addEventListener('keydown', function (e) {
+            if (e.ctrlKey && e.key === 'r') {
+                e.preventDefault();
+                location.reload();
+            }
+            if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+                e.preventDefault();
+                clearLog();
+            }
+        });
+
+        // 页面加载后初始化轮播图和主题
+        document.addEventListener('DOMContentLoaded', function () {
+            // 1. 主题（使用 common.js）
+            if (typeof loadAndApplyTheme === 'function') {
+                loadAndApplyTheme();
+                watchSystemTheme();
+            }
+
+            // 2. 轮播图
+            if (typeof initCarousel === 'function') {
+                initCarousel('.header', {
+                    autoSlideshow: true,
+                    intervalTime: 8000
+                });
+            }
+        });
+    </script>
+</body>
+
+</html>

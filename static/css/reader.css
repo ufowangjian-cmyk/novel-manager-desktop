@@ -1,0 +1,2323 @@
+/* ============================================
+   📚 小说阅读器样式表
+   ============================================
+   版本: 1.0
+   最后更新: 2026-05-12
+   ============================================ */
+
+/* ===== 1. CSS 变量定义 ===== */
+/* 1.1 全局变量 - 浅色主题（高对比度优化版） */
+:root {
+  /* 基础配色 - 田园绿系 */
+  --color-text-primary: #000000;        /* 主文字：纯黑 */
+  --color-text-secondary: #1f2937;      /* 次级文字：深灰 */
+  --color-text-tertiary: #4b5563;       /* 三级文字：中灰 */
+  --color-text-quaternary: #4a7a3a;     /* 四级文字：深绿 */
+
+  --color-bg-primary: #ffffff;          /* 主背景：纯白 */
+  --color-bg-secondary: #f0f5ea;        /* 次级背景：清新浅绿 */
+  --color-bg-tertiary: #e2ebd5;         /* 三级背景：略深 */
+  --color-bg-quaternary: #c8d4b5;       /* 四级背景 */
+
+  /* 功能高亮色 */
+  --color-highlight-quote: #c2412c;           /* 双引号：砖红 */
+  --color-highlight-quote-single: #e07c1c;    /* 单引号：橙色 */
+  --color-highlight-bracket: #2c7652;         /* 括号：翡翠绿 */
+  --color-highlight-square-bracket: #b02b2b;  /* 方括号：正红 */
+  --color-highlight-hollow-bracket: #8e44ad;  /* 中空方括号：浅紫 */
+  --color-highlight-book: #3b73af;            /* 书名号：深蓝 */
+  --color-highlight-bold-bracket: #cb6e1f;    /* 粗体括号：琥珀橙 */
+
+  /* 标题配色 */
+  --color-title-level1: #1e5a3e;         /* 一级标题：深祖母绿 */
+  --color-title-level2: #2c6e4a;         /* 二级标题：森林绿 */
+  --color-title-level3: #3d7a56;         /* 三级标题 */
+
+  /* 边框与分隔符 */
+  --color-border-primary: #ccd8bc;       /* 主边框 */
+  --color-separator: #d1dac4;            /* 分隔符 */
+
+  /* 交互状态 - 田园绿色风格 */
+  --color-btn-active: #4a7a3a;           /* 按钮激活 - 沉稳田园绿 */
+  --color-btn-hover: #6b9c4a;            /* 按钮悬停 - 明亮草绿 */
+  --color-btn-text-active: #ffffff;      /* 按钮文字 - 白色 */
+  --color-btn-text-hover: #ffffff;       /* 按钮悬停文字 - 白色 */
+
+  /* 朗读功能 - 田园绿色风格 */
+  --color-speech-primary: #5a8a3a;               /* 朗读主色 - 橄榄绿 */
+  --color-speech-speaking: #c2412c;              /* 朗读中 - 陶土红（田园砖红色） */
+  --color-speech-highlight: rgba(90, 138, 58, 0.15);      /* 朗读高亮背景 - 柔和绿 */
+  --color-speech-highlight-gradient: rgba(90, 138, 58, 0.05); /* 朗读渐变 - 淡绿 */
+
+  /* 间距 */
+  --padding-content-desktop: 40px 60px;
+  --padding-bar: 0 25px;
+  --padding-bottom: 20px 25px;
+
+  /* 阅读排版（由阅读设置抽屉注入覆盖，供首屏与滑条共用） */
+  --reader-line-height: 1.8;
+  --reader-paragraph-spacing: 0.8rem;
+  --reader-text-indent: 2em;
+
+  /* 动画 */
+  --transition-base: all 0.2s ease;
+}
+
+/* 1.2 深色主题变量 */
+body.dark-mode {
+  --color-text-primary: #f0f3ec;
+  --color-text-secondary: #e2e8f0;
+  --color-text-tertiary: #9ca3af;
+  --color-text-quaternary: #8cbd6e;
+
+  --color-bg-primary: #131a12;
+  --color-bg-secondary: #1b2418;
+  --color-bg-tertiary: #232f1f;
+  --color-bg-quaternary: #2f3d2a;
+
+  --color-highlight-quote: #ff8a6f;
+  --color-highlight-quote-single: #ffaa5e;
+  --color-highlight-bracket: #5ace9b;
+  --color-highlight-square-bracket: #f56c6c;
+  --color-highlight-hollow-bracket: #c084fc;
+  --color-highlight-book: #7cafef;
+  --color-highlight-bold-bracket: #f5a623;
+
+  --color-title-level1: #8cbd6e;
+  --color-title-level2: #7bad5c;
+  --color-title-level3: #6a9a4a;
+
+  --color-border-primary: #334033;
+  --color-separator: #3a4a35;
+
+  --color-btn-active: #6a9a4a;
+  --color-btn-hover: #5a8a3a;
+
+  --color-speech-primary: #6a9a4a;
+  --color-speech-speaking: #f87171;
+  --color-speech-highlight: rgba(106, 154, 74, 0.2);
+  --color-speech-highlight-gradient: rgba(106, 154, 74, 0.05);
+}
+
+/* ===== 2. 基础重置与字体 ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 
+    'PingFang SC', 'Microsoft YaHei', 'WenQuanYi Micro Hei', 
+    'Noto Sans CJK SC', sans-serif;
+  line-height: 1.5;
+}
+
+/* ===== 3. 布局容器 ===== */
+.reader-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  background: var(--color-bg-primary);
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+  position: relative;
+}
+
+body.dark-mode .reader-container {
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+}
+
+.content-wrapper {
+  padding: var(--padding-content-desktop);
+  background: var(--color-bg-primary);
+  min-height: 500px;
+}
+
+/* ===== 4. 顶部栏 ===== */
+.top-bar {
+  background: var(--color-bg-primary);
+  border-bottom: 1px solid var(--color-border-primary);
+  padding: var(--padding-bar);
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 100;
+}
+
+.book-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.book-title {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.book-author {
+  font-size: 0.9rem;
+  color: var(--color-text-quaternary);
+}
+
+.nav-links {
+  display: flex;
+  gap: 12px;
+}
+
+.nav-link {
+  padding: 6px 16px;
+  border-radius: 30px;
+  text-decoration: none;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-tertiary);
+  transition: var(--transition-base);
+}
+
+.nav-link:hover {
+  background: var(--color-bg-quaternary);
+  color: var(--color-btn-text-hover);
+}
+
+/* 章节头部 */
+.chapter-header {
+  background: var(--color-bg-secondary);
+  padding: 15px 25px;
+  border-bottom: 1px solid var(--color-border-primary);
+  text-align: center;
+}
+
+.chapter-name {
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+/* 顶部控制栏 */
+.top-controls {
+  background: var(--color-bg-primary);
+  padding: 12px 25px;
+  border-bottom: 1px solid var(--color-border-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+/* ===== 5. 控件样式 ===== */
+/* 5.1 字体控制 */
+.font-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.font-btn {
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--color-border-primary);
+  background: var(--color-bg-primary);
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: var(--transition-base);
+}
+
+.font-btn:hover {
+  background: var(--color-bg-tertiary);
+}
+
+.font-btn.active {
+  background: var(--color-btn-active);
+  color: var(--color-btn-text-active);
+  border-color: var(--color-btn-active);
+}
+
+.font-select {
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--color-border-primary);
+  background: var(--color-bg-primary);
+  cursor: pointer;
+  font-size: 0.9rem;
+  min-width: 120px;
+  color: var(--color-text-secondary);
+}
+
+/* 5.2 行跳转控件 */
+.line-jump {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.line-jump span {
+  color: var(--color-text-quaternary);
+  font-size: 0.9rem;
+}
+
+.jump-input {
+  width: 70px;
+  padding: 4px 8px;
+  border: 1px solid var(--color-border-primary);
+  border-radius: 20px;
+  text-align: center;
+  font-size: 0.9rem;
+  outline: none;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+}
+
+.jump-input:focus {
+  border-color: var(--color-btn-active);
+}
+
+.jump-btn {
+  padding: 4px 16px;
+  border-radius: 20px;
+  border: none;
+  background: var(--color-btn-active);
+  color: var(--color-btn-text-active);
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.2s;
+}
+
+.jump-btn:hover {
+  background: var(--color-btn-hover);
+}
+
+/* 5.3 朗读控件 */
+.speech-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.03);
+  padding: 5px 10px;
+  border-radius: 40px;
+}
+
+body.dark-mode .speech-controls {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.speech-btn {
+  background: var(--color-speech-primary);
+  color: white;
+  border: none;
+  padding: 5px 14px;
+  border-radius: 30px;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: var(--transition-base);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.speech-btn:hover {
+  background: var(--color-btn-hover);
+}
+
+.speech-btn.speaking {
+  background: var(--color-speech-speaking);
+  animation: pulse 1s infinite;
+}
+
+/* 下拉菜单 */
+.speech-select-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.speech-select {
+  padding: 5px 24px 5px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--color-border-primary);
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  min-width: 90px;
+  transition: var(--transition-base);
+}
+
+.speech-select:hover {
+  border-color: var(--color-speech-primary);
+}
+
+.speech-select:focus {
+  border-color: var(--color-speech-primary);
+  box-shadow: 0 0 0 2px rgba(114, 139, 71, 0.2);
+}
+
+.speech-select-wrapper::after {
+  content: '▼';
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-quaternary);
+  font-size: 10px;
+  pointer-events: none;
+}
+
+body.dark-mode .speech-select-wrapper::after {
+  color: var(--color-text-tertiary);
+}
+
+/* ============================================
+   按住拖动翻页（抓手）
+   ------------------------------------------------------------
+   仅在正文区域显示 grab；拖拽激活时全局切 grabbing。
+   不能给整个页面加 grab —— 顶栏/底栏按钮上会误导用户以为可拖。
+   注意：不对 #contentWrapper 写 user-select:none —— 那会彻底禁掉
+   选词复制，而阅读页需要能选中文字复制/查词。防选中虚影只在拖拽
+   激活期间靠 body.is-drag-scrolling 处理。
+   ============================================ */
+#contentWrapper {
+  cursor: grab;
+}
+/* 圈选文字模式：正文恢复 I-beam 光标，提示用户可自由选词（与抓手模式互斥） */
+body.text-select-mode #contentWrapper {
+  cursor: text;
+}
+/* 拖拽激活：整页 grabbing + 禁止选中，避免拖动时选出大片蓝字 */
+body.is-drag-scrolling,
+body.is-drag-scrolling #contentWrapper {
+  cursor: grabbing;
+  user-select: none;
+}
+/* 可交互元素上不显示抓手，保持常规指针 */
+#contentWrapper a,
+#contentWrapper button,
+#contentWrapper img,
+#contentWrapper video,
+#contentWrapper audio,
+#contentWrapper input,
+#contentWrapper select,
+#contentWrapper textarea,
+#contentWrapper label,
+#contentWrapper .emoji {
+  cursor: pointer;
+}
+
+/* ===== 6. 正文内容样式 ===== */
+.reading-content,
+/* 段落排版：由阅读设置抽屉注入的变量驱动（.reading-content 上） */
+.content-line {
+  color: var(--color-text-primary);
+}
+
+.content-line {
+  margin-bottom: var(--reader-paragraph-spacing, 0.8rem);
+  word-break: break-word;
+  white-space: pre-wrap;
+  letter-spacing: 0.3px;
+  text-align: justify;
+}
+
+/* 段落首行缩进（可由设置抽屉关闭：--reader-text-indent 置 0） */
+.content-line:not(.chapter-title-level1):not(.chapter-title-level2):not(.chapter-title-level3):not(.separator) {
+  text-indent: var(--reader-text-indent, 2em);
+}
+
+/* 智能换行后的每个句子都首行缩进 */
+.content-sentence {
+    text-indent: var(--reader-text-indent, 2em);
+    margin-bottom: 0.6rem;
+}
+
+/* 图片行不缩进 */
+.content-line:has(.local-image-figure),
+.content-line:has(.image-wrapper) {
+  text-indent: 0;
+}
+
+.empty-line {
+  height: 1rem;
+}
+
+
+.chapter-title-level1 {
+  color: var(--color-title-level1);
+  border-bottom: 2px solid;
+  font-size: 2.5rem;
+  font-weight: 700;
+  text-align: center;
+  margin: 30px 0 20px;
+  padding: 15px 0;
+}
+
+.chapter-title-level2 {
+  color: var(--color-title-level2);
+  font-size: 2rem;
+  font-weight: 600;
+  text-align: center;
+  margin: 20px 0 10px;
+}
+
+.chapter-title-level3 {
+  color: var(--color-title-level3);
+  font-size: 1.5rem;
+  font-weight: 600;
+  text-align: center;
+  margin: 20px 0 10px;
+}
+
+/* 标题序号 */
+.chapter-title-level1 .chapter-number {
+  font-size: 0.65em;
+  opacity: 0.5;
+
+}
+
+.chapter-title-level2 .chapter-number {
+  font-size: 0.7em;
+  opacity: 0.6;
+
+}
+
+.chapter-title-level3 .chapter-number {
+  font-size: 0.75em;
+  opacity: 0.7;
+
+}
+
+/* 6.2 分隔符样式 - 基础 */
+.separator {
+  text-indent: 0;
+  text-align: center;
+  margin: 35px 0;
+  position: relative;
+  border: none;
+  background: transparent;
+  font-size: 1rem;
+}
+
+/* ===== 分隔符变体（按4大类）===== */
+
+/* 省略号分隔符 - 保留原意，居中弱化 */
+.separator[data-type="ellipsis"] {
+  color: var(--color-text-quaternary);
+  font-size: 1.4rem;
+  letter-spacing: 0.3em;
+  opacity: 0.6;
+  text-indent: 0;
+  transition: all 0.3s ease;
+}
+
+.separator[data-type="ellipsis"]:hover {
+  opacity: 1;
+  letter-spacing: 0.5em;
+}
+
+body.dark-mode .separator[data-type="ellipsis"] {
+  color: var(--color-text-tertiary);
+}
+
+/* 点类 - dot */
+.separator[data-type="dot"] {
+  color: var(--color-highlight-quote);
+  font-size: 1.2rem;
+  letter-spacing: 8px;
+  opacity: 0.7;
+  transition: all 0.3s ease;
+}
+
+.separator[data-type="dot"]:hover {
+  opacity: 1;
+  letter-spacing: 12px;
+}
+
+/* 星类 - star */
+.separator[data-type="star"] {
+  color: var(--color-highlight-quote);
+  font-size: 1.3rem;
+  letter-spacing: 6px;
+  opacity: 0.7;
+  transition: all 0.3s ease;
+}
+
+.separator[data-type="star"]:hover {
+  opacity: 1;
+  letter-spacing: 10px;
+}
+
+/* 线类 - line */
+.separator[data-type="line"] {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--color-text-quaternary), 
+              var(--color-highlight-quote), var(--color-text-quaternary), transparent);
+  margin: 40px 0;
+}
+
+.separator[data-type="line"]::before {
+  content: '❖';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--color-bg-primary);
+  padding: 0 15px;
+  color: var(--color-highlight-quote);
+  font-size: 0.9rem;
+}
+
+/* 花类 - flower（其他装饰符号） */
+.separator[data-type="flower"] {
+  color: var(--color-highlight-quote);
+  font-size: 1.1rem;
+  letter-spacing: 8px;
+  opacity: 0.7;
+  transition: all 0.3s ease;
+}
+
+.separator[data-type="flower"]:hover {
+  opacity: 1;
+  letter-spacing: 12px;
+}
+
+/* 深色模式适配 */
+body.dark-mode .separator[data-type="dot"],
+body.dark-mode .separator[data-type="star"],
+body.dark-mode .separator[data-type="flower"] {
+  text-shadow: 0 0 3px var(--color-speech-highlight);
+}
+
+body.dark-mode .separator[data-type="line"]::before {
+  background: var(--color-bg-primary);
+}
+
+/* 6.3 字号控制 */
+.reading-content {
+  font-size: 16px;
+  /* 行高由阅读设置抽屉的滑条驱动；放在 .reading-content 上，
+     下面的 .content-line 继承即可，避免被更具体的选择器覆盖 */
+  line-height: var(--reader-line-height, 1.8);
+}
+
+.reading-content.font-size-20 { font-size: 20px; }
+.reading-content.font-size-24 { font-size: 24px; }
+.reading-content.font-size-28 { font-size: 28px; }
+.reading-content.font-size-32 { font-size: 32px; }
+
+/* 6.4 朗读高亮 */
+.content-line.speech-highlight {
+  background: linear-gradient(120deg, var(--color-speech-highlight) 0%, 
+              var(--color-speech-highlight-gradient) 100%);
+  border-radius: 4px;
+  transition: background 0.1s ease;
+}
+
+/* ===== 7. 高亮样式（引号/括号/书名号）===== */
+.highlight-quote-double {
+  color: var(--color-highlight-quote);
+}
+
+.highlight-quote-single {
+  color: var(--color-highlight-quote-single);
+}
+
+.highlight-bracket {
+  font-size: 0.8em;
+  color: var(--color-highlight-bracket);
+}
+
+/* 括号高亮内的表情恢复原始大小 */
+.highlight-bracket .custom-emoji,
+.highlight-bracket img {
+    font-size: 1.25em !important;
+    width: 1.2em;
+    height: 1.2em;
+    vertical-align: middle;
+}
+/* 所有高亮括号内的表情恢复原始大小 */
+[class*="highlight-bracket"] .custom-emoji,
+[class*="highlight-bracket"] img,
+[class*="highlight-square"] .custom-emoji,
+[class*="highlight-square"] img,
+[class*="highlight-hollow"] .custom-emoji,
+[class*="highlight-hollow"] img {
+  font-size: 1.25em !important;
+  width: 1.2em;
+  height: 1.2em;
+  vertical-align: middle;
+}
+
+.highlight-square-bracket {
+  color: var(--color-highlight-square-bracket);
+}
+
+.highlight-square-bracket-1 {
+  color: var(--color-highlight-hollow-bracket);
+}
+
+.highlight-hollow-bracket {
+  color: var(--color-highlight-hollow-bracket);
+}
+
+.highlight-boldface-square-brackets {
+  font-weight: normal;
+  color: var(--color-highlight-bold-bracket);
+}
+
+.highlight-book {
+  color: var(--color-highlight-book);
+}
+
+/* ===== 8. 底部栏 ===== */
+.bottom-bar {
+  background: var(--color-bg-primary);
+  border-top: 1px solid var(--color-border-primary);
+  padding: var(--padding-bottom);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  position: sticky;
+  bottom: 0;
+  z-index: 100;
+  transition: var(--transition-base);
+}
+
+.bottom-bar > div {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* 按钮基础样式 */
+.chapter-switch-btn {
+  padding: 8px 30px;
+  border-radius: 30px;
+  font-size: 1rem;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  transition: var(--transition-base);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  text-decoration: none !important;
+}
+
+.chapter-switch-btn:hover:not(.disabled) {
+  background: var(--color-btn-active);
+  color: var(--color-btn-text-active);
+  border-color: var(--color-btn-active);
+}
+
+.chapter-switch-btn.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* 按钮尺寸变体 */
+.chapter-nav {
+  font-size: 1.8rem;
+}
+
+.page-nav {
+  font-size: 1.5rem;
+}
+
+.page-indicator {
+  font-size: 0.9rem;
+  padding: 5px 12px;
+}
+
+.progress-info {
+  color: var(--color-text-quaternary);
+  font-size: 0.9rem;
+  margin: 0 15px;
+}
+
+/* 8.1 悬浮透明底栏 */
+.bottom-bar.transparent {
+  background: transparent !important;
+  border-top: none !important;
+  padding: 10px 15px !important;
+}
+
+.bottom-bar.transparent .chapter-switch-btn {
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  line-height: 1;
+  flex-shrink: 0;
+  font-size: 1rem;
+  background: var(--color-speech-highlight);
+  color: var(--color-text-primary);
+  border: none;
+  backdrop-filter: blur(5px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.bottom-bar.transparent .chapter-switch-btn:hover:not(.disabled) {
+  background: var(--color-btn-active);
+  color: var(--color-btn-text-active);
+  transform: scale(1.05);
+}
+
+.bottom-bar.transparent .chapter-nav {
+  width: 56px;
+  height: 56px;
+  font-size: 2rem;
+}
+
+.bottom-bar.transparent .page-nav {
+  font-size: 1.3rem;
+}
+
+/* 翻页箭头：改用内联 SVG 绘制。
+   原因：◀ / ▶（U+25C0 / U+25B6）是几何图形字符，advance width 是整个字符框，
+   而墨迹（三角形）偏向一侧，flex 居中的是「字符框」不是「墨迹」，
+   所以看起来偏离圆心。SVG 靠 viewBox 几何居中，且不受字体差异影响。
+   路径已按 viewBox 24×24 的墨迹中心（12, 12）对齐，无需额外位移补偿。 */
+.nav-arrow {
+  display: block;
+  width: 1.05em;
+  height: 1.05em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.bottom-bar.transparent .page-indicator {
+  background: var(--color-speech-highlight);
+  color: var(--color-text-primary);
+  border-radius: 20px;
+  backdrop-filter: blur(5px);
+}
+
+/* ===== 9. 图片样式 ===== */
+/* 9.1 行内图片 */
+.inline-image {
+  max-width: min(100vw - 40px, 1200px);
+  max-height: 70vh;
+  width: auto;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  cursor: zoom-in;
+  transition: var(--transition-base);
+  object-fit: contain;
+  border: 1px solid var(--color-border-primary);
+}
+
+.inline-image:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px var(--color-speech-highlight-gradient);
+}
+
+/* 图片加载中骨架屏 */
+.inline-image:not(.loaded),
+.local-image:not(.loaded) {
+  min-width: 100px;
+  min-height: 50px;
+  background: linear-gradient(90deg, var(--color-bg-secondary) 25%, 
+              var(--color-border-primary) 50%, var(--color-bg-secondary) 75%);
+  background-size: 200% 100%;
+  animation: loading-shimmer 1.5s infinite;
+}
+
+body.dark-mode .inline-image:not(.loaded),
+body.dark-mode .local-image:not(.loaded) {
+  background: linear-gradient(90deg, var(--color-bg-tertiary) 25%, 
+              var(--color-bg-quaternary) 50%, var(--color-bg-tertiary) 75%);
+}
+
+/* 图片包装器 */
+.image-wrapper {
+  display: flex;
+  justify-content: center;
+  margin: 16px -20px;
+  position: relative;
+}
+
+/* 备选链接 */
+.image-fallback-link {
+  display: inline-block;
+  margin-top: 5px;
+  font-size: 0.9rem;
+  background: var(--color-bg-tertiary);
+  padding: 4px 12px;
+  border-radius: 20px;
+  text-decoration: none;
+  color: var(--color-text-tertiary);
+  border: 1px solid var(--color-border-primary);
+}
+
+.image-fallback-link:hover {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+body.dark-mode .image-fallback-link {
+  background: var(--color-bg-tertiary);
+}
+
+body.dark-mode .image-fallback-link:hover {
+  background: var(--color-bg-quaternary);
+}
+
+/* 9.2 本地配图 */
+.local-image-figure {
+  display: block;
+  width: fit-content;
+  width: -moz-fit-content;
+  width: -webkit-fit-content;
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 100%;
+}
+
+.local-image {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px var(--color-speech-highlight);
+  display: block;
+  cursor: zoom-in;
+  transition: var(--transition-base);
+}
+
+.local-image:hover {
+  box-shadow: 0 6px 16px var(--color-speech-highlight-gradient);
+}
+
+.local-image-caption {
+  margin-top: 8px;
+  font-size: 0.9rem;
+  color: var(--color-text-quaternary);
+  text-align: center;
+  font-style: italic;
+  width: 100%;
+  display: block;
+}
+
+/* 图片缺失提示 */
+.local-image-missing {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--color-highlight-bold-bracket);
+  border: 1px dashed var(--color-highlight-bracket);
+  border-radius: 4px;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  cursor: help;
+}
+
+body.dark-mode .local-image-missing {
+  background: rgba(251, 146, 60, 0.2);
+  border-color: var(--color-highlight-bracket);
+}
+
+.local-image-error {
+  padding: 20px;
+  background: var(--color-speech-highlight);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.local-image-error .error-icon {
+  font-size: 2.5rem;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.local-image-error p {
+  margin: 5px 0;
+  color: var(--color-speech-speaking);
+}
+
+.local-image-error .error-hint {
+  font-size: 0.8rem;
+  color: var(--color-text-tertiary);
+}
+
+.open-image-folder-btn {
+  margin-top: 10px;
+  padding: 6px 12px;
+  background: var(--color-speech-primary);
+  color: var(--color-btn-text-active);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: var(--transition-base);
+}
+
+.open-image-folder-btn:hover {
+  background: var(--color-btn-hover);
+}
+
+/* ===== 完结标记样式（适配长条形SVG - img标签版）===== */
+.ending-wrapper {
+    text-align: center;
+    margin: 50px auto;
+    padding: 20px 0;
+    position: relative;
+    clear: both;
+}
+
+.ending-image {
+    display: inline-block;
+    width: 100%;
+    max-width: 900px;
+    height: auto;
+}
+
+/* ===== 10. 链接与表情 ===== */
+.reading-content a {
+  color: var(--color-highlight-quote);
+  text-decoration: underline;
+  word-break: break-all;
+  font-size: 0.65em;
+  font-family: monospace, 'Courier New', 'Microsoft YaHei', sans-serif;
+}
+
+.reading-content a:hover {
+  color: var(--color-highlight-book);
+  opacity: 0.8;
+}
+
+body.dark-mode .reading-content a {
+  color: var(--color-highlight-quote);
+}
+
+body.dark-mode .reading-content a:hover {
+  color: var(--color-highlight-book);
+}
+
+.custom-emoji {
+  width: 1.2em;
+  height: 1.2em;
+  vertical-align: middle;
+  display: inline-block;
+}
+
+/* ===== 11. 空状态与提示 ===== */
+.no-chapter-tip {
+  text-align: center;
+  padding: 30px;
+  background: var(--color-bg-secondary);
+  border-radius: 12px;
+  margin: 20px 0;
+  color: var(--color-text-quaternary);
+}
+
+.image-error-hint {
+  display: inline-block;
+  background: var(--color-speech-highlight);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+body.dark-mode .image-error-hint {
+  background: var(--color-speech-highlight-gradient);
+}
+
+/* ===== 12. 动画定义 ===== */
+@keyframes starGlow {
+  0%, 100% {
+    opacity: 0.5;
+    text-shadow: none;
+  }
+  50% {
+    opacity: 1;
+    text-shadow: 0 0 3px var(--color-highlight-quote);
+  }
+}
+
+@keyframes heartBeat {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+@keyframes loading-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* ============================================
+   🎬 本地视频样式（共用图片文件夹）- 全平台兼容
+   ============================================ */
+
+/* ----- 1. 视频容器 ----- */
+.local-video-figure {
+    display: block;
+    width: fit-content;
+    width: -moz-fit-content;
+    width: -webkit-fit-content;
+    max-width: 100%;
+    margin: 20px auto;
+    padding: 0;
+    clear: both;
+}
+
+/* ----- 2. 视频播放器 ----- */
+.local-video-figure video {
+    max-width: 100%;
+    max-height: 70vh;
+    width: auto;
+    height: auto;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    background: #000;
+    display: block;
+    transition: box-shadow 0.3s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.local-video-figure video:hover {
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+}
+
+.local-video-figure video:focus {
+    outline: none;
+}
+
+/* ----- 3. 视频说明文字 ----- */
+.local-video-caption {
+    margin-top: 10px;
+    font-size: 0.9rem;
+    color: var(--color-text-quaternary);
+    text-align: center;
+    font-style: italic;
+    width: 100%;
+    display: block;
+    word-break: break-word;
+}
+
+/* ----- 4. 视频缺失提示 ----- */
+.local-video-missing {
+    display: inline-block;
+    padding: 4px 12px;
+    background: rgba(255, 193, 7, 0.15);
+    border: 1px dashed #f59e0b;
+    border-radius: 6px;
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+    cursor: help;
+    margin: 0 2px;
+}
+
+/* ----- 5. 视频行不缩进 ----- */
+.content-line:has(.local-video-figure) {
+    text-indent: 0 !important;
+    margin-bottom: 0.5rem;
+}
+
+/* ============================================
+   🎨 深色模式适配
+   ============================================ */
+
+body.dark-mode .local-video-figure video {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    background: #0a0a0a;
+}
+
+body.dark-mode .local-video-figure video:hover {
+    box-shadow: 0 6px 28px rgba(0, 0, 0, 0.6);
+}
+
+body.dark-mode .local-video-caption {
+    color: var(--color-text-tertiary);
+}
+
+body.dark-mode .local-video-missing {
+    background: rgba(255, 193, 7, 0.1);
+    border-color: #92400e;
+    color: var(--color-text-secondary);
+}
+
+/* ============================================
+   🖥️ 大屏优化 (≥1200px)
+   ============================================ */
+
+@media (min-width: 1200px) {
+    .local-video-figure {
+        margin: 30px auto;
+    }
+
+    .local-video-figure video {
+        max-width: 80%;            /* 大屏不占满，留白更美观 */
+        max-height: 60vh;
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    }
+
+    .local-video-figure video:hover {
+        box-shadow: 0 12px 48px rgba(0, 0, 0, 0.25);
+    }
+
+    .local-video-caption {
+        font-size: 1rem;
+    }
+}
+/* ============================================
+   🎵 本地音频样式（共用图片文件夹）
+   ============================================ */
+
+/* ----- 1. 音频容器 ----- */
+.local-audio-figure {
+    display: block;
+    width: fit-content;
+    width: -moz-fit-content;
+    width: -webkit-fit-content;
+    max-width: 100%;
+    margin: 16px auto;
+    padding: 8px 0;
+    clear: both;
+}
+
+/* ----- 2. 音频播放器 ----- */
+.local-audio-figure audio {
+    width: 100%;
+    max-width: 500px;
+    min-width: 200px;
+    border-radius: 8px;
+    background: var(--color-bg-secondary);
+    padding: 2px 0;
+    display: block;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* ----- 3. 音频说明文字 ----- */
+.local-audio-caption {
+    margin-top: 6px;
+    font-size: 0.85rem;
+    color: var(--color-text-quaternary);
+    text-align: center;
+    font-style: italic;
+    width: 100%;
+    display: block;
+    word-break: break-word;
+}
+
+/* ----- 4. 音频缺失提示 ----- */
+.local-audio-missing {
+    display: inline-block;
+    padding: 4px 12px;
+    background: rgba(59, 130, 246, 0.12);
+    border: 1px dashed #3b82f6;
+    border-radius: 6px;
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+    cursor: help;
+    margin: 0 2px;
+}
+
+/* ----- 5. 音频行不缩进 ----- */
+.content-line:has(.local-audio-figure) {
+    text-indent: 0 !important;
+    margin-bottom: 0.3rem;
+}
+
+/* ============================================
+   🎨 深色模式适配
+   ============================================ */
+
+body.dark-mode .local-audio-figure audio {
+    background: var(--color-bg-tertiary);
+}
+
+body.dark-mode .local-audio-caption {
+    color: var(--color-text-tertiary);
+}
+
+body.dark-mode .local-audio-missing {
+    background: rgba(59, 130, 246, 0.08);
+    border-color: #1d4ed8;
+    color: var(--color-text-secondary);
+}
+
+/* ============================================
+   🖥️ 大屏优化 (≥1200px)
+   ============================================ */
+
+@media (min-width: 1200px) {
+    .local-audio-figure {
+        margin: 24px auto;
+    }
+
+    .local-audio-figure audio {
+        max-width: 600px;
+    }
+
+    .local-audio-caption {
+        font-size: 0.95rem;
+        margin-top: 8px;
+    }
+}
+/* ============================================
+   🖼️ 图片加载失败占位符样式
+   ============================================ */
+
+.image-fallback-placeholder {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 20px;
+    background: var(--color-bg-secondary);
+    border: 2px dashed var(--color-border-primary);
+    border-radius: 12px;
+    min-height: 100px;
+    width: 100%;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.image-fallback-placeholder:hover {
+    background: var(--color-bg-tertiary);
+    border-color: var(--color-text-tertiary);
+}
+
+.fallback-icon {
+    font-size: 2.5rem;
+    opacity: 0.6;
+}
+
+.fallback-text {
+    font-size: 0.95rem;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+}
+
+.fallback-link {
+    margin-top: 4px;
+    padding: 4px 16px;
+    background: var(--color-btn-active);
+    color: var(--color-btn-text-active);
+    border-radius: 20px;
+    text-decoration: none;
+    font-size: 0.85rem;
+    transition: background 0.2s;
+}
+
+.fallback-link:hover {
+    background: var(--color-btn-hover);
+    color: var(--color-btn-text-active);
+    text-decoration: none;
+}
+
+/* 深色模式适配 */
+body.dark-mode .image-fallback-placeholder {
+    background: var(--color-bg-tertiary);
+    border-color: var(--color-border-primary);
+}
+
+body.dark-mode .image-fallback-placeholder:hover {
+    background: var(--color-bg-quaternary);
+}
+
+body.dark-mode .fallback-text {
+    color: var(--color-text-secondary);
+}
+
+/* ============================================
+   🔗 美化链接样式（修复版）
+   ============================================ */
+
+.pretty-link {
+    display: inline;
+    /* 改为 inline，避免块级行为 */
+    padding: 1px 6px 1px 2px;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-primary);
+    border-radius: 12px;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    font-size: 0.85em;
+    transition: all 0.2s ease;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    white-space: nowrap;
+    vertical-align: middle;
+    line-height: 1.4;
+    /* 关键：消除内联元素间的空白 */
+    margin: 0 -2px 0 -1px;
+}
+
+/* 使用伪元素替代 flex 布局 */
+.pretty-link::before {
+    content: "🔗";
+    font-size: 0.8em;
+    opacity: 0.7;
+    margin-right: 2px;
+}
+
+/* 移除外层 span 的干扰 */
+.pretty-link .link-icon {
+    display: none;
+    /* 隐藏 icon span，用伪元素替代 */
+}
+
+.pretty-link .link-text {
+    display: inline;
+}
+
+.pretty-link:hover {
+    background: var(--color-btn-active);
+    color: var(--color-btn-text-active);
+    border-color: var(--color-btn-active);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px var(--shadow-green);
+    text-decoration: none;
+}
+
+/* 限制链接文本宽度 */
+.pretty-link .link-text {
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+    vertical-align: bottom;
+}
+
+/* 深色模式 */
+body.dark-mode .pretty-link {
+    background: var(--color-bg-tertiary);
+    border-color: var(--color-border-primary);
+    color: var(--color-text-secondary);
+}
+
+body.dark-mode .pretty-link:hover {
+    background: var(--color-btn-active);
+    color: var(--color-btn-text-active);
+    border-color: var(--color-btn-active);
+}
+
+/* 当链接单独占一行时 */
+.content-line:has(.pretty-link:only-child) .pretty-link {
+    font-size: 0.9em;
+    padding: 4px 10px 4px 6px;
+}
+
+.content-line:has(.pretty-link:only-child) .pretty-link .link-text {
+    max-width: 500px;
+}
+
+/* ============================================
+   📑 目录抽屉
+   ============================================ */
+.toc-drawer-mask {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 3000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.toc-drawer-mask.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.toc-drawer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 85vw;
+    max-width: 380px;
+    background: var(--color-bg-primary);
+    z-index: 3001;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+.toc-drawer.active {
+    transform: translateX(0);
+}
+
+.toc-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--color-border-primary);
+    flex-shrink: 0;
+}
+
+.toc-drawer-title {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--color-text-primary);
+}
+
+.toc-drawer-close {
+    height: 28px;
+    width: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: transparent;
+    border: none;
+    font-size: 18px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    transition: background 0.15s;
+}
+
+.toc-drawer-close:hover {
+    background: var(--color-bg-tertiary);
+}
+
+.toc-drawer-stats {
+    padding: 8px 16px;
+    font-size: 12px;
+    color: var(--color-text-tertiary);
+    background: var(--color-bg-secondary);
+    border-bottom: 1px solid var(--color-border-primary);
+    flex-shrink: 0;
+}
+
+.toc-drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 0;
+    overscroll-behavior: contain;
+}
+
+.toc-item {
+    display: block;
+    padding: 10px 16px;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    font-size: 14px;
+    line-height: 1.4;
+    border-left: 3px solid transparent;
+    transition: background 0.12s, border-color 0.12s;
+    word-break: break-word;
+    cursor: pointer;
+    text-indent: 0;
+}
+
+.toc-item:hover,
+.toc-item:active {
+    background: var(--color-bg-secondary);
+}
+
+/* 不同层级缩进 */
+.toc-item.toc-level1 {
+    font-weight: 600;
+    color: var(--color-text-primary);
+    padding-left: 16px;
+}
+
+.toc-item.toc-level2 {
+    padding-left: 32px;
+    font-size: 13.5px;
+}
+
+.toc-item.toc-level3 {
+    padding-left: 48px;
+    font-size: 13px;
+    color: var(--color-text-tertiary);
+}
+
+/* 当前章节高亮 */
+.toc-item.current {
+    background: var(--color-btn-active);
+    border-left-color: var(--color-btn-active);
+    color: var(--color-btn-text-active);
+    font-weight: 600;
+}
+.toc-item.current:hover,
+.toc-item.current:active {
+    background: var(--color-btn-hover);
+}
+
+.toc-drawer-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.toc-drawer-detail-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 28px;
+    box-sizing: border-box;
+    padding: 0 10px;
+    border-radius: 14px;
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    font-size: 12px;
+    line-height: 1;
+    white-space: nowrap;
+    transition: var(--transition-base);
+}
+
+.toc-drawer-detail-btn:hover {
+    background: var(--color-btn-active);
+    color: var(--color-btn-text-active);
+}
+
+/* ============================================================
+   ★ 新增：UAA 风格交互改造（桌面版）
+   ------------------------------------------------------------
+   1. 阅读页背景主题（独立于全站 body.dark-mode）
+   2. 极简顶栏 + 沉浸模式隐藏
+   3. 阅读设置抽屉
+   4. 悬浮跳顶/跳底
+   桌面专用，不含移动端媒体查询。
+   ============================================================ */
+
+/* ============================================
+   1. 阅读页背景主题
+   ------------------------------------------------------------
+   挂在 .reader-container[data-reader-theme] 上，只影响阅读页，
+   不改 body.dark-mode，因此不干扰全站明暗切换。
+   "default" = 沿用上面的站点配色（含深色模式）。
+   ============================================ */
+.reader-container[data-reader-theme="paper"] {
+  --color-bg-primary: #F4ECD8;
+  --color-bg-secondary: #EFE6CE;
+  --color-bg-tertiary: #E7DCC0;
+  --color-bg-quaternary: #DCCFB0;
+  --color-text-primary: #3A3226;
+  --color-text-secondary: #4A4133;
+  --color-text-tertiary: #6B6151;
+  --color-text-quaternary: #8A7E68;
+  --color-border-primary: #DFD2B4;
+  --color-separator: #DFD2B4;
+  --color-btn-active: #8A7E68;
+  --color-btn-hover: #A2947A;
+  --color-speech-highlight: rgba(138, 126, 104, 0.14);
+}
+
+.reader-container[data-reader-theme="white"] {
+  --color-bg-primary: #FFFFFF;
+  --color-bg-secondary: #F7F7F7;
+  --color-bg-tertiary: #EFEFEF;
+  --color-bg-quaternary: #E2E2E2;
+  --color-text-primary: #1A1A1A;
+  --color-text-secondary: #2B2B2B;
+  --color-text-tertiary: #555555;
+  --color-text-quaternary: #7A7A7A;
+  --color-border-primary: #E4E4E4;
+  --color-separator: #E4E4E4;
+}
+
+.reader-container[data-reader-theme="green"] {
+  --color-bg-primary: #C7EDCC;
+  --color-bg-secondary: #BCE5C1;
+  --color-bg-tertiary: #B0DCB6;
+  --color-bg-quaternary: #A3D2AA;
+  --color-text-primary: #23331F;
+  --color-text-secondary: #2D3A2D;
+  --color-text-tertiary: #4C5C49;
+  --color-text-quaternary: #6B7A66;
+  --color-border-primary: #A9D8B0;
+  --color-separator: #A9D8B0;
+  --color-btn-active: #5C8A5F;
+  --color-btn-hover: #6E9C71;
+  --color-speech-highlight: rgba(92, 138, 95, 0.16);
+}
+
+.reader-container[data-reader-theme="sepia"] {
+  --color-bg-primary: #E8D9B5;
+  --color-bg-secondary: #E0CFA6;
+  --color-bg-tertiary: #D8C598;
+  --color-bg-quaternary: #CDB989;
+  --color-text-primary: #3B2F1C;
+  --color-text-secondary: #4A3C26;
+  --color-text-tertiary: #6B5A3C;
+  --color-text-quaternary: #8A7854;
+  --color-border-primary: #D3C094;
+  --color-separator: #D3C094;
+  --color-btn-active: #8A7854;
+  --color-btn-hover: #A08C64;
+  --color-speech-highlight: rgba(138, 120, 84, 0.16);
+}
+
+.reader-container[data-reader-theme="gray"] {
+  --color-bg-primary: #DDE3E6;
+  --color-bg-secondary: #D2DADE;
+  --color-bg-tertiary: #C8D1D6;
+  --color-bg-quaternary: #BCC7CD;
+  --color-text-primary: #222C31;
+  --color-text-secondary: #2E3A40;
+  --color-text-tertiary: #53626A;
+  --color-text-quaternary: #75848C;
+  --color-border-primary: #C2CCD1;
+  --color-separator: #C2CCD1;
+  --color-btn-active: #5A6D77;
+  --color-btn-hover: #6E828D;
+  --color-speech-highlight: rgba(90, 109, 119, 0.16);
+}
+
+.reader-container[data-reader-theme="night"] {
+  --color-bg-primary: #121212;
+  --color-bg-secondary: #1C1C1C;
+  --color-bg-tertiary: #242424;
+  --color-bg-quaternary: #2E2E2E;
+  --color-text-primary: #B8B8B8;
+  --color-text-secondary: #A8A8A8;
+  --color-text-tertiary: #8A8A8A;
+  --color-text-quaternary: #6E6E6E;
+  --color-border-primary: #2E2E2E;
+  --color-separator: #2E2E2E;
+  --color-btn-active: #4A4A4A;
+  --color-btn-hover: #5A5A5A;
+  --color-btn-text-active: #E8E8E8;
+  --color-speech-highlight: rgba(255, 255, 255, 0.10);
+  --color-highlight-quote: #E8917A;
+  --color-highlight-quote-single: #E0A863;
+  --color-highlight-bracket: #6FC79A;
+  --color-highlight-square-bracket: #D46A6A;
+  --color-highlight-book: #7FA8D8;
+  --color-title-level1: #9CC48A;
+  --color-title-level2: #8FB47E;
+  --color-title-level3: #82A472;
+}
+
+/* 主题生效范围：正文容器跟着换底色 */
+.reader-container[data-reader-theme] {
+  background: var(--color-bg-primary);
+  transition: background 0.2s ease;
+}
+
+/* ============================================
+   2. 极简顶栏 + 沉浸模式
+   ------------------------------------------------------------
+   必须用 position: fixed，不能用 sticky：
+   sticky 的吸附范围被父容器 .reader-container 限制，滑到页末时
+   父容器顶部已滚出视口，顶栏会被一起带走 ->
+   沉浸模式点中间时「底栏弹得出来、顶栏弹不出来」。
+   fixed 相对视口定位，不受父容器影响。
+   ============================================ */
+.top-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--color-bg-primary);
+  border-bottom: 1px solid var(--color-border-primary);
+  padding: 0 14px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 1000;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+/* fixed 脱离文档流，正文顶部留出顶栏高度，避免第一行被盖住 */
+.reader-container {
+  padding-top: 60px;
+}
+
+/* 沉浸模式：顶部栏上移隐藏 */
+.top-bar.is-hidden {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 沉浸模式：底部栏（翻页/目录）下移隐藏，与顶部对称。
+   用 fixed 脱离文档流，避免 sticky 占位在隐藏时留下底部空白 */
+.bottom-bar.is-hidden {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  transform: translateY(100%);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+/* 顶栏图标按钮 */
+.reader-ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 17px;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.reader-ic:hover {
+  background: var(--color-bg-tertiary);
+}
+
+.reader-ic--aa {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* 书名：占满中间剩余空间并居中，超长省略。
+   顶栏布局：[🔙 返回列表] 书名 [📖详情][🔊朗读][Aa] */
+.reader-book-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.reader-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+/* 顶栏朗读按钮：跟随其它图标外观，只有朗读中才上色 */
+.speech-btn.speaking {
+  background: var(--color-speech-speaking);
+  color: #fff;
+  animation: pulse 1s infinite;
+}
+
+.reader-ic.speech-btn {
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+.reader-ic.speech-btn:hover {
+  background: var(--color-bg-tertiary);
+}
+
+.reader-ic.speech-btn.speaking {
+  background: var(--color-speech-speaking);
+  color: #fff;
+}
+
+/* 沉浸模式提示 */
+.reader-immersive-hint {
+  position: fixed;
+  left: 50%;
+  top: 64px;
+  transform: translateX(-50%) translateY(-6px);
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font-size: 0.8rem;
+  padding: 7px 14px;
+  border-radius: 18px;
+  z-index: 2500;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  white-space: nowrap;
+}
+
+.reader-immersive-hint.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ============================================
+   3. 阅读设置抽屉
+   ============================================ */
+.set-drawer-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 3000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.set-drawer-mask.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* 阅读设置抽屉
+   ------------------------------------------------------------
+   居中限宽：min(560px, 92vw) 一行同时兼顾两端 ——
+   桌面取 560px 居中（设置项纵向排列，太宽会把滑条拉得过长、
+   拖动精度下降）；窄屏宽度不足 560px 时取 92vw，近乎占满。
+   因此不需要额外的媒体查询。 */
+.set-drawer {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%) translateY(100%);
+  width: min(560px, 92vw);
+  max-height: 82vh;
+  z-index: 3010;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-primary);
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 -6px 30px rgba(0, 0, 0, 0.18);
+  transition: transform 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.set-drawer.active {
+  transform: translateX(-50%) translateY(0);
+}
+
+.set-head {
+  flex-shrink: 0;
+  padding: 8px 18px 4px;
+  border-bottom: 1px solid var(--color-border-primary);
+}
+
+.set-grip {
+  display: block;
+  width: 40px;
+  height: 4px;
+  margin: 0 auto 8px;
+  border-radius: 2px;
+  background: var(--color-border-primary);
+}
+
+.set-head-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 8px;
+}
+
+.set-title {
+  flex: 1;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.set-reset {
+  border: none;
+  background: transparent;
+  color: var(--color-text-quaternary);
+  font-size: 0.82rem;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.set-reset:hover {
+  background: var(--color-bg-tertiary);
+}
+
+.set-close {
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 1.1rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.set-close:hover {
+  background: var(--color-bg-tertiary);
+}
+
+.set-body {
+  overflow-y: auto;
+  padding: 6px 18px 20px;
+}
+
+.set-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border-primary);
+}
+
+.set-row:last-child {
+  border-bottom: none;
+}
+
+.set-row--speech {
+  flex-wrap: wrap;
+}
+
+.set-lab {
+  flex-shrink: 0;
+  width: 92px;
+  white-space: nowrap;
+  font-size: 0.86rem;
+  color: var(--color-text-quaternary);
+}
+
+.set-lab2 {
+  flex: 1;
+  font-size: 0.92rem;
+  color: var(--color-text-secondary);
+}
+
+/* 背景主题色块 */
+.set-themes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex: 1;
+}
+
+.set-theme {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border-primary);
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.set-theme:hover {
+  transform: scale(1.08);
+}
+
+.set-theme.on {
+  box-shadow: 0 0 0 2px var(--color-btn-active);
+  border-color: var(--color-btn-active);
+}
+
+.set-theme[data-rt="default"] { background: linear-gradient(135deg, #ffffff 50%, #131a12 50%); }
+.set-theme[data-rt="paper"]   { background: #F4ECD8; }
+.set-theme[data-rt="white"]   { background: #ffffff; }
+.set-theme[data-rt="green"]   { background: #C7EDCC; }
+.set-theme[data-rt="sepia"]   { background: #E8D9B5; }
+.set-theme[data-rt="gray"]    { background: #DDE3E6; }
+.set-theme[data-rt="night"]   { background: #121212; }
+
+/* 字号 A- / A+ */
+.set-size {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.set-size button {
+  flex: 1;
+  height: 36px;
+  border: 1px solid var(--color-border-primary);
+  border-radius: 8px;
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.set-size button:hover {
+  background: var(--color-btn-active);
+  color: var(--color-btn-text-active);
+}
+
+.set-val {
+  min-width: 48px;
+  text-align: center;
+  font-size: 0.86rem;
+  color: var(--color-text-quaternary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 滑条 */
+.set-slider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.set-slider input[type="range"] {
+  flex: 1;
+  min-width: 0;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--color-border-primary);
+  border-radius: 2px;
+  outline: none;
+}
+
+.set-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-btn-active);
+  cursor: pointer;
+  border: 2px solid var(--color-bg-primary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* 下拉框 */
+.set-select {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 10px;
+  font-size: 0.86rem;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.set-select--sm {
+  flex: 0 1 auto;
+  width: auto;
+  min-width: 96px;
+}
+
+/* 字体 + 加粗/斜体 行内控件（对齐 Docker 版高亮标点设置） */
+.set-font-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.set-font-ctrl .set-select {
+  flex: 1;
+  min-width: 0;
+}
+
+.set-bi {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border-primary);
+  border-radius: 8px;
+  background: var(--color-bg-secondary);
+  color: var(--color-text-quaternary);
+  cursor: pointer;
+  font-size: 1rem;
+  font-family: Georgia, 'Times New Roman', serif;
+  line-height: 1;
+  padding: 0;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.set-bi[data-style="bold"] {
+  font-weight: bold;
+}
+
+.set-bi[data-style="italic"] {
+  font-style: italic;
+}
+
+.set-bi[aria-pressed="true"] {
+  background: var(--color-btn-active);
+  color: var(--color-btn-text-active);
+  border-color: var(--color-btn-active);
+}
+
+.set-bi:hover {
+  border-color: var(--color-btn-active);
+}
+
+/* 开关 */
+.set-switch {
+  flex-shrink: 0;
+  width: 48px;
+  height: 28px;
+  border-radius: 14px;
+  border: none;
+  background: var(--color-border-primary);
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s;
+  padding: 0;
+}
+
+.set-switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s;
+}
+
+.set-switch.on {
+  background: var(--color-btn-active);
+}
+
+.set-switch.on::after {
+  transform: translateX(20px);
+}
+
+/* 抽屉内朗读 / 跳行 */
+.set-drawer .speech-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.set-drawer .line-jump {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.set-drawer .jump-input {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 10px;
+  font-size: 0.86rem;
+  border: 1px solid var(--color-border-primary);
+  border-radius: 8px;
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  box-sizing: border-box;
+}
+
+.set-drawer .jump-btn {
+  height: 36px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 8px;
+  background: var(--color-btn-active);
+  color: var(--color-btn-text-active);
+  font-size: 0.86rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* 旧控制栏已收进抽屉，隐藏 */
+.top-controls {
+  display: none;
+}
+
+/* ============================================
+   4. 底栏 / 悬浮跳转
+   ============================================ */
+.bottom-cat-btn {
+  background: var(--color-speech-highlight) !important;
+  color: var(--color-text-primary) !important;
+}
+
+.reader-jump {
+  position: fixed;
+  right: 16px;
+  bottom: 90px;
+  z-index: 2500;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reader-jump[hidden] {
+  display: none;
+}
+
+.reader-jump button {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid var(--color-border-primary);
+  border-radius: 50%;
+  background: var(--color-bg-primary);
+  color: var(--color-text-quaternary);
+  font-size: 17px;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  opacity: 0.92;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.reader-jump button:hover {
+  opacity: 1;
+  transform: scale(1.06);
+}

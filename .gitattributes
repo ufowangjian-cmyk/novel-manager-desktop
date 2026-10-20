@@ -1,0 +1,22 @@
+# 统一换行符为 LF，避免跨平台协作时 shell 脚本被转成 CRLF
+* text=auto eol=lf
+
+*.py    text eol=lf
+*.md    text eol=lf
+*.json  text eol=lf
+*.html  text eol=lf
+*.css   text eol=lf
+*.js    text eol=lf
+*.sh    text eol=lf
+
+# Windows 专用脚本必须保留 CRLF，否则 cscript/wscript 解析出错
+*.bat   text eol=crlf
+*.vbs   text eol=crlf
+
+# 二进制文件不做换行转换
+*.ico   binary
+*.png   binary
+*.jpg   binary
+*.gif   binary
+*.webp  binary
+*.woff2 binary
