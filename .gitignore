@@ -42,3 +42,9 @@ _local_backup/
 # 中文名启动脚本不入库（跨系统文件名编码易出问题），
 # 仓库内提供等价的 start_emoji_editor.bat
 启动表情映射编辑器.bat
+
+# ========== 本地凭据 ==========
+# 临时 token 文件，绝不提交
+.pat
+*.pat
+*.token
