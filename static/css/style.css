@@ -718,6 +718,72 @@ td:nth-child(2) {
     color: #999;
 }
 
+/* 空状态引导：主页没有小说 / 筛选无结果 */
+.empty-table .empty-state {
+    padding: 26px 20px;
+}
+.empty-state-icon {
+    font-size: 42px;
+    line-height: 1;
+    margin-bottom: 14px;
+}
+.empty-state-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--tool-green-dark);
+    margin-bottom: 10px;
+}
+.empty-state-tip {
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--tool-text-gray);
+    max-width: 460px;
+    margin: 0 auto 20px;
+}
+.empty-state-tip b {
+    color: var(--tool-green-link);
+    font-weight: 600;
+}
+.empty-state-btn {
+    display: inline-block;
+    padding: 9px 24px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    color: #fff;
+    background: var(--tool-green-dark);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.25s, transform 0.25s;
+}
+.empty-state-btn:hover {
+    background: var(--tool-green-link);
+    transform: translateY(-1px);
+}
+.empty-state-btn:disabled {
+    opacity: 0.65;
+    cursor: default;
+    transform: none;
+    background: var(--tool-green-dark);
+}
+body.dark-mode .empty-state-title,
+body.dark-mode .empty-state-tip b {
+    color: var(--tool-green-light);
+}
+body.dark-mode .empty-state-tip {
+    color: #b0b0b0;
+}
+body.dark-mode .empty-state-btn {
+    background: var(--tool-green-link);
+    color: #eef2e6;
+}
+body.dark-mode .empty-state-btn:hover {
+    background: var(--tool-green-light);
+    color: #24301a;
+}
+
 /* ============================================
    6. 徽章样式
    ============================================ */
