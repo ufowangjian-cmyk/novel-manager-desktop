@@ -1722,13 +1722,50 @@ def extract_intro_clean(lines):
     return intro if intro else '无简介'
 
 
+# 与 extract_intro_clean / _META_PREFIXES 同义的图片行判定（本地图片、外链、
+# [img:…] 标记）。「简介里只有图、没有文字」的书，提取结果里的文字只剩这些
+# 标记 —— is_valid_intro 检查前必须先剔除，否则整段简介被判无效、丢成「无简介」。
+_INTRO_IMAGE_LINE_RE = re.compile(
+    r'^(?:'
+    r'\[\s*img\s*[:：]?[^\]]*\]'                     # [img:01 caption=封面]
+    r'|(?:封面图|封面|配图|插图|图片)?\s*[：:]?\s*https?://\S+'   # 封面：https://…
+    r'|(?:[A-Za-z]:[\\/]|[./\\])?[^\s:*?"<>|]+\.(?:jpe?g|png|gif|webp|bmp|svg)'  # 本地路径
+    r')$',
+    re.IGNORECASE,
+)
+
+
+def intro_text_part(intro):
+    """去掉简介里的图片行，只留文字部分（用于有效性校验）
+
+    正文/阅读页会把图片行原样渲染成 <img>，所以图片行必须留在简介里；
+    但它们不是文字，不能参与「过短 / 无标点」这类文字质量校验。
+    """
+    if not intro or intro == '无简介':
+        return ''
+    kept = [
+        ln for ln in re.split(r'\r?\n', intro)
+        if ln.strip() and not _INTRO_IMAGE_LINE_RE.match(_clean_line(ln))
+    ]
+    return '\n'.join(kept).strip()
+
+
 def is_valid_intro(intro):
-    """简介有效性校验：排除元数据误截、过短、无标点的内容"""
+    """简介有效性校验：排除元数据误截、过短、无标点的内容
+
+    ⚠️ 只看文字部分（intro_text_part）：以 [img:…] 开头的图文小说，正文全是
+    「一句简述 + 多张配图」，旧逻辑拿标记行当文字算「无标点」，
+    于是简介被判无效、详情页只剩预览，图片标记一并丢失。
+    """
     if not intro or intro == '无简介':
         return False
     if any(kw in intro for kw in ['书名：', '作者：', '标签：', '链接：']):
         return False
-    return len(intro) > 10 and bool(re.search(r'[，。！？；：、]', intro))
+    text = intro_text_part(intro)
+    if not text:
+        # 纯图片简介（只有 [img:…] / 图片链接），没有正文可预览时也要能显示
+        return True
+    return len(text) > 10 and bool(re.search(r'[，。！？；：、]', text))
 
 
 def _intro_section_start(lines):
@@ -3173,10 +3210,15 @@ def novel_detail(file_path):
     fallback_lines = None
 
     def _read_fallback_lines():
-        """按真实编码读取文件头，供简介/预览兜底共用（只读一次）"""
+        """按真实编码读取文件头，供简介/预览兜底共用（只读一次）
+
+        ⚠️ 必须用文件真实路径 actual_path：file_path 是 URL 里的那串
+        （可能是相对名，且在 /read 路由里已被 unquote 过），直接 open
+        会落到进程 CWD 上，抛异常后简介兜底静默失效。
+        """
         nonlocal fallback_lines
         if fallback_lines is None:
-            with open(file_path, 'r', encoding=detect_encoding(file_path),
+            with open(actual_path, 'r', encoding=detect_encoding(actual_path),
                       errors='ignore') as f:
                 fallback_lines = re.split(r'\r?\n|\r', f.read(65536))
         return fallback_lines
@@ -3186,10 +3228,10 @@ def novel_detail(file_path):
             final_intro = extract_intro_clean(_read_fallback_lines())
             if final_intro != '无简介':
                 # 回写缓存，避免每次打开都重算
-                if file_path in chapter_cache and isinstance(chapter_cache[file_path], dict):
-                    chapter_cache[file_path]['intro'] = final_intro
-                if file_path in tag_parse_cache:
-                    _, cached_result = tag_parse_cache[file_path]
+                if actual_path in chapter_cache and isinstance(chapter_cache[actual_path], dict):
+                    chapter_cache[actual_path]['intro'] = final_intro
+                if actual_path in tag_parse_cache:
+                    _, cached_result = tag_parse_cache[actual_path]
                     if isinstance(cached_result, dict):
                         cached_result['intro'] = final_intro
                 print(f"♻️ 兜底重新提取简介: {final_intro[:50]}")

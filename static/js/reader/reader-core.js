@@ -471,13 +471,15 @@
     }
 
     // 转换本地图片标记
+    // 没找到配图目录时标记原样保留 —— 后面的 convertTextEmoji 还要靠它把
+    // [img:封面] 解析成图片表情，提前改成「📷 [封面]」会把表情也一起吃掉。
     function convertLocalImages(text) {
         if (!text) return text;
         const localImagePattern = /\[(img|图|image)[：:]\s*([^\s\]]+)(?:\s+([^\]]*))?\]/gi;
 
         return text.replace(localImagePattern, (match, type, imageName, params) => {
             if (!currentNovelImagePath) {
-                return `<span class="local-image-missing" title="未找到配图文件夹">📷 [${imageName}]</span>`;
+                return match;
             }
             const styleParams = parseImageParams(params);
             return createLocalImageElement(currentNovelImagePath, imageName, styleParams, match);

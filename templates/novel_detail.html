@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 
 <head>
@@ -54,12 +54,12 @@
         {% if intro and intro != '无简介' %}
         <div class="detail-card" id="introCard" data-mode="intro">
             <div class="card-title">📖 内容简介</div>
-            <div class="intro-content">{{ intro }}</div>
+            <div class="intro-content" data-raw="{{ intro | e }}">{{ intro }}</div>
         </div>
         {% elif preview %}
         <div class="detail-card" id="introCard" data-mode="preview">
             <div class="card-title">👀 正文预览</div>
-            <div class="intro-content preview-content">{{ preview }}</div>
+            <div class="intro-content preview-content" data-raw="{{ preview | e }}">{{ preview }}</div>
             <div class="preview-hint">ℹ️ 本文未提供简介，以上为正文开头</div>
         </div>
         {% endif %}
@@ -208,7 +208,13 @@
             // ===== 5. 处理简介内容 =====
             const introDiv = document.querySelector('.intro-content');
             if (introDiv) {
-                let processed = introDiv.innerHTML;
+                // 取原始文本（data-raw）而不是 innerHTML：
+                // 简介里的「&」「<」已经被 Jinja 转义成实体，拿 innerHTML 再跑
+                // 各种替换会把 &amp; 当正文处理。没有 data-raw 时退回 innerHTML。
+                let processed = introDiv.dataset.raw;
+                if (processed === undefined || processed === null) {
+                    processed = introDiv.innerHTML;
+                }
 
                 if (processed && processed !== '无简介' && processed.trim() !== '') {
                     // 处理分隔符
