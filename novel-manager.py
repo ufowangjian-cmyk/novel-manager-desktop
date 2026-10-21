@@ -424,7 +424,7 @@ def get_file_hash(file_path):
 
 
 LINE_INDEX_STEP = 1000
-LINE_INDEX_MAX = 10
+LINE_INDEX_MAX = 100
 LINE_BREAK_RE = re.compile(r'\r\n|\r|\n')
 line_index_cache = OrderedDict()
 
@@ -2180,8 +2180,11 @@ def parse_novel_details(file_path, prefetched=None):
     
     chapter_cache[file_path] = result
     
-    if len(chapter_cache) > 200:
-        old_keys = list(chapter_cache.keys())[:20]
+    # 桌面版内存充裕，缓存上限放宽到 500 本（翻过的书基本都能秒开章节列表）；
+    # Docker 版仍保持 200，那边要顾 NAS 的内存和缓存文件体积。
+    CHAPTER_CACHE_MAX = 500
+    if len(chapter_cache) > CHAPTER_CACHE_MAX:
+        old_keys = list(chapter_cache.keys())[:50]
         for key in old_keys:
             del chapter_cache[key]
     
