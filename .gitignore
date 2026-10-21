@@ -1,6 +1,9 @@
 # 运行时数据 —— 不要提交/分享这些
-data/
+# 用 data/* 而非 data/，才能用 ! 放行个别文件（目录被整体忽略后 git 不会再进入）
+data/*
 !data/.gitkeep
+# 表情映射是纯数据（表情名 → emoji），无隐私，放行以便新用户开箱可用
+!data/emoji_mapping.json
 
 # 日志
 *.log
