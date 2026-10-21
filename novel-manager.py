@@ -530,7 +530,34 @@ def get_line_index(file_path, encoding=None):
     return set_line_index(real_path, file_hash, raw_data, encoding)
 
 
+# 行区间短期缓存：(真实路径, 文件哈希, 起始行, 结束行) -> 行列表
+# 阅读页翻页、上一页/下一页、以及「预取下一章」都会命中，避免重复读同一段文件。
+# 桌面版内存充裕，12 个区间约几 MB，换来翻章时不重新解析文件。
+_line_range_cache = OrderedDict()
+LINE_RANGE_CACHE_MAX = 12
+
+
 def read_line_range(file_path, start_line, end_line, index=None, encoding=None):
+    """按行读取（带短期缓存）。真正的实现是 _read_line_range_raw。"""
+    index = index or get_line_index(file_path, encoding)
+    key = (index.get('file_path') or os.path.realpath(file_path),
+           index.get('file_hash'),
+           max(1, int(start_line)),
+           max(1, int(end_line)))
+
+    hit = _line_range_cache.get(key)
+    if hit is not None:
+        _line_range_cache.move_to_end(key)
+        return list(hit)
+
+    lines = _read_line_range_raw(file_path, start_line, end_line, index=index, encoding=encoding)
+    _line_range_cache[key] = lines
+    while len(_line_range_cache) > LINE_RANGE_CACHE_MAX:
+        _line_range_cache.popitem(last=False)
+    return list(lines)
+
+
+def _read_line_range_raw(file_path, start_line, end_line, index=None, encoding=None):
     """流式读取指定行区间（包含 start_line 和 end_line，1-based）。"""
     start_line = max(1, int(start_line))
     end_line = max(start_line, int(end_line))
@@ -695,8 +722,12 @@ def save_cache():
             if key not in active_names:
                 image_cache.pop(key, None)
 
+        # 内存里的 chapter_cache 可以放到 500 本，但磁盘只存最近 200 本 ——
+        # 缓存文件从 6MB 涨到 15MB 会让启动加载明显变慢，而超过 200 本的部分
+        # 命中率很低（谁也不会一天翻 300 本书），留着不划算。
         relative_chapter_cache = {}
-        for abs_path, chapters in chapter_cache.items():
+        recent_chapters = list(chapter_cache.items())[-200:]
+        for abs_path, chapters in recent_chapters:
             filename = os.path.basename(abs_path)
             if filename in active_names:
                 relative_chapter_cache[filename] = chapters
@@ -3397,6 +3428,24 @@ def read_chapter(file_path, line_number):
             save_success = save_reading_records(records)
         else:
             save_success = True
+
+        # ===== 预取下一章（后台线程，不阻塞本次响应）=====
+        # 多数情况下用户会继续往下读，提前把下一章读进行缓存，翻章时不必再等磁盘。
+        if next_chapter and not is_virtual_chapter:
+            def _prefetch_next():
+                try:
+                    n_start = max(1, int(next_chapter.get('line_number', 1)))
+                    n_end = total_lines
+                    for ch in all_chapters:
+                        nl = int(ch.get('line_number', total_lines + 1))
+                        if nl > n_start:
+                            n_end = nl - 1
+                            break
+                    read_line_range(file_path, n_start, n_end, index=line_index)
+                except Exception:
+                    pass
+
+            threading.Thread(target=_prefetch_next, daemon=True).start()
 
     except Exception as e:
         print(f"❌ 读取文件失败：{str(e)}")
@@ -6619,6 +6668,32 @@ if __name__ == '__main__':
         cprint(f"✅ 已加载 {len(novel_data)} 本小说缓存", 'GREEN')
         if CONFIG.get('auto_scan_on_start', True):
             cprint("🔍 后台检查文件更新...", 'BLUE')
+
+        # ===== 预加载最近阅读的几本书 =====
+        # 桌面版内存充裕：开机后先把「你上次在读的书」的章节解析好，
+        # 点进去就是现成的，不用等它读文件、切章节。
+        def preload_recent():
+            time.sleep(3)   # 让启动流程与后台扫描先跑起来，避免抢 IO
+            try:
+                records = load_reading_records()
+                recent = sorted(
+                    records.values(),
+                    key=lambda r: r.get('timestamp', 0),
+                    reverse=True
+                )[:5]
+                loaded = 0
+                for r in recent:
+                    fp = r.get('file_path')
+                    if not fp or not os.path.exists(fp) or fp in chapter_cache:
+                        continue
+                    parse_novel_details(fp)
+                    loaded += 1
+                if loaded:
+                    print(f"⚡ 已预加载 {loaded} 本最近阅读书籍的章节")
+            except Exception as e:
+                print(f"⚠️ 预加载最近阅读失败：{e}")
+
+        threading.Thread(target=preload_recent, daemon=True).start()
     
     def check_updates():
         time.sleep(2)
