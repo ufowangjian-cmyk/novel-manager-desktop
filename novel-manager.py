@@ -674,11 +674,11 @@ def save_cache():
             if 'intro' not in novel_copy:
                 novel_copy['intro'] = '无简介'
 
-            # NAS 版读取时会对缺失的 preview 补 None，这里主动补齐以保证字段齐全
+            # 字段完整：读取方默认这些键存在，缺失时运行时还要再补一次
             if 'preview' not in novel_copy:
                 novel_copy['preview'] = None
 
-            # work_id 必须存在（NAS 版靠它关联阅读记录）
+            # work_id 是重命名识别的依据，缺省写 None 保持字段一致
             if 'work_id' not in novel_copy:
                 novel_copy['work_id'] = None
 
@@ -705,19 +705,12 @@ def save_cache():
             'novel_data': relative_novel_data,
         }
 
-        # chapter_cache 是桌面版自己的运行时缓存，NAS 版不读取（它重启后从空开始）。
-        # 默认仍然写入，保证桌面版自己的性能；
-        # 若只想产出「NAS 兼容」的精简缓存，可设环境变量 STRATA_NAS_COMPAT=1，
-        # 或把 config.json 里的 "nas_compatible_cache" 设为 true。
-        nas_compat = bool(CONFIG.get('nas_compatible_cache')) or \
-            os.environ.get('STRATA_NAS_COMPAT') == '1'
-        if not nas_compat:
-            cache_data['chapter_cache'] = relative_chapter_cache
+        # chapter_cache 是桌面版自己的运行时章节缓存，重启后用于加速首屏
+        cache_data['chapter_cache'] = relative_chapter_cache
 
         # 缓存文件不需要人类可读的缩进，紧凑写入可显著减小 6MB+ 的缓存体积
         save_json_file(CACHE_FILE, cache_data, indent=None)
-        print(f"✅ 已缓存 {len(novel_data)} 本小说，{len(chapter_cache)} 个章节信息"
-              + ("（NAS 兼容模式：未写入 chapter_cache）" if nas_compat else ""))
+        print(f"✅ 已缓存 {len(novel_data)} 本小说，{len(chapter_cache)} 个章节信息")
     except Exception as e:
         print(f"❌ 缓存保存失败：{e}")
         traceback.print_exc()
@@ -1303,7 +1296,7 @@ def is_image_line(t):
 
 
 # ==================== 作品指纹（work_id）====================
-# 与 NAS 版（novel_manager.py）保持完全一致，缓存才能互相通用。
+# 用于识别「同一本书换了文件名」，与文件名无关。
 #
 # 算法：MinHash 风格的「最小行哈希集合」
 #   1. 正文按行归一化（去掉所有空白符），过滤掉过短的行（空行/纯序号）
@@ -1311,9 +1304,9 @@ def is_image_line(t):
 #   3. 取优先级最小的 K 行，作为这本书的「指纹集合」
 #   4. work_id = 指纹集合排序后整体哈希
 #
-# 注意：这里的常量、盐值和算法**不能随意改动**，
-#       一旦改动，NAS 版算出的 work_id 就会和桌面版不一致，
-#       导致阅读记录丢失。改动必须两边同步。
+# 注意：常量、盐值和算法**不要随意改动** ——
+#       改了对已有缓存里的 work_id 就对不上，表现为重命名识别失效一次
+#       （文件名匹配仍然有效，所以影响可控，重扫一次即可恢复）。
 WORK_ID_VERSION = 2
 WORK_ID_BYTES = 16              # 16 字节 = 32 位十六进制
 WORK_ID_FINGERPRINT_LINES = 32  # 指纹集合大小（行数）
@@ -1446,7 +1439,7 @@ def compute_work_id(file_path, _use_cache=True, text=None):
     """计算文件的 work_id（必须基于全文，不能用前缀近似）
 
     text：调用方若已读过并解码全文，可直接传入，避免同一文件被读第二遍
-    （扫描时 work_id 与详情解析都需要全文，NAS/机械盘上这是主要耗时）。
+    （扫描时 work_id 与详情解析都需要全文，这是主要耗时）。
     """
     if not file_path or not os.path.isfile(file_path):
         return None
@@ -1864,7 +1857,7 @@ def parse_file_content_fast(file_path):
     # 简介 / 预览：与 parse_novel_details 走同一套提取函数，避免两条路径给出不同结果
     intro = extract_intro_clean(lines)
 
-    # 预览无条件提取（与 NAS 版一致）：即使有简介也留一份正文开头，
+    # 预览无条件提取：即使有简介也留一份正文开头，
     # 前端在卡片上展示时更丰富，且两边缓存字段才能对齐。
     preview = extract_preview_clean(lines)
     
@@ -2117,7 +2110,7 @@ def parse_novel_details(file_path, prefetched=None):
     intro_start_line = _intro_section_start(lines)
 
     # 没有简介时，提取正文开头作为预览
-    # 预览无条件提取（与 NAS 版一致）；intro 单独判定
+    # 预览无条件提取；intro 单独判定
     preview = extract_preview_clean(lines)
     if intro == '无简介':
         print(f"📝 无简介，提取预览: {len(preview) if preview else 0} 字")
@@ -2419,8 +2412,8 @@ def scan_novel_files_background(full_scan=False):
                     except Exception as e:
                         logger.warning(f"读取正文失败 {filename}: {e}")
 
-                # work_id：与 NAS 版共用的「作品指纹」，与文件名无关。
-                # 缓存里存一份，NAS 版读取时就不用为了它重读全文。
+                # work_id：「作品指纹」，与文件名无关。
+                # 缓存里存一份，重启加载时不必为了它重读全文。
                 try:
                     base_info['work_id'] = compute_work_id(
                         file_path,
