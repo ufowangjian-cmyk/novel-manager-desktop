@@ -13,12 +13,14 @@ function getSystemTheme() {
 // ===== 扫描进度相关 =====
 let scanning = false;
 let progressInterval = null;
+let displayedProgress = 0;   // 进度条已显示的百分比，只增不减
 
 // 开始扫描
 function startScan(fullScan = false) {
     if (scanning) return;
     
     scanning = true;
+    displayedProgress = 0;
     const scanBtn = document.getElementById('scanBtn');
     const scanFullBtn = document.getElementById('scanFullBtn');
     const progressContainer = document.getElementById('progressContainer');
@@ -71,7 +73,9 @@ function updateProgressUI(data) {
     if (!progressFill) return;
     
     if (data.status === 'scanning') {
-        progressFill.style.width = data.percentage + '%';
+        // 只增不减：不同阶段 total 会变化，避免百分比倒退造成视觉抖动
+        displayedProgress = Math.max(displayedProgress, data.percentage || 0);
+        progressFill.style.width = displayedProgress + '%';
         if (progressMessage) progressMessage.textContent = data.message;
         
         if (progressTime && data.elapsed) {

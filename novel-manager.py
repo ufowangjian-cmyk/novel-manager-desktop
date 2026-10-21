@@ -913,7 +913,11 @@ scan_progress = {
     'current': 0,
     'status': 'idle',
     'message': '',
-    'start_time': None
+    'start_time': None,
+    # 进度分两段：scan_dir（检查书目，增量扫描的主要耗时）→ parse（解析变化文件）
+    # 百分比由接口按阶段加权，避免 total 切换导致的跳变
+    'phase': '',
+    'incremental': False,
 }
 
 cache = {
@@ -2221,6 +2225,8 @@ def scan_novel_files_background(full_scan=False):
     try:
         scan_progress['status'] = 'scanning'
         scan_progress['current'] = 0
+        scan_progress['phase'] = 'scan_dir'
+        scan_progress['incremental'] = not full_scan
         scan_progress['message'] = '正在扫描目录...'
 
         if not os.path.exists(NOVEL_DIR):
@@ -2267,7 +2273,15 @@ def scan_novel_files_background(full_scan=False):
                 if filename:
                     existing_files[filename] = item
 
+            _check_total = len(all_files)
+            _checked = 0
             for filename, file_path in all_files.items():
+                _checked += 1
+                # 每 50 个文件刷新一次进度：这是增量扫描最耗时的环节
+                if _checked % 50 == 0:
+                    scan_progress['current'] = _checked
+                    scan_progress['total'] = _check_total
+                    scan_progress['message'] = f'正在检查书目：{_checked}/{_check_total}'
                 try:
                     current_mtime = os.path.getmtime(file_path)
                 except OSError:
@@ -2321,6 +2335,9 @@ def scan_novel_files_background(full_scan=False):
                     new_files.append(filename)
 
             files_to_scan = new_files + changed_files
+            # 检查阶段收尾，切到解析阶段（百分比由接口按阶段加权）
+            scan_progress['phase'] = 'parse'
+            scan_progress['current'] = 0
             scan_progress['total'] = len(files_to_scan)
 
             message_parts = []
@@ -2344,6 +2361,10 @@ def scan_novel_files_background(full_scan=False):
 
             files_to_scan = list(all_files.keys())
             temp_data = []
+            # 全量扫描没有「检查书目」阶段，直接进入解析（百分比 0-100）
+            scan_progress['phase'] = 'parse'
+            scan_progress['current'] = 0
+            scan_progress['total'] = len(files_to_scan)
             scan_progress['message'] = f'完全扫描 {len(files_to_scan)} 个文件...'
 
         files_needing_details = set(all_files.keys()) if full_scan else (set(new_files) | set(changed_files_list))
@@ -2502,8 +2523,17 @@ def scan_novel_files_background(full_scan=False):
 # ===================== 路由 =====================
 @app.route('/api/scan_progress')
 def get_scan_progress():
-    if scan_progress['status'] == 'scanning' and scan_progress['total'] > 0:
-        percentage = int(scan_progress['current'] / scan_progress['total'] * 100)
+    if scan_progress['status'] == 'scanning':
+        # 分阶段加权：增量的「检查书目」占 0-55%，「解析」占 55-100%；
+        # 全量扫描没有检查阶段，直接 0-100%。这样 total 切换时百分比不会倒退。
+        _cur = scan_progress['current']
+        _tot = scan_progress['total']
+        if scan_progress.get('phase') == 'scan_dir':
+            percentage = int(_cur / _tot * 55) if _tot else 0
+        elif scan_progress.get('incremental'):
+            percentage = 55 + int(_cur / _tot * 45) if _tot else 55
+        else:
+            percentage = int(_cur / _tot * 100) if _tot else 0
         elapsed = time.time() - scan_progress['start_time'] if scan_progress['start_time'] else 0
         
         if scan_progress['current'] > 0:
