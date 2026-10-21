@@ -609,6 +609,15 @@ def _read_line_range_raw(file_path, start_line, end_line, index=None, encoding=N
     end_line = max(start_line, int(end_line))
     index = index or get_line_index(file_path, encoding)
     encoding = index.get('encoding') or encoding or 'utf-8'
+    try:
+        codecs.lookup(encoding)
+    except LookupError:
+        # 历史缓存里存了无效编码（如已废弃的 'prefetched' 哨兵）：
+        # 丢掉行索引，按真实探测重建后再继续
+        line_index_cache.pop((index.get('file_path') or os.path.realpath(file_path),
+                              index.get('file_hash')), None)
+        index = get_line_index(file_path)
+        encoding = index.get('encoding') or 'utf-8'
     step = index.get('step', LINE_INDEX_STEP)
     offsets = index.get('offsets') or [0]
     line_count = index.get('line_count', 0)
@@ -1483,25 +1492,27 @@ def read_text_for_fingerprint(file_path, max_bytes=None):
 
 
 def read_and_decode_novel(file_path):
-    """一次性读取并解码整本小说，返回 (raw_bytes, text)。
+    """一次性读取并解码整本小说，返回 (raw_bytes, text, encoding)。
 
     扫描时 work_id 与详情解析都需要全文，过去各读一次；
     抽出公共实现让调用方读一次、两处复用。解码顺序与
     parse_novel_details 保持一致，保证两条路径结果相同。
+    encoding 必须原样传给 parse_novel_details —— 它会进入行索引缓存，
+    传哨兵值（如 'prefetched'）会让阅读页的增量解码器直接抛 LookupError。
     """
     with open(file_path, 'rb') as f:
         raw_data = f.read()
 
     if raw_data[:3] == b'\xef\xbb\xbf':
-        return raw_data, raw_data[3:].decode('utf-8')
+        return raw_data, raw_data[3:].decode('utf-8'), 'utf-8'
     if raw_data[:2] == b'\xff\xfe':
-        return raw_data, raw_data[2:].decode('utf-16-le')
+        return raw_data, raw_data[2:].decode('utf-16-le'), 'utf-16-le'
     if raw_data[:2] == b'\xfe\xff':
-        return raw_data, raw_data[2:].decode('utf-16-be')
+        return raw_data, raw_data[2:].decode('utf-16-be'), 'utf-16-be'
 
     for enc in ('utf-8', 'gbk', 'gb18030', 'big5'):
         try:
-            return raw_data, raw_data.decode(enc)
+            return raw_data, raw_data.decode(enc), enc
         except UnicodeDecodeError:
             continue
 
@@ -1509,7 +1520,7 @@ def read_and_decode_novel(file_path):
         detected = chardet.detect(raw_data[:65536]).get('encoding') or 'utf-8'
     except Exception:
         detected = 'utf-8'
-    return raw_data, raw_data.decode(detected, errors='ignore')
+    return raw_data, raw_data.decode(detected, errors='ignore'), detected
 
 
 def compute_work_id(file_path, _use_cache=True, text=None):
@@ -2131,8 +2142,9 @@ def parse_novel_details(file_path, prefetched=None):
     print(f"📖 开始解析: {os.path.basename(file_path)} ({file_size/1024/1024:.2f} MB)")
     
     t1 = time.time()
+    pre_encoding = None
     if prefetched is not None:
-        raw_data, _pre_text = prefetched
+        raw_data, _pre_text, pre_encoding = prefetched
         print(f"   ⏱️ 复用预读内容（跳过重复读取）")
     else:
         with open(file_path, 'rb') as f:
@@ -2144,9 +2156,11 @@ def parse_novel_details(file_path, prefetched=None):
     content = None
 
     if prefetched is not None:
-        # 预读路径：直接复用已解码文本，跳过编码探测
+        # 预读路径：直接复用已解码文本，跳过编码探测。
+        # 编码必须用预读时的真实值 —— 哨兵值一旦传进行索引缓存，
+        # 阅读页 codecs.getincrementaldecoder('prefetched') 会抛 LookupError
         content = _pre_text
-        encoding = 'prefetched'
+        encoding = pre_encoding or 'utf-8'
     elif raw_data[:3] == b'\xef\xbb\xbf':
         content = raw_data[3:].decode('utf-8')
         encoding = 'utf-8-sig'
