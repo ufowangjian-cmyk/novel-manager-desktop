@@ -1401,6 +1401,33 @@ body.dark-mode .tab-hide-btn:hover {
     font-style: italic;
 }
 
+/* 上次扫描未完成（程序在扫描途中退出 / 扫描出错）的警示条 */
+.scan-warn {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 9px 12px;
+    border-left: 3px solid #E08A2E;
+    border-radius: 8px;
+    background: #FDF3E4;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: #8A4B0F;
+}
+
+.scan-warn-icon {
+    flex-shrink: 0;
+    font-size: 0.95rem;
+}
+
+/* 「上次全量完成」一行：增量扫描时也告诉用户多久没做全量了 */
+.last-scan-full {
+    margin-top: 6px;
+    font-size: 0.82rem;
+    color: #8a9478;
+}
+
 /* 暗色模式 */
 body.dark-mode .cache-overview-title,
 body.dark-mode .last-scan-title {
@@ -1432,6 +1459,16 @@ body.dark-mode .last-scan-time {
 
 body.dark-mode .last-scan-meta,
 body.dark-mode .last-scan-result {
+    color: #93a37a;
+}
+
+body.dark-mode .scan-warn {
+    background: rgba(224, 138, 46, 0.12);
+    border-left-color: #C97A28;
+    color: #E5A96A;
+}
+
+body.dark-mode .last-scan-full {
     color: #93a37a;
 }
 

@@ -411,9 +411,52 @@ def load_scan_stats():
     return load_json_file(SCAN_STATS_FILE, {})
 
 
-def save_scan_stats(stats):
-    """持久化上次扫描的统计信息到 data/scan_stats.json。"""
+def save_scan_stats(stats, merge=True):
+    """持久化扫描统计到 data/scan_stats.json。
+
+    merge=True（默认）时与现有内容合并：增量扫描只更新 last_scan_* 等字段，
+    不会把 last_full_scan_time 冲掉。置 None 的键仍然会写入（表示显式清空）。
+    """
+    if merge:
+        merged = load_scan_stats()
+        if not isinstance(merged, dict):
+            merged = {}
+        merged.update(stats)
+        stats = merged
     return save_json_file(SCAN_STATS_FILE, stats)
+
+
+def check_interrupted_scan():
+    """启动时检查上次扫描是否被中断（程序退出/被杀，扫描线程随之消失）。
+
+    扫描开始时会在 scan_stats.json 写 scan_in_progress 标记，正常结束时清除。
+    如果启动时还留着它，说明上一次扫描没能跑完 —— 统计数据不可信，且
+    last_scan_type 可能停在「增量」，让用户误以为全量从未执行过。
+    """
+    try:
+        stats = load_scan_stats()
+        if not isinstance(stats, dict):
+            return
+        pending = stats.get('scan_in_progress')
+        if not pending:
+            return
+
+        started = pending.get('start_time')
+        scan_type = pending.get('type') or 'unknown'
+        stats['scan_in_progress'] = None
+        stats['last_scan_interrupted'] = {
+            'type': scan_type,
+            'start_time': started,
+            'detected_at': time.time(),
+        }
+        save_scan_stats(stats, merge=False)
+
+        from datetime import datetime
+        when = datetime.fromtimestamp(started).strftime('%Y-%m-%d %H:%M:%S') if started else '未知时间'
+        label = '全量扫描' if scan_type == 'full' else '增量扫描'
+        logger.warning(f"⚠️ 检测到上次{label}未完成（开始于 {when}），程序可能在扫描过程中退出")
+    except Exception as e:
+        logger.warning(f"检查扫描中断状态失败（已跳过）：{e}")
 
 
 def get_file_hash(file_path):
@@ -2264,6 +2307,18 @@ def scan_novel_files_background(full_scan=False):
             scan_progress['message'] = f'目录不存在：{NOVEL_DIR}'
             return
 
+        # 记录「扫描进行中」标记：正常结束会清除，程序若在扫描途中退出，
+        # 下次启动时 check_interrupted_scan() 就能发现上次没跑完
+        try:
+            save_scan_stats({
+                'scan_in_progress': {
+                    'type': 'full' if full_scan else 'incremental',
+                    'start_time': start_time,
+                }
+            })
+        except Exception as e:
+            logger.warning(f"写入扫描进行中标记失败（不影响扫描）：{e}")
+
         exclude_patterns = [p for p in (CONFIG.get('exclude_patterns') or []) if p]
         try:
             max_size_bytes = int(CONFIG.get('max_file_size_mb', 100) or 0) * 1024 * 1024
@@ -2526,7 +2581,19 @@ def scan_novel_files_background(full_scan=False):
                 'last_scan_updated': len(changed_files) if not full_scan else 0,
                 'last_scan_images': len(image_changed_files) if not full_scan else 0,
                 'last_scan_duration': round(duration, 1),
+                # 本次正常结束：清掉进行中标记
+                'scan_in_progress': None,
             }
+            # 中断告警的清除要保守：启动后很快就会自动跑一次增量扫描，
+            # 若无条件清除，用户还没打开页面告警就没了。
+            # 规则：全量成功 → 清除任何告警；增量成功 → 只清除「增量被中断」的告警。
+            prev = load_scan_stats()
+            pending = prev.get('last_scan_interrupted') if isinstance(prev, dict) else None
+            keep_warn = bool(pending) and not full_scan and pending.get('type') == 'full'
+            scan_stats['last_scan_interrupted'] = pending if keep_warn else None
+            # 全量扫描成功才更新，增量扫描不碰它（merge 写入会保留旧值）
+            if full_scan:
+                scan_stats['last_full_scan_time'] = scan_stats['last_scan_time']
             save_scan_stats(scan_stats)
         except Exception as e:
             print(f"⚠️ 保存扫描统计失败：{e}")
@@ -2541,7 +2608,25 @@ def scan_novel_files_background(full_scan=False):
         scan_progress['message'] = f'扫描出错：{str(e)}'
         print(f"❌ 扫描失败：{e}")
         traceback.print_exc()
+        # 扫描出错：清掉进行中标记，并留下可展示的中断原因
+        try:
+            save_scan_stats({
+                'scan_in_progress': None,
+                'last_scan_interrupted': {
+                    'type': 'full' if full_scan else 'incremental',
+                    'start_time': start_time,
+                    'reason': f'扫描出错：{e}',
+                },
+            })
+        except Exception:
+            pass
     finally:
+        # 兜底：任何未预期路径都不要留下「进行中」标记，否则下次启动会误报
+        if scan_progress.get('status') != 'completed':
+            try:
+                save_scan_stats({'scan_in_progress': None})
+            except Exception:
+                pass
         elapsed = time.time() - start_time
         logger.info(
             f"扫描结束 - 处理文件: {len(files_to_scan)}, "
@@ -6615,6 +6700,7 @@ if __name__ == '__main__':
     if CONFIG.get('debug_mode', False):
         if is_reloader:
             print("🔧 调试模式：子进程启动，加载缓存...")
+            check_interrupted_scan()
             load_cache()
         
         print()
@@ -6660,8 +6746,11 @@ if __name__ == '__main__':
         app.run(debug=True, host=debug_host, port=int(CONFIG.get('app_port', 5000)))
         sys.exit(0)
     
+    # 必须在任何自动扫描启动之前：判断上次扫描是否被中断
+    check_interrupted_scan()
+
     threading.Thread(target=run_tray, daemon=True).start()
-    
+
     if not load_cache() and CONFIG.get('auto_scan_on_start', True):
         cprint("🔄 首次运行，开始后台扫描...", 'WARNING')
         thread = threading.Thread(target=scan_novel_files_background, args=(True,))
