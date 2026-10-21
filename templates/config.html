@@ -459,10 +459,26 @@
                         </label>
                         <div class="form-hint">首次启动建议勾选，之后可以取消以加快启动速度</div>
                     </div>
-                    
+
                     <div class="form-group">
                         <label class="checkbox-label">
-                            <input type="checkbox" id="auto_backup_enabled" name="auto_backup_enabled" 
+                            <input type="checkbox" id="preload_recent_enabled" name="preload_recent_enabled"
+                                   {% if config.preload_recent_enabled %}checked{% endif %}>
+                            ⚡ 启动时预加载最近阅读的书
+                        </label>
+                        <div class="form-hint">开机后提前解析你上次在读的书，点进去直接就是现成的章节列表（仅桌面版）</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label title="单位：本，建议 5">📚 预加载数量</label>
+                        <input type="number" id="preload_recent_count" name="preload_recent_count"
+                               value="{{ config.preload_recent_count }}" min="1" max="20" step="1">
+                        <div class="form-hint hint-as-title">预加载最近阅读的几本书，建议 5；设太多会拖慢启动</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="auto_backup_enabled" name="auto_backup_enabled"
                                    {% if config.auto_backup_enabled %}checked{% endif %}>
                             💾 启用自动备份
                         </label>

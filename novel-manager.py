@@ -161,6 +161,9 @@ DEFAULT_CONFIG = {
         "max_tags_display": 3,
         "date_format": "YYYY-MM-DD",
         "auto_scan_on_start": True,
+        # 启动时预加载最近阅读的书（桌面版专属：内存充裕，开机即续读）
+        "preload_recent_enabled": True,
+        "preload_recent_count": 5,
         "auto_backup_enabled": True,
         "backup_interval_days": 7,
         "max_backups": 5,
@@ -3940,7 +3943,7 @@ def save_config_api():
 
         for key in ('app_port', 'per_page', 'words_per_page', 'max_file_size_mb',
                     'max_tags_display', 'scan_interval_hours', 'backup_interval_days',
-                    'max_backups'):
+                    'max_backups', 'preload_recent_count'):
             if key in current_config:
                 try:
                     current_config[key] = int(current_config[key])
@@ -6669,9 +6672,16 @@ if __name__ == '__main__':
         if CONFIG.get('auto_scan_on_start', True):
             cprint("🔍 后台检查文件更新...", 'BLUE')
 
-        # ===== 预加载最近阅读的几本书 =====
+        # ===== 启动时预加载最近阅读的书（可在配置页关闭或调整数量）=====
         # 桌面版内存充裕：开机后先把「你上次在读的书」的章节解析好，
         # 点进去就是现成的，不用等它读文件、切章节。
+        preload_enabled = CONFIG.get('preload_recent_enabled', True)
+        try:
+            preload_count = int(CONFIG.get('preload_recent_count', 5) or 0)
+        except (TypeError, ValueError):
+            preload_count = 5
+        preload_count = max(0, min(20, preload_count))
+
         def preload_recent():
             time.sleep(3)   # 让启动流程与后台扫描先跑起来，避免抢 IO
             try:
@@ -6680,7 +6690,7 @@ if __name__ == '__main__':
                     records.values(),
                     key=lambda r: r.get('timestamp', 0),
                     reverse=True
-                )[:5]
+                )[:preload_count]
                 loaded = 0
                 for r in recent:
                     fp = r.get('file_path')
@@ -6693,7 +6703,8 @@ if __name__ == '__main__':
             except Exception as e:
                 print(f"⚠️ 预加载最近阅读失败：{e}")
 
-        threading.Thread(target=preload_recent, daemon=True).start()
+        if preload_enabled and preload_count > 0:
+            threading.Thread(target=preload_recent, daemon=True).start()
     
     def check_updates():
         time.sleep(2)
