@@ -34,7 +34,8 @@ desktop.ini
 # ========== 版权受限素材（不随仓库分发）==========
 # 表情包与头图来源网络、授权不明，公开仓库不包含；缺了不影响功能
 static/emojis/
-static/images/
+# 只排除网络来源的头图背景；图标与 svg 素材可公开
+static/images/header-bg-*.webp
 
 # 本地备份（含真实路径与原始文件）
 _local_backup/
