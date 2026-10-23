@@ -660,6 +660,140 @@ function initTabHideButtons() {
     });
 }
 
+// ===== 每日推荐：换一本（移植自 Docker 版） =====
+// 与 Docker 版的差异：桌面版没有 SVG 图标库（用 emoji 代替），
+// 也没有封面图（novel 里没有 cover_url），所以卡片是单列、无封面块。
+const RandomNovel = (function () {
+    let currentWorkId = '';
+    let loading = false;
+
+    const el = (id) => document.getElementById(id);
+
+    function escapeHtml(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function formatWordCount(count) {
+        const n = parseInt(count, 10) || 0;
+        if (!n) return '';
+        return n >= 10000 ? (n / 10000).toFixed(1) + '万字' : n + '字';
+    }
+
+    // 与服务端 templates/_random_card.html 保持一致，改一边要同步另一边
+    function buildRandomCardHTML(n) {
+        const meta = [];
+        meta.push(`<span class="random-meta-item">✍ ${escapeHtml(n.author || '未知作者')}</span>`);
+        if (n.site && n.site !== '未知网站') {
+            meta.push(`<span class="random-meta-item">🌐 ${escapeHtml(n.site)}</span>`);
+        }
+        const wc = formatWordCount(n.word_count);
+        if (wc) meta.push(`<span class="random-meta-item">📄 ${wc}</span>`);
+        if (n.progress) meta.push(`<span class="random-meta-item">📚 ${escapeHtml(n.progress)}</span>`);
+        if (n.publish_date && n.publish_date !== '未知') {
+            meta.push(`<span class="random-meta-item">📅 ${escapeHtml(n.publish_date)}</span>`);
+        }
+
+        const tagList = n.tags || [];
+        const tags = tagList.slice(0, 8).map(t =>
+            `<a href="?tag=${encodeURIComponent(t)}" class="tag-badge">${escapeHtml(t)}</a>`
+        ).join('');
+        const moreTags = tagList.length > 8
+            ? `<span class="tag-badge tag-more">+${tagList.length - 8}</span>`
+            : '';
+
+        const intro = n.intro
+            ? `<div class="random-intro-label">📖 简介 / 试读</div>
+               <div class="random-intro">${escapeHtml(n.intro)}</div>`
+            : `<div class="random-intro random-intro-empty">这本书没有可显示的简介，点开看看正文吧。</div>`;
+
+        return `
+        <div class="random-card" data-work-id="${escapeHtml(n.work_id)}">
+            <div class="random-card-main">
+                <h4 class="random-title">
+                    <a href="${escapeHtml(n.detail_url)}">${escapeHtml(n.title)}</a>
+                </h4>
+                <div class="random-meta">${meta.join('')}</div>
+                ${tags ? `<div class="random-tags">${tags}${moreTags}</div>` : ''}
+            </div>
+            <div class="random-intro-wrap">${intro}</div>
+            <div class="random-card-actions">
+                <a href="${escapeHtml(n.detail_url)}" class="random-btn">📄 查看详情</a>
+                <a href="${escapeHtml(n.read_url)}" class="random-btn random-btn-primary">📖 开始阅读</a>
+            </div>
+        </div>`;
+    }
+
+    function render(novel) {
+        const body = el('randomCardBody');
+        if (!body || !novel) return;
+        body.innerHTML = buildRandomCardHTML(novel);
+        currentWorkId = novel.work_id || '';
+    }
+
+    function swap() {
+        if (loading) return;
+        const btn = el('randomRefreshBtn');
+        const body = el('randomCardBody');
+        if (!body) return;
+
+        loading = true;
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = '抽书中...';
+        }
+        body.classList.add('swapping');
+
+        const params = new URLSearchParams();
+        if (currentWorkId) params.set('exclude', currentWorkId);
+
+        fetch('/api/random_novel?' + params.toString(), {
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) throw new Error(data.message || '获取失败');
+                render(data.novel);
+            })
+            .catch(err => {
+                console.error('换一本失败:', err);
+                if (typeof showNotification === 'function') {
+                    showNotification('换一本失败，请重试', 'error');
+                }
+            })
+            .finally(() => {
+                loading = false;
+                body.classList.remove('swapping');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = '🔄 换一本';
+                }
+            });
+    }
+
+    function init() {
+        const section = el('randomSection');
+        if (!section) return;
+
+        // 记住首屏那本的 work_id，这样第一次「换一本」不会重复抽到它
+        const card = section.querySelector('.random-card');
+        if (card) currentWorkId = card.getAttribute('data-work-id') || '';
+
+        const btn = el('randomRefreshBtn');
+        if (btn) btn.addEventListener('click', swap);
+    }
+
+    return { init, swap, render, buildRandomCardHTML };
+})();
+
+document.addEventListener('DOMContentLoaded', function () {
+    RandomNovel.init();
+});
+
 // ===== 主页初始化 =====
 document.addEventListener('DOMContentLoaded', () => {
     // 使用 common.js 的函数

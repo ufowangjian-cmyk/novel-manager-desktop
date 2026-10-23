@@ -1,0 +1,63 @@
+{# 每日推荐卡片（桌面版）
+
+   与 Docker 版的差异：
+     - 桌面版没有封面图（novel 里没有 cover_url），所以是单列布局，没有封面块
+     - 桌面版没有图标库（无 _icons.html、无 SVG sprite），图标一律用 emoji
+     - 标签链接用 `?tag=xxx`，与桌面版其它地方保持一致（不做 urlencode）
+
+   ⚠️ static/js/main.js 里的 buildRandomCardHTML() 是本文件的等价实现，
+   改这里时必须同步改那边，否则「换一本」出来的卡片和首屏渲染的样式会不一致。
+
+   依赖 novel 上下文：title / author / site / word_count / publish_date /
+   progress / tags / intro / file_path / work_id
+#}
+<div class="random-card" data-work-id="{{ novel.work_id }}">
+    <div class="random-card-main">
+        <h4 class="random-title">
+            <a href="{{ url_for('novel_detail', file_path=(novel.file_path or '').lstrip('/')) }}">{{ novel.title }}</a>
+        </h4>
+
+        <div class="random-meta">
+            <span class="random-meta-item">✍ {{ novel.author }}</span>
+            {% if novel.site and novel.site != '未知网站' %}
+            <span class="random-meta-item">🌐 {{ novel.site }}</span>
+            {% endif %}
+            {% if novel.word_count %}
+            <span class="random-meta-item">📄 {% if novel.word_count >= 10000 %}{{ '{:.1f}'.format(novel.word_count / 10000) }}万字{% else %}{{ novel.word_count }}字{% endif %}</span>
+            {% endif %}
+            {% if novel.progress %}
+            <span class="random-meta-item">📚 {{ novel.progress }}</span>
+            {% endif %}
+            {% if novel.publish_date and novel.publish_date != '未知' %}
+            <span class="random-meta-item">📅 {{ novel.publish_date }}</span>
+            {% endif %}
+        </div>
+
+        {% if novel.tags %}
+        <div class="random-tags">
+            {% for tag in novel.tags[:8] %}
+            <a href="?tag={{ tag }}" class="tag-badge">{{ tag }}</a>
+            {% endfor %}
+            {% if novel.tags|length > 8 %}
+            <span class="tag-badge tag-more">+{{ novel.tags|length - 8 }}</span>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="random-intro-wrap">
+        {% if novel.intro %}
+        <div class="random-intro-label">📖 简介 / 试读</div>
+        <div class="random-intro">{{ novel.intro }}</div>
+        {% else %}
+        <div class="random-intro random-intro-empty">这本书没有可显示的简介，点开看看正文吧。</div>
+        {% endif %}
+    </div>
+
+    <div class="random-card-actions">
+        <a href="{{ url_for('novel_detail', file_path=(novel.file_path or '').lstrip('/')) }}"
+            class="random-btn">📄 查看详情</a>
+        <a href="{{ url_for('read_chapter', file_path=(novel.file_path or '').lstrip('/'), line_number=1) }}"
+            class="random-btn random-btn-primary">📖 开始阅读</a>
+    </div>
+</div>

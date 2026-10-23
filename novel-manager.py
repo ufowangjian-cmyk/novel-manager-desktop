@@ -1,5 +1,6 @@
 import sys
 import os
+import random
 import logging
 import json
 import traceback
@@ -2961,6 +2962,86 @@ def get_cache_stats():
     }
 
 
+def pick_random_novel(exclude_work_id=None, prefer_rich=True):
+    """随机挑一本书，供「每日推荐」区块使用（移植自 Docker 版）。
+
+    prefer_rich=True 时优先从「有可用简介或预览」的书里挑，避免推荐出空卡片；
+    候选为空时退回全量，保证一定能推荐出东西。
+    exclude_work_id：避免「换一本」时抽到同一本。
+
+    与 Docker 版的差异：桌面版没有封面图（无 cover_url）和作者马甲拆分
+    （无 split_author_aliases），所以这里 author 用原值、不返回 aliases，
+    卡片也不渲染封面。
+    """
+    if not novel_data:
+        return None
+
+    def _has_text(value):
+        text = (value or '').strip()
+        return bool(text) and text != '无简介'
+
+    def _build(novel):
+        base_info = novel
+        title = base_info.get('title') or os.path.basename(str(base_info.get('file_path') or ''))
+        # 简介优先；没有就用正文预览（预览是截取的正文开头，更适合「试读」）
+        intro = ''
+        for key in ('intro', 'preview'):
+            if is_valid_intro(base_info.get(key)):
+                intro = base_info[key].strip()
+                break
+        if not intro:
+            preview = (base_info.get('preview') or '').strip()
+            intro = preview if preview and preview != '无简介' else ''
+
+        tags = [t.strip() for t in (base_info.get('tags') or '').split(',')
+                if t.strip() and t.strip() != '无']
+
+        return {
+            'work_id': base_info.get('work_id', ''),
+            'title': title,
+            'author': base_info.get('author') or '未知作者',
+            'site': base_info.get('site') or '未知网站',
+            'word_count': base_info.get('word_count', 0),
+            'publish_date': base_info.get('publish_date') or '未知',
+            'progress': base_info.get('progress') or '',
+            'tags': tags,
+            'intro': intro,
+            'file_path': base_info.get('file_path', ''),
+        }
+
+    candidates = novel_data
+    if exclude_work_id:
+        filtered = [n for n in novel_data if n.get('work_id') != exclude_work_id]
+        # 只剩一本时就用它，否则「换一本」会没结果
+        if filtered:
+            candidates = filtered
+
+    if prefer_rich:
+        rich = [n for n in candidates
+                if is_valid_intro(n.get('intro')) or _has_text(n.get('preview'))]
+        if rich:
+            candidates = rich
+
+    return _build(random.choice(candidates))
+
+
+@app.route('/api/random_novel')
+def api_random_novel():
+    """随机推荐一本书（供「每日推荐」区块的「换一本」使用）。
+
+    桌面版本地单人使用、无登录鉴权，所以这里不做 is_authenticated 校验。
+    """
+    exclude = (request.args.get('exclude') or '').strip()
+    novel = pick_random_novel(exclude_work_id=exclude or None)
+    if not novel:
+        return jsonify({'success': False, 'message': '书库为空，请先扫描目录'})
+
+    novel['detail_url'] = url_for('novel_detail', file_path=(novel.get('file_path') or '').lstrip('/'))
+    novel['read_url'] = url_for('read_chapter',
+                                file_path=(novel.get('file_path') or '').lstrip('/'), line_number=1)
+    return jsonify({'success': True, 'novel': novel})
+
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     global novel_data, scan_progress
@@ -3096,7 +3177,9 @@ def index():
         sort_by=sort_by,
         sort_order=sort_order,
         cache_stats=cache_stats,
-        scan_stats=scan_stats
+        scan_stats=scan_stats,
+        # 每次刷新页面随机推荐一本；「换一本」按钮再走 /api/random_novel
+        random_novel=pick_random_novel()
     )
 
 

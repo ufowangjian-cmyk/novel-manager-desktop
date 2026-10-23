@@ -351,7 +351,51 @@
                 </div>
             </div>
 
+            <!-- 每日推荐选项卡（移植自 Docker 版） -->
+            <div class="tab-content" id="tab-random">
+                <div class="random-section" id="randomSection">
+                    <div class="random-header">
+                        <h3>✨ 随机推荐好书</h3>
+                        <div class="random-actions">
+                            <span class="random-hint">每次刷新页面随机推荐一本</span>
+                            <button type="button" class="random-refresh-btn" id="randomRefreshBtn">🔄 换一本</button>
+                        </div>
+                    </div>
+
+                    {# 首屏由服务端渲染，「换一本」再由 JS 替换内容 #}
+                    <div id="randomCardBody">
+                        {% if random_novel %}
+                        {% set novel = random_novel %}
+                        {% include "_random_card.html" %}
+                        {% else %}
+                        <div class="random-empty">
+                            <div class="empty-text">书库为空</div>
+                            <div class="empty-tip">请先在「扫描管理」里扫描小说目录</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
         </div>
+
+        {# 筛选/搜索结果提示条。刻意放在选项卡区块【外面】：
+           收起筛选区块后仍然显示，方便在列表被筛过的情况下直接一键还原。
+           只清筛选条件，保留当前排序（sort/order）。 #}
+        {% if search_text or search_author or search_tag or search_site %}
+        <div class="filter-notice">
+            <span class="filter-notice-text">
+                🔍
+                {% if search_text %}
+                <span class="filter-notice-query" title="{{ search_text }}">搜索「{{ search_text }}」</span>
+                {% else %}
+                <span>筛选结果</span>
+                {% endif %}
+                <span class="filter-notice-count">共 <b>{{ filtered_count }}</b> 本</span>
+            </span>
+            <a href="?sort={{ sort_by }}&order={{ sort_order }}" class="filter-notice-reset">↺ 返回列表</a>
+        </div>
+        {% endif %}
 
         <!-- 小说列表 -->
         <div class="bookshelf-wrapper">
@@ -606,6 +650,13 @@
                 <span class="drawer-item-text">
                     <span class="drawer-item-name">扫描管理</span>
                     <span class="drawer-item-desc">增量/全量扫描书架</span>
+                </span>
+            </a>
+            <a href="#" class="drawer-item" data-tab="random">
+                <span class="drawer-item-icon">✨</span>
+                <span class="drawer-item-text">
+                    <span class="drawer-item-name">每日推荐</span>
+                    <span class="drawer-item-desc">随机推荐一本好书</span>
                 </span>
             </a>
             <a href="/logs" target="_blank" class="drawer-item">

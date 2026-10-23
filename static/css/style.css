@@ -571,6 +571,320 @@ body.dark-mode .drawer-item:hover .drawer-item-desc {
 /* ============================================
    5. 小说表格
    ============================================ */
+
+/* ---- 筛选/搜索提示条：紧凑一行，位于列表上方、选项卡区块之外 ---- */
+.filter-notice {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+    padding: 7px 14px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--tool-green-link);
+    background: rgba(162, 188, 117, 0.16);
+    border: 1px solid rgba(114, 139, 71, 0.25);
+    border-radius: 10px;
+}
+
+.filter-notice-text {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+/* 搜索词可能很长，超宽省略，避免把「返回列表」挤到第二行 */
+.filter-notice-query {
+    max-width: 46vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.filter-notice-count {
+    flex-shrink: 0;
+    opacity: 0.85;
+}
+
+.filter-notice-count b {
+    font-weight: 600;
+}
+
+.filter-notice-reset {
+    margin-left: auto;
+    flex-shrink: 0;
+    padding: 3px 10px;
+    font-size: 12px;
+    color: var(--tool-green-link);
+    background: rgba(162, 188, 117, 0.3);
+    border-radius: 7px;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background 0.2s;
+}
+
+.filter-notice-reset:hover {
+    background: rgba(162, 188, 117, 0.5);
+}
+
+/* ---- 每日推荐 ---- */
+.random-section {
+    padding: 5px;
+}
+
+.random-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--tool-green-border);
+}
+
+.random-header h3 {
+    color: var(--tool-green-dark);
+    font-size: 1.15rem;
+}
+
+.random-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.random-hint {
+    font-size: 0.78rem;
+    color: var(--tool-text-gray);
+}
+
+.random-refresh-btn {
+    padding: 7px 16px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--tool-green-light), var(--tool-green-dark));
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(114, 139, 71, 0.3);
+    transition: box-shadow 0.2s, transform 0.2s, opacity 0.2s;
+}
+
+.random-refresh-btn:hover {
+    box-shadow: 0 6px 18px rgba(114, 139, 71, 0.4);
+    transform: translateY(-1px);
+}
+
+.random-refresh-btn:active {
+    transform: translateY(1px);
+}
+
+.random-refresh-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+    transform: none;
+    box-shadow: none;
+}
+
+.random-card {
+    background: #fff;
+    border: 1px solid var(--tool-green-border);
+    border-radius: 14px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+}
+
+.random-card.swapping {
+    opacity: 0.45;
+    transition: opacity 0.15s;
+}
+
+.random-title {
+    font-size: 1.15rem;
+    margin-bottom: 10px;
+    line-height: 1.4;
+}
+
+.random-title a {
+    color: var(--tool-green-link);
+    text-decoration: none;
+}
+
+.random-title a:hover {
+    text-decoration: underline;
+}
+
+.random-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    margin-bottom: 10px;
+    font-size: 0.82rem;
+    color: var(--tool-text-gray);
+}
+
+.random-meta-item {
+    white-space: nowrap;
+}
+
+.random-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.random-intro-wrap {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--tool-green-border);
+}
+
+.random-intro-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--tool-green-dark);
+    margin-bottom: 6px;
+}
+
+/* 简介可能很长：限高滚动，避免整块被一本书撑到几千像素 */
+.random-intro {
+    font-size: 0.86rem;
+    line-height: 1.75;
+    color: #333;
+    max-height: 168px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.random-intro-empty {
+    color: var(--tool-text-gray);
+    font-style: italic;
+}
+
+.random-card-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--tool-green-border);
+}
+
+.random-btn {
+    padding: 7px 16px;
+    border-radius: 8px;
+    font-size: 0.84rem;
+    text-decoration: none;
+    color: var(--tool-green-dark);
+    background: rgba(162, 188, 117, 0.22);
+    transition: background 0.2s;
+}
+
+.random-btn:hover {
+    background: rgba(162, 188, 117, 0.42);
+}
+
+.random-btn-primary {
+    color: #fff;
+    background: var(--tool-green-dark);
+}
+
+.random-btn-primary:hover {
+    background: #5d7339;
+}
+
+.random-empty {
+    padding: 30px 20px;
+    text-align: center;
+    color: var(--tool-text-gray);
+}
+
+/* ---- 提示条 & 每日推荐：暗色 ---- */
+body.dark-mode .filter-notice {
+    color: #cfe0a8;
+    background: rgba(114, 139, 71, 0.18);
+    border-color: #334d33;
+}
+
+body.dark-mode .filter-notice-reset {
+    color: #dbeac0;
+    background: rgba(114, 139, 71, 0.35);
+}
+
+body.dark-mode .filter-notice-reset:hover {
+    background: rgba(114, 139, 71, 0.5);
+}
+
+body.dark-mode .random-header {
+    border-bottom-color: #334d33;
+}
+
+body.dark-mode .random-header h3 {
+    color: #cbd5e1;
+}
+
+body.dark-mode .random-hint {
+    color: #94a3b8;
+}
+
+body.dark-mode .random-card {
+    background: #1e2a1e;
+    border-color: #334d33;
+}
+
+body.dark-mode .random-title a {
+    color: #a9c97f;
+}
+
+body.dark-mode .random-meta {
+    color: #94a3b8;
+}
+
+body.dark-mode .random-intro-wrap,
+body.dark-mode .random-card-actions {
+    border-color: #334d33;
+}
+
+body.dark-mode .random-intro-label {
+    color: #a9c97f;
+}
+
+body.dark-mode .random-intro {
+    color: #cbd5e1;
+}
+
+body.dark-mode .random-intro-empty {
+    color: #94a3b8;
+}
+
+body.dark-mode .random-btn {
+    color: #cfe0a8;
+    background: rgba(114, 139, 71, 0.3);
+}
+
+body.dark-mode .random-btn:hover {
+    background: rgba(114, 139, 71, 0.5);
+}
+
+body.dark-mode .random-btn-primary {
+    color: #10200f;
+    background: #a2bc75;
+}
+
+body.dark-mode .random-btn-primary:hover {
+    background: #b8cf90;
+}
+
+body.dark-mode .random-empty {
+    color: #94a3b8;
+}
+
 .table-wrapper {
     background: #E0E8D0;
     border-radius: 15px;
