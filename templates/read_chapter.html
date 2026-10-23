@@ -11,7 +11,7 @@
     <link rel="icon" href="{{ url_for('static', filename='images/novel-icon.png') }}" type="image/png">
     <link rel="shortcut icon" href="{{ url_for('static', filename='images/novel-icon.png') }}" type="image/png">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/reader.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/reader.css') }}?v={{ css_version }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/viewer.min.css') }}">
 
     <!-- 关键：立即应用字体和字号，防止闪烁 -->
@@ -494,6 +494,24 @@
                 {% endfor %}
             </div>
         </div>
+
+        {# 相似书籍：只在全书最后一页出现，没有结果就不渲染 #}
+        {% if similar_novels %}
+        <div class="similar-card">
+            <div class="similar-head">📚 相似书籍</div>
+            <div class="similar-list">
+                {% for item in similar_novels %}
+                <a href="{{ item.detail_url }}" class="similar-item">
+                    <span class="similar-text">
+                        <span class="similar-title">{{ item.title }}</span>
+                        <span class="similar-sub">{{ item.author }}</span>
+                    </span>
+                    <span class="similar-reason">{{ item.reason }}</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
 
     </div>
 

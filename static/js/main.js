@@ -711,8 +711,20 @@ const RandomNovel = (function () {
                <div class="random-intro">${escapeHtml(n.intro)}</div>`
             : `<div class="random-intro random-intro-empty">这本书没有可显示的简介，点开看看正文吧。</div>`;
 
+        // 封面：有真图显示图；没有则「占位底图 + 书名首字」（与模板保持一致）
+        const initial = escapeHtml((n.title || '书').slice(0, 1));
+        const cover = n.cover_url
+            ? `<div class="random-cover" data-initial="${initial}">
+                   <img src="${escapeHtml(n.cover_url)}" alt="${escapeHtml(n.title)} 封面" loading="lazy" referrerpolicy="no-referrer"
+                        onerror="var p=this.parentElement;if(!p.dataset.fb){p.dataset.fb=1;p.classList.add('random-cover-empty');p.textContent=p.dataset.initial;}">
+               </div>`
+            : `<div class="random-cover random-cover-empty" data-initial="${initial}">
+                   <span class="random-cover-initial">${initial}</span>
+               </div>`;
+
         return `
         <div class="random-card" data-work-id="${escapeHtml(n.work_id)}">
+            ${cover}
             <div class="random-card-main">
                 <h4 class="random-title">
                     <a href="${escapeHtml(n.detail_url)}">${escapeHtml(n.title)}</a>
@@ -724,6 +736,8 @@ const RandomNovel = (function () {
             <div class="random-card-actions">
                 <a href="${escapeHtml(n.detail_url)}" class="random-btn">📄 查看详情</a>
                 <a href="${escapeHtml(n.read_url)}" class="random-btn random-btn-primary">📖 开始阅读</a>
+                <a href="javascript:void(0);" class="random-btn rc-open-file" data-file-path="${escapeHtml(n.file_path)}">📝 打开文件</a>
+                ${n.has_images ? `<a href="javascript:void(0);" class="random-btn rc-open-folder" data-folder="${escapeHtml(n.image_folder)}">📁 打开文件夹</a>` : ''}
             </div>
         </div>`;
     }
@@ -775,6 +789,31 @@ const RandomNovel = (function () {
             });
     }
 
+    // 打开配图文件夹：复用详情页同一个接口
+    function openFolder(folder) {
+        if (!folder) return;
+        fetch('/api/media/open_folder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ folder: folder })
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (typeof showNotification !== 'function') return;
+                if (data.success) {
+                    showNotification('✅ 文件夹已打开', 'success');
+                } else {
+                    showNotification('打开失败：' + (data.message || '未知错误'), 'error');
+                }
+            })
+            .catch(err => {
+                console.error('打开文件夹失败:', err);
+                if (typeof showNotification === 'function') {
+                    showNotification('打开失败：' + err.message, 'error');
+                }
+            });
+    }
+
     function init() {
         const section = el('randomSection');
         if (!section) return;
@@ -785,6 +824,24 @@ const RandomNovel = (function () {
 
         const btn = el('randomRefreshBtn');
         if (btn) btn.addEventListener('click', swap);
+
+        // 「打开文件 / 打开文件夹」用事件委托：「换一本」会整体替换卡片内容，
+        // 直接给按钮绑事件会在换卡后失效
+        section.addEventListener('click', function (e) {
+            const fileBtn = e.target.closest('.rc-open-file');
+            if (fileBtn) {
+                e.preventDefault();
+                const path = fileBtn.getAttribute('data-file-path');
+                if (path && typeof openFile === 'function') openFile(path);
+                return;
+            }
+
+            const folderBtn = e.target.closest('.rc-open-folder');
+            if (folderBtn) {
+                e.preventDefault();
+                openFolder(folderBtn.getAttribute('data-folder'));
+            }
+        });
     }
 
     return { init, swap, render, buildRandomCardHTML };

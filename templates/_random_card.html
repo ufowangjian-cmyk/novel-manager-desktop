@@ -9,9 +9,26 @@
    改这里时必须同步改那边，否则「换一本」出来的卡片和首屏渲染的样式会不一致。
 
    依赖 novel 上下文：title / author / site / word_count / publish_date /
-   progress / tags / intro / file_path / work_id
+   progress / tags / intro / file_path / work_id / cover_url
+
+   封面：cover_url 由后端 resolve_cover_url() 决定（正文外链 → 配图目录首图），
+   为空表示没有封面，此时渲染占位样式：cover-placeholder.webp 底图 + 书名首字，
+   与 Docker 版一致。图片加载失败时同样退回这个占位样式，不会出现破图。
 #}
 <div class="random-card" data-work-id="{{ novel.work_id }}">
+
+    {% set cover_initial = (novel.title or '书')[:1] %}
+    {% if novel.cover_url %}
+    <div class="random-cover" data-initial="{{ cover_initial }}">
+        <img src="{{ novel.cover_url }}" alt="{{ novel.title }} 封面" loading="lazy" referrerpolicy="no-referrer"
+            onerror="var p=this.parentElement;if(!p.dataset.fb){p.dataset.fb=1;p.classList.add('random-cover-empty');p.textContent=p.dataset.initial;}">
+    </div>
+    {% else %}
+    <div class="random-cover random-cover-empty" data-initial="{{ cover_initial }}">
+        <span class="random-cover-initial">{{ cover_initial }}</span>
+    </div>
+    {% endif %}
+
     <div class="random-card-main">
         <h4 class="random-title">
             <a href="{{ url_for('novel_detail', file_path=(novel.file_path or '').lstrip('/')) }}">{{ novel.title }}</a>
@@ -59,5 +76,13 @@
             class="random-btn">📄 查看详情</a>
         <a href="{{ url_for('read_chapter', file_path=(novel.file_path or '').lstrip('/'), line_number=1) }}"
             class="random-btn random-btn-primary">📖 开始阅读</a>
+        {# 打开文件 / 打开文件夹：复用详情页的做法（openFile + /api/media/open_folder）。
+           文件夹只在本书有配图目录时出现，与详情页的 has_images 判定一致。 #}
+        <a href="javascript:void(0);" class="random-btn rc-open-file"
+            data-file-path="{{ novel.file_path }}">📝 打开文件</a>
+        {% if novel.has_images %}
+        <a href="javascript:void(0);" class="random-btn rc-open-folder"
+            data-folder="{{ novel.image_folder }}">📁 打开文件夹</a>
+        {% endif %}
     </div>
 </div>
