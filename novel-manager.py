@@ -4358,17 +4358,17 @@ _css_version_cache = {'value': 0, 'ts': 0}
 
 
 def get_css_version():
-    """取 detail.css / reader.css 的最新 mtime 作为 ?v=，改样式后浏览器不会拿旧缓存。"""
+    """取 static/css 下所有样式的最新 mtime 作为 ?v=，改样式后浏览器不会拿旧缓存。"""
     now = time.time()
     if _css_version_cache['value'] and now - _css_version_cache['ts'] < 300:
         return _css_version_cache['value']
     latest = 0
-    for name in ('detail.css', 'reader.css'):
-        try:
-            latest = max(latest, int(os.path.getmtime(
-                os.path.join(BASE_DIR, 'static', 'css', name))))
-        except OSError:
-            continue
+    try:
+        for entry in os.scandir(os.path.join(BASE_DIR, 'static', 'css')):
+            if entry.name.endswith('.css') and entry.is_file():
+                latest = max(latest, int(entry.stat().st_mtime))
+    except OSError:
+        pass
     _css_version_cache['value'] = latest
     _css_version_cache['ts'] = now
     return latest

@@ -9,7 +9,7 @@
     <!-- 添加网站图标 -->
     <link rel="icon" href="{{ url_for('static', filename='images/novel-icon.png') }}" type="image/png">
     <link rel="shortcut icon" href="{{ url_for('static', filename='images/novel-icon.png') }}" type="image/png">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ css_version }}">
     <script>
         (function () {
             // 从 localStorage 读取缓存的主题

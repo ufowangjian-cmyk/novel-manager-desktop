@@ -890,7 +890,10 @@ body.dark-mode .random-card {
 }
 
 body.dark-mode .random-cover {
-    background: #2a3a2a;
+    /* 只用 background-color，不能用 background 简写：
+       简写会把 .random-cover-empty 的 background-image（cover-placeholder.webp）
+       一起重置掉，导致深色模式下占位封面图消失、只剩纯色块 + 书名首字。 */
+    background-color: #2a3a2a;
 }
 
 body.dark-mode .random-title a {

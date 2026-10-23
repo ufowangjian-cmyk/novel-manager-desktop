@@ -6,7 +6,7 @@
     <title>文件已变更 - {{ title or '提示' }}</title>
     <link rel="icon" href="{{ url_for('static', filename='images/novel-icon.png') }}" type="image/png">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/font.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ css_version }}">
     <style>
         .missing-container {
             max-width: 640px;

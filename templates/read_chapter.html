@@ -10,7 +10,7 @@
     <title>{{ title }} - {{ current_chapter.text if current_chapter else '阅读' }}</title>
     <link rel="icon" href="{{ url_for('static', filename='images/novel-icon.png') }}" type="image/png">
     <link rel="shortcut icon" href="{{ url_for('static', filename='images/novel-icon.png') }}" type="image/png">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ css_version }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/reader.css') }}?v={{ css_version }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/viewer.min.css') }}">
 
