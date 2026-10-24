@@ -4358,17 +4358,23 @@ _css_version_cache = {'value': 0, 'ts': 0}
 
 
 def get_css_version():
-    """取 static/css 下所有样式的最新 mtime 作为 ?v=，改样式后浏览器不会拿旧缓存。"""
+    """静态资源版本号：static/css 与 static/js 下的最新 mtime。
+
+    名字沿用 css_version（模板里已经在用），但范围覆盖到 JS ——
+    改 reader-core.js 这类脚本同样必须换 URL，否则浏览器会按缓存跑旧代码。
+    """
     now = time.time()
     if _css_version_cache['value'] and now - _css_version_cache['ts'] < 300:
         return _css_version_cache['value']
     latest = 0
-    try:
-        for entry in os.scandir(os.path.join(BASE_DIR, 'static', 'css')):
-            if entry.name.endswith('.css') and entry.is_file():
-                latest = max(latest, int(entry.stat().st_mtime))
-    except OSError:
-        pass
+    for sub in ('css', 'js'):
+        for root, _dirs, files in os.walk(os.path.join(BASE_DIR, 'static', sub)):
+            for name in files:
+                if name.endswith(('.css', '.js')):
+                    try:
+                        latest = max(latest, int(os.path.getmtime(os.path.join(root, name))))
+                    except OSError:
+                        continue
     _css_version_cache['value'] = latest
     _css_version_cache['ts'] = now
     return latest

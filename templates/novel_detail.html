@@ -137,10 +137,10 @@
         {% endif %}
     </div>
     <!-- novel_detail.html 底部 -->
-    <script src="{{ url_for('static', filename='js/common.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/reader/reader-core.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/reader/reader-viewer.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/viewer.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/common.js') }}?v={{ css_version }}"></script>
+    <script src="{{ url_for('static', filename='js/reader/reader-core.js') }}?v={{ css_version }}"></script>
+    <script src="{{ url_for('static', filename='js/reader/reader-viewer.js') }}?v={{ css_version }}"></script>
+    <script src="{{ url_for('static', filename='js/viewer.min.js') }}?v={{ css_version }}"></script>
     <script>
         // ===== 打开配图文件夹（复用 media_detect 的逻辑） =====
         async function openFolder(filePath) {
