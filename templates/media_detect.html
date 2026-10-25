@@ -20,8 +20,9 @@
             border-radius: 15px;
             margin-bottom: 25px;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
             flex-wrap: wrap;
         }
         .media-header h1 {
@@ -29,16 +30,19 @@
             display: flex;
             align-items: center;
             gap: 12px;
+            margin: 0;
         }
-        .media-header h1 small {
-            font-size: 0.5em;
-            opacity: 0.7;
-            font-weight: normal;
+        /* 说明文字单独占一行（和配置页 / 标签页同一版式），按钮组落到下一行 */
+        .media-header-desc {
+            font-size: 0.95em;
+            line-height: 1.5;
+            opacity: 0.78;
         }
         .media-header-actions {
             display: flex;
             gap: 12px;
             align-items: center;
+            flex-wrap: wrap;
         }
         .media-header-actions .btn-back {
             display: inline-flex;
@@ -647,10 +651,8 @@
     <div class="media-detect-container">
         <!-- 头部 - 添加返回按钮 -->
         <div class="media-header">
-            <h1>
-                📷 媒体检测
-                <small>检测图片/视频/音频标记遗漏</small>
-            </h1>
+            <h1>📷 媒体检测</h1>
+            <div class="media-header-desc">检测图片 / 视频 / 音频标记遗漏</div>
             <div class="media-header-actions">
                 <a href="/" class="btn-back">🏠 返回主页</a>
                 <div class="media-stats">

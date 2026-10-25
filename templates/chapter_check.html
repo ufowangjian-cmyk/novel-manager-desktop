@@ -1,0 +1,971 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>章节检测 - 摸鱼书架</title>
+    <link rel="icon" href="{{ url_for('static', filename='images/novel-icon.png') }}" type="image/png">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ css_version }}">
+    <script src="{{ url_for('static', filename='js/common.js') }}"></script>
+    <style>
+        .health-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* ===== 统一头部样式（参考媒体检测） ===== */
+        .health-header {
+            background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+            flex-wrap: wrap;
+            position: relative;
+            overflow: hidden;
+        }
+        .health-header h1 {
+            font-size: 2em;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 0;
+        }
+        /* 说明文字单独占一行（和配置页 / 标签页同一版式），按钮组落到下一行 */
+        .health-header-desc {
+            font-size: 0.95em;
+            line-height: 1.5;
+            opacity: 0.78;
+        }
+        .health-header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .health-header-actions .btn-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 24px;
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 10px;
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .health-header-actions .btn-back:hover {
+            background: rgba(255,255,255,0.35);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .health-stats {
+            display: flex;
+            gap: 20px;
+            background: rgba(255,255,255,0.1);
+            padding: 10px 20px;
+            border-radius: 10px;
+        }
+        .health-stats span {
+            font-size: 0.95em;
+        }
+        .health-stats .num {
+            font-weight: bold;
+            color: #ffd700;
+        }
+        
+        /* 轮播图容器在底层 */
+        .health-header .header-bg-container {
+            z-index: 0 !important;
+            pointer-events: none !important;
+        }
+        .health-header .header-bg-layer {
+            pointer-events: none !important;
+        }
+        /* 头部所有内容在顶层 */
+        .health-header > *:not(.header-bg-container) {
+            position: relative;
+            z-index: 1;
+        }
+        .health-header h1,
+        .health-header .health-header-actions,
+        .health-header .health-stats,
+        .health-header .btn-back {
+            position: relative;
+            z-index: 2;
+        }
+        
+        /* ===== 控制栏 ===== */
+        .control-bar {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+        .control-bar label {
+            font-weight: 500;
+            color: #333;
+        }
+        .control-bar select, .control-bar input {
+            padding: 8px 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.95em;
+        }
+        .control-bar .btn {
+            padding: 8px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #728B47;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #5a7a3a;
+        }
+        .btn-danger {
+            background: #e53e3e;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #c53030;
+        }
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+        .btn-outline {
+            background: transparent;
+            color: #728B47;
+            border: 1px solid #728B47;
+        }
+        .btn-outline:hover {
+            background: #728B47;
+            color: white;
+        }
+        .btn-open {
+            background: #48bb78;
+            color: white;
+        }
+        .btn-open:hover {
+            background: #38a169;
+        }
+
+        /* 深色模式 */
+        body.dark-mode .btn-open {
+            background: #2a5a3a;
+        }
+        body.dark-mode .btn-open:hover {
+            background: #1a4a2a;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* ===== 进度条（与主页统一样式） ===== */
+        .progress-container {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            margin-top: 20px;
+            padding: 15px;
+            display: none;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            position: absolute;
+            left: 0;
+            top: 0;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 15px;
+            background-color: rgba(0, 150, 255, 0.85);
+            background-image: linear-gradient(135deg,
+                rgba(255, 255, 255, 0.4) 25%,
+                transparent 25%,
+                transparent 50%,
+                rgba(255, 255, 255, 0.4) 50%,
+                rgba(255, 255, 255, 0.4) 75%,
+                transparent 75%,
+                transparent
+            );
+            background-size: 40px 40px;
+            box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.3), 0 1px 1px rgba(0, 0, 0, 0.1);
+            animation: old-safari-stripes 1.2s linear infinite;
+        }
+        .progress-fill::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.1) 50%, transparent 100%);
+            border-radius: 15px 0 0 0;
+            pointer-events: none;
+        }
+        .progress-fill[style*="width: 0%"] {
+            animation-play-state: paused;
+        }
+        .progress-fill:not([style*="width: 100%"]) {
+            border-radius: 15px 0 0 15px;
+        }
+        @keyframes old-safari-stripes {
+            0% { background-position: 0 0; }
+            100% { background-position: 40px 0; }
+        }
+        .progress-text {
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            color: #1a202c;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+        
+        
+        /* ===== 结果卡片 ===== */
+        .results-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .result-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border-left: 4px solid #48bb78;
+        }
+        .result-card.has-error {
+            border-left-color: #f56565;
+        }
+        .result-card.has-warning {
+            border-left-color: #ed8936;
+        }
+        .result-header {
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .result-header:hover {
+            background: #f7fafc;
+        }
+        .result-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            color: #2d3748;
+        }
+        .result-badges {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .badge {
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.75em;
+            font-weight: 500;
+        }
+        .badge-error {
+            background: #fed7d7;
+            color: #c53030;
+        }
+        .badge-warning {
+            background: #feebc8;
+            color: #c05621;
+        }
+        .result-body {
+            padding: 0 20px 20px;
+            display: none;
+        }
+        .result-card.expanded .result-body {
+            display: block;
+        }
+        .result-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .result-actions button {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.2s;
+        }
+        
+        .issue-list {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0;
+        }
+        .issue-item {
+            padding: 8px 12px;
+            margin-bottom: 5px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .issue-item.error {
+            background: #fff5f5;
+            color: #c53030;
+        }
+        .issue-item.warning {
+            background: #fffaf0;
+            color: #c05621;
+        }
+        .issue-item.info {
+            background: #ebf8ff;
+            color: #2b6cb0;
+        }
+        
+        .file-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .info-item {
+            background: #f7fafc;
+            padding: 12px 15px;
+            border-radius: 8px;
+        }
+        .info-label {
+            font-size: 0.8em;
+            color: #718096;
+            margin-bottom: 4px;
+        }
+        .info-value {
+            font-weight: 600;
+            color: #2d3748;
+            word-break: break-all;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #a0aec0;
+        }
+        .empty-state .icon {
+            font-size: 4em;
+            margin-bottom: 15px;
+        }
+        .empty-state h3 {
+            color: #4a5568;
+            margin-bottom: 8px;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* ===== 深色模式 ===== */
+        body.dark-mode {
+            background: #1a2a1a;
+        }
+        body.dark-mode .control-bar,
+        body.dark-mode .result-card {
+            background: #1e2a1e;
+        }
+        body.dark-mode .progress-container {
+            background: rgba(0, 0, 0, 0.35);
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+        body.dark-mode .progress-text {
+            color: #cbd5e1;
+        }
+        body.dark-mode .control-bar label {
+            color: #cbd5e1;
+        }
+        body.dark-mode .control-bar select,
+        body.dark-mode .control-bar input {
+            background: #0f1a0f;
+            border-color: #334d33;
+            color: #cbd5e1;
+        }
+        body.dark-mode .result-title {
+            color: #cbd5e1;
+        }
+        body.dark-mode .result-header:hover {
+            background: #2a3a2a;
+        }
+        body.dark-mode .info-item {
+            background: #0f1a0f;
+        }
+        body.dark-mode .info-value {
+            color: #cbd5e1;
+        }
+        body.dark-mode .info-label {
+            color: #94a3b8;
+        }
+        body.dark-mode .btn-secondary {
+            background: #2a3a2a;
+            color: #cbd5e1;
+        }
+        body.dark-mode .btn-secondary:hover {
+            background: #3a4d3a;
+        }
+        body.dark-mode .progress-text {
+            color: #94a3b8;
+        }
+        body.dark-mode .empty-state h3 {
+            color: #cbd5e1;
+        }
+        body.dark-mode .result-actions {
+            border-top-color: #334d33;
+        }
+        body.dark-mode .health-header-actions .btn-back {
+            background: rgba(0,0,0,0.3);
+            border-color: rgba(255,255,255,0.15);
+        }
+        body.dark-mode .health-header-actions .btn-back:hover {
+            background: rgba(0,0,0,0.5);
+        }
+        body.dark-mode .issue-item code {
+            background: rgba(255,255,255,0.1) !important;
+            color: #cbd5e1;
+        }
+        /* 检测项目勾选栏 */
+        .check-items-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 16px;
+            padding: 10px 14px;
+            margin-bottom: 10px;
+            background: rgba(102, 126, 234, 0.08);
+            border-radius: 10px;
+            font-size: 13px;
+        }
+        .check-items-label { font-weight: 600; color: #4a5568; }
+        .check-items-hint { color: #8a94a6; font-size: 12px; }
+        .layout-opts { display: none; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .layout-num {
+            width: 64px;
+            padding: 3px 6px;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #2d3748;
+            background: #fff;
+        }
+
+        /* 章节检测专用 */
+        .layout-opts {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .layout-num {
+            width: 70px;
+            padding: 4px 8px;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #2d3748;
+            background: #fff;
+        }
+        .chapter-line {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .chapter-line-head {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .chapter-line-text {
+            font-family: ui-monospace, Consolas, monospace;
+            font-size: 0.86em;
+            line-height: 1.6;
+            color: #4a5568;
+            background: rgba(0, 0, 0, 0.04);
+            padding: 6px 10px;
+            border-radius: 6px;
+            word-break: break-all;
+        }
+        body.dark-mode .chapter-line-text {
+            color: #cbd5e0;
+            background: rgba(255, 255, 255, 0.08);
+        }
+        body.dark-mode .layout-num {
+            background: #2d3748;
+            color: #e2e8f0;
+            border-color: #4a5568;
+        }
+    </style>
+<body>
+    <!-- 加载遮罩 -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+    <div class="health-container">
+        <!-- 头部 -->
+        <div class="health-header">
+            <h1>📑 章节检测</h1>
+            <div class="health-header-desc">找出「章节标题和正文写在同一行」的排版问题，改法是在标题词后手工断行</div>
+            <div class="health-header-actions">
+                <a href="/" class="btn-back">🏠 返回主页</a>
+                <div class="health-stats">
+                    <span>📁 小说总数: <span class="num" id="totalNovels">{{ novel_data|length }}</span></span>
+                    <span>⚠️ 问题文件: <span class="num" id="problemCount">0</span></span>
+                    <span>📍 问题处数: <span class="num" id="lineCount">0</span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 检测参数 -->
+        <div class="check-items-bar">
+            <span class="check-items-label">⚙️ 检测参数</span>
+            <span class="layout-opts">
+                <span class="check-items-hint">标题词后超过</span>
+                <input type="number" id="layoutRestLimit" class="layout-num" value="30" min="10" max="200"
+                       title="标题词后面剩多少字才算「标题和正文写在同一行」">
+                <span class="check-items-hint">字判为问题，每本只扫前</span>
+                <input type="number" id="layoutMaxLines" class="layout-num" value="3000" min="200" max="50000"
+                       title="每本书扫描的行数上限（章节都在开头，不必全文扫）">
+                <span class="check-items-hint">行</span>
+            </span>
+            <span class="check-items-hint">真章节标题极少超过 30 字，调小会误报、调大会漏报</span>
+        </div>
+
+        <!-- 控制栏 -->
+        <div class="control-bar">
+            <button class="btn btn-primary" id="scanAllBtn" onclick="scanAll()">
+                🔍 开始扫描
+            </button>
+            <button class="btn btn-outline" onclick="expandAll()">展开全部</button>
+            <button class="btn btn-outline" onclick="collapseAll()">折叠全部</button>
+            <span style="flex:1;"></span>
+            <button class="btn btn-danger" onclick="confirmClearAll()">🗑️ 清空结果</button>
+        </div>
+
+        <!-- 进度条 -->
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text">
+                <span id="progressText">准备中...</span>
+                <span id="progressCount"></span>
+            </div>
+        </div>
+
+        <!-- 结果容器 -->
+        <div class="results-container" id="resultsContainer">
+            <div class="empty-state">
+                <div class="icon">📑</div>
+                <h3>暂无检测结果</h3>
+                <p>点击「开始扫描」找出章节标题和正文挤在同一行的文件</p>
+                <p style="font-size:0.85em;color:#a0aec0;margin-top:8px;">
+                    改法：在标题词后面断行，正文一个字都不会丢
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allResults = [];
+        let isScanning = false;
+
+        // ---------- 参数（记在浏览器本地）----------
+        const OPTS_KEY = 'nm_chapter_scan_opts';
+
+        function chapterLayoutOpts() {
+            const restEl = document.getElementById('layoutRestLimit');
+            const linesEl = document.getElementById('layoutMaxLines');
+            const rest = restEl ? parseInt(restEl.value, 10) : NaN;
+            const lines = linesEl ? parseInt(linesEl.value, 10) : NaN;
+            return {
+                rest_limit: isNaN(rest) ? 30 : rest,
+                max_lines: isNaN(lines) ? 3000 : lines
+            };
+        }
+
+        function saveOpts() {
+            try {
+                localStorage.setItem(OPTS_KEY, JSON.stringify(chapterLayoutOpts()));
+            } catch (e) { }
+        }
+
+        function initOpts() {
+            let saved = null;
+            try {
+                saved = JSON.parse(localStorage.getItem(OPTS_KEY) || 'null');
+            } catch (e) { }
+            if (saved && typeof saved === 'object') {
+                const restEl = document.getElementById('layoutRestLimit');
+                const linesEl = document.getElementById('layoutMaxLines');
+                if (restEl && saved.rest_limit) restEl.value = saved.rest_limit;
+                if (linesEl && saved.max_lines) linesEl.value = saved.max_lines;
+            }
+            ['layoutRestLimit', 'layoutMaxLines'].forEach(function (id) {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener('change', saveOpts);
+            });
+        }
+
+        // 轮询后台任务进度
+        async function pollScanResult(taskId) {
+            while (true) {
+                await new Promise(resolve => setTimeout(resolve, 700));
+
+                const progressResp = await fetch(`/api/task/${taskId}/progress`);
+                const progress = await progressResp.json();
+                if (!progress.success) {
+                    throw new Error(progress.message || '获取扫描进度失败');
+                }
+
+                document.getElementById('progressFill').style.width = (progress.progress || 0) + '%';
+                document.getElementById('progressText').textContent = progress.message || '正在扫描...';
+                document.getElementById('progressCount').textContent =
+                    `${progress.current || 0} / ${progress.total || 0}`;
+
+                if (progress.status !== 'completed' && progress.status !== 'error') {
+                    continue;
+                }
+
+                const resultResp = await fetch(`/api/task/${taskId}/result`);
+                const data = await resultResp.json();
+                if (!data.success) {
+                    throw new Error(data.message || '扫描失败');
+                }
+
+                allResults = data.results || [];
+                document.getElementById('problemCount').textContent = data.problem_count || 0;
+                document.getElementById('lineCount').textContent =
+                    allResults.reduce((sum, r) => sum + (r.problems || []).length, 0);
+
+                renderResults();
+
+                document.getElementById('progressFill').style.width = '100%';
+                document.getElementById('progressText').textContent =
+                    `检测完成！共扫描 ${data.total_checked || 0} 个文件，发现 ${data.problem_count || 0} 个问题文件`;
+                document.getElementById('progressCount').textContent =
+                    `${data.total_checked || 0} / ${data.total_checked || 0}`;
+
+                if (typeof showNotification === 'function') {
+                    showNotification(`检测完成！发现 ${data.problem_count || 0} 个问题文件`, 'success');
+                }
+                return;
+            }
+        }
+
+        async function scanAll() {
+            if (isScanning) {
+                if (typeof showNotification === 'function') {
+                    showNotification('检测正在进行中，请勿重复点击', 'warning');
+                }
+                return;
+            }
+            isScanning = true;
+
+            const btn = document.getElementById('scanAllBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner"></span>检测中...';
+
+            const container = document.getElementById('progressContainer');
+            container.style.display = 'block';
+            document.getElementById('progressFill').style.width = '0%';
+            document.getElementById('progressText').textContent = '正在扫描...';
+            document.getElementById('progressCount').textContent = '';
+
+            try {
+                saveOpts();
+                const startResp = await fetch('/api/txt/chapter_scan_all', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chapter_layout: chapterLayoutOpts() })
+                });
+                const startData = await startResp.json();
+
+                if (startData.duplicate) {
+                    if (typeof showNotification === 'function') {
+                        showNotification(startData.message || '检测已在进行中', 'warning');
+                    }
+                    if (startData.task_id) {
+                        await pollScanResult(startData.task_id);
+                        return;
+                    }
+                    throw new Error(startData.message || '检测已在进行中');
+                }
+                if (!startData.success || !startData.task_id) {
+                    throw new Error(startData.message || '检测启动失败');
+                }
+
+                await pollScanResult(startData.task_id);
+            } catch (error) {
+                console.error('检测失败:', error);
+                if (typeof showNotification === 'function') {
+                    showNotification('检测失败: ' + error.message, 'error');
+                } else {
+                    alert('检测失败: ' + error.message);
+                }
+            } finally {
+                isScanning = false;
+                btn.disabled = false;
+                btn.innerHTML = '🔍 开始扫描';
+                setTimeout(() => {
+                    document.getElementById('progressContainer').style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function formatSize(bytes) {
+            if (!bytes) return '0 B';
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / 1024 / 1024).toFixed(2) + ' MB';
+        }
+
+        function renderResults() {
+            const container = document.getElementById('resultsContainer');
+
+            if (allResults.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">✅</div>
+                        <h3>没有发现章节排版问题</h3>
+                        <p>所有书籍的章节标题都独立成行</p>
+                        <p style="font-size:0.85em;color:#a0aec0;margin-top:8px;">
+                            如果觉得有遗漏，可以调小「标题词后超过 N 字」再扫一次
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = allResults.map(item => {
+                const count = (item.problems || []).length;
+                const cardClass = item.is_readable ? 'result-card has-warning' : 'result-card has-error';
+                const escapedPath = item.file_path.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+                let badges = '';
+                if (!item.is_readable) {
+                    badges += '<span class="badge badge-error">无法读取</span>';
+                } else {
+                    badges += `<span class="badge badge-warning">${count} 处</span>`;
+                }
+
+                let inner = '';
+                if (!item.is_readable) {
+                    inner = `<p style="color:#f56565;">❌ ${escapeHtml(item.error || '无法读取')}</p>`;
+                } else if (count === 0) {
+                    inner = '<p style="color:#48bb78;">✅ 未发现问题</p>';
+                } else {
+                    inner = '<ul class="issue-list">' + item.problems.map(p => {
+                        return `<li class="issue-item warning">
+                            <div class="chapter-line">
+                                <div class="chapter-line-head">
+                                    <strong>第 ${p.line} 行</strong>
+                                    <span class="badge badge-warning">词后 ${p.rest_len} 字</span>
+                                    <span style="opacity:0.8;">标题词「${escapeHtml(p.head || '')}」</span>
+                                </div>
+                                <div class="chapter-line-text">${escapeHtml(p.text || '')}</div>
+                            </div>
+                        </li>`;
+                    }).join('') + '</ul>';
+                }
+
+                return `
+                    <div class="${cardClass}" data-file-path="${escapeHtml(item.file_path)}">
+                        <div class="result-header" onclick="toggleCard(this)">
+                            <div class="result-title">
+                                <span>${escapeHtml(item.title || item.filename)}</span>
+                            </div>
+                            <div class="result-badges">${badges}</div>
+                        </div>
+                        <div class="result-body">
+                            <div class="file-info-grid">
+                                <div class="info-item">
+                                    <div class="info-label">文件名</div>
+                                    <div class="info-value">${escapeHtml(item.filename || '')}</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-label">文件大小</div>
+                                    <div class="info-value">${formatSize(item.file_size)}</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-label">总行数</div>
+                                    <div class="info-value">${(item.total_lines || 0).toLocaleString()}</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-label">扫描行数</div>
+                                    <div class="info-value">${(item.scanned_lines || 0).toLocaleString()}</div>
+                                </div>
+                            </div>
+
+                            <h4 style="margin-bottom:10px;color:#4a5568;">疑似问题</h4>
+                            ${inner}
+
+                            <div class="result-actions">
+                                <button class="btn btn-secondary" onclick="checkSingle('${escapedPath}')">
+                                    🔍 重新检测
+                                </button>
+                                <button class="btn btn-open" onclick="openTxtFile('${escapedPath}')">
+                                    📂 打开文件
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleCard(header) {
+            header.closest('.result-card').classList.toggle('expanded');
+        }
+
+        function expandAll() {
+            document.querySelectorAll('.result-card').forEach(card => card.classList.add('expanded'));
+        }
+
+        function collapseAll() {
+            document.querySelectorAll('.result-card').forEach(card => card.classList.remove('expanded'));
+        }
+
+        async function checkSingle(filePath) {
+            try {
+                const response = await fetch('/api/txt/chapter_check', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file_path: filePath, chapter_layout: chapterLayoutOpts() })
+                });
+                const data = await response.json();
+                if (!data.success) {
+                    throw new Error(data.message || '检测失败');
+                }
+                const index = allResults.findIndex(r => r.file_path === filePath);
+                if (index >= 0) {
+                    allResults[index] = Object.assign({}, allResults[index], data.result);
+                    document.getElementById('lineCount').textContent =
+                        allResults.reduce((sum, r) => sum + (r.problems || []).length, 0);
+                    renderResults();
+                }
+                if (typeof showNotification === 'function') {
+                    showNotification(`检测完成，发现 ${data.result.problem_count || 0} 处`, 'success');
+                }
+            } catch (error) {
+                if (typeof showNotification === 'function') {
+                    showNotification('检测失败: ' + error.message, 'error');
+                }
+            }
+        }
+
+        // 用默认编辑器打开文件
+        function openTxtFile(filePath) {
+            if (typeof openFile === 'function') {
+                openFile(filePath);
+                return;
+            }
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            if (loadingOverlay) loadingOverlay.style.display = 'flex';
+
+            let encodedPath = filePath;
+            if (!filePath.includes('%')) {
+                encodedPath = encodeURIComponent(filePath);
+            }
+            fetch(`/open_file_ajax/${encodedPath}`, {method: 'POST'})
+                .then(response => response.json())
+                .then(data => {
+                    if (loadingOverlay) loadingOverlay.style.display = 'none';
+                    if (typeof showNotification === 'function') {
+                        showNotification(data.success ? '文件已打开' : `打开失败：${data.error || '未知错误'}`,
+                                          data.success ? 'success' : 'error');
+                    }
+                })
+                .catch(error => {
+                    if (loadingOverlay) loadingOverlay.style.display = 'none';
+                    if (typeof showNotification === 'function') {
+                        showNotification(`请求失败：${error.message}`, 'error');
+                    }
+                });
+        }
+
+        function confirmClearAll() {
+            if (!confirm('清空所有检测结果？')) return;
+            allResults = [];
+            document.getElementById('problemCount').textContent = '0';
+            document.getElementById('lineCount').textContent = '0';
+            renderResults();
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof initCarousel === 'function') {
+                initCarousel('.health-header', {
+                    autoSlideshow: true,
+                    intervalTime: 8000
+                });
+            }
+            initOpts();
+        });
+    </script>
+</body>
+</html>

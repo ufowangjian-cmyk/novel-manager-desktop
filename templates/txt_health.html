@@ -22,8 +22,9 @@
             border-radius: 15px;
             margin-bottom: 25px;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
             flex-wrap: wrap;
             position: relative;
             overflow: hidden;
@@ -33,11 +34,13 @@
             display: flex;
             align-items: center;
             gap: 12px;
+            margin: 0;
         }
-        .health-header h1 small {
-            font-size: 0.5em;
-            opacity: 0.7;
-            font-weight: normal;
+        /* 说明文字单独占一行（和配置页 / 标签页同一版式），按钮组落到下一行 */
+        .health-header-desc {
+            font-size: 0.95em;
+            line-height: 1.5;
+            opacity: 0.78;
         }
         .health-header-actions {
             display: flex;
@@ -629,6 +632,22 @@
             background: rgba(255,255,255,0.1) !important;
             color: #cbd5e1;
         }
+        /* 检测项目勾选栏 */
+        .check-items-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 16px;
+            padding: 10px 14px;
+            margin-bottom: 10px;
+            background: rgba(102, 126, 234, 0.08);
+            border-radius: 10px;
+            font-size: 13px;
+        }
+        .check-items-label { font-weight: 600; color: #4a5568; }
+        .check-item { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; color: #4a5568; }
+        .check-item input { cursor: pointer; margin: 0; }
+        .check-items-hint { color: #8a94a6; font-size: 12px; }
     </style>
 </head>
 <body>
@@ -639,10 +658,8 @@
     <div class="health-container">
         <!-- 头部 - 统一风格 -->
         <div class="health-header">
-            <h1>
-                📝 TXT 文件体检
-                <small>检测编码/乱码/换行符问题</small>
-            </h1>
+            <h1>📝 TXT 文件体检</h1>
+            <div class="health-header-desc">检测编码 / BOM / 换行符 / 乱码与可疑字符，可一键自动修复</div>
             <div class="health-header-actions">
                 <a href="/" class="btn-back">🏠 返回主页</a>
                 <div class="health-stats">
@@ -653,10 +670,19 @@
             </div>
         </div>
         
+        <!-- 检测项目：默认全选，手动点「开始扫描」才开跑 -->
+        <div class="check-items-bar" id="checkItemsBar">
+            <span class="check-items-label">🔧 检测项目</span>
+            <label class="check-item"><input type="checkbox" class="health-check-item" value="encoding" checked> 编码 / BOM</label>
+            <label class="check-item"><input type="checkbox" class="health-check-item" value="line_endings" checked> 换行符</label>
+            <label class="check-item"><input type="checkbox" class="health-check-item" value="suspicious" checked> 乱码与可疑字符<span class="check-items-hint">（最慢）</span></label>
+            <span class="check-items-hint">只勾需要的项目能快很多</span>
+        </div>
+
         <!-- 控制栏 -->
         <div class="control-bar">
             <button class="btn btn-primary" id="scanAllBtn" onclick="scanAll()">
-                🔍 扫描全部
+                🔍 开始扫描
             </button>
             <button class="btn btn-warning" id="fixAllBtn" onclick="fixAll()" disabled>
                 🔧 一键修复
@@ -696,9 +722,12 @@
             <div class="empty-state">
                 <div class="icon">📝</div>
                 <h3>暂无检测结果</h3>
-                <p>点击「扫描全部」开始检测 TXT 文件健康状态</p>
+                <p>点击「开始扫描」开始检测 TXT 文件健康状态</p>
                 <p style="font-size:0.85em;color:#a0aec0;margin-top:8px;">
                     将检测：编码格式、BOM头、混合换行符、乱码字符、零宽与异常控制字符
+                </p>
+                <p style="font-size:0.85em;color:#a0aec0;">
+                    章节排版问题请用「章节检测」页
                 </p>
             </div>
         </div>
@@ -760,7 +789,7 @@
         let currentFilter = 'all';
         let filesToFix = [];
         
-        // 扫描全部
+        // 开始扫描
         // 同一时间只允许一个扫描进行（前端守卫，后端另有硬约束）
         let isScanning = false;
 
@@ -797,7 +826,7 @@
 
                 renderResults();
                 document.getElementById('filterBar').style.display = 'flex';
-                document.getElementById('fixAllBtn').disabled = (data.problem_count || 0) === 0;
+                document.getElementById('fixAllBtn').disabled = !allResults.some(hasFixableIssue);
 
                 document.getElementById('progressFill').style.width = '100%';
                 document.getElementById('progressText').textContent =
@@ -812,6 +841,56 @@
             }
         }
 
+        // ---------- 检测项目选择 ----------
+        const HEALTH_ITEMS_KEY = 'nm_health_check_items';
+
+        function healthItemBoxes() {
+            return Array.from(document.querySelectorAll('.health-check-item'));
+        }
+
+        function getCheckedHealthItems() {
+            return healthItemBoxes().filter(b => b.checked).map(b => b.value);
+        }
+
+        // 全选时返回 null —— 后端约定 null 表示「全跑」，将来新增检测项也自动包含
+        function healthChecksPayload() {
+            const boxes = healthItemBoxes();
+            const checked = getCheckedHealthItems();
+            if (boxes.length && checked.length === boxes.length) return null;
+            return checked;
+        }
+
+        function ensureItemsSelected() {
+            if (getCheckedHealthItems().length) return true;
+            if (typeof showNotification === 'function') {
+                showNotification('请至少勾选一个检测项目', 'warning');
+            }
+            return false;
+        }
+
+        function initHealthItems() {
+            let saved = null;
+            try {
+                saved = JSON.parse(localStorage.getItem(HEALTH_ITEMS_KEY) || 'null');
+            } catch (e) { }
+            if (Array.isArray(saved)) {
+                healthItemBoxes().forEach(box => { box.checked = saved.indexOf(box.value) >= 0; });
+            }
+            healthItemBoxes().forEach(box => box.addEventListener('change', function () {
+                try {
+                    localStorage.setItem(HEALTH_ITEMS_KEY, JSON.stringify(getCheckedHealthItems()));
+                } catch (e) { }
+            }));
+        }
+
+        // ---------- 是否值得修复 ----------
+        // 体检现在只剩编码/BOM/换行/乱码，全都能自动修；唯一要排除的是读不出来的文件
+        // （fix_txt_file 对它无能为力）。章节排版问题已移到「章节检测」页，不参与这里。
+        function hasFixableIssue(item) {
+            if (!item || !item.is_readable) return false;
+            return (item.issues || []).length > 0 || (item.suspicious_chars || []).length > 0;
+        }
+
         async function scanAll() {
             if (isScanning) {
                 if (typeof showNotification === 'function') {
@@ -819,6 +898,7 @@
                 }
                 return;
             }
+            if (!ensureItemsSelected()) return;
             isScanning = true;
 
             const btn = document.getElementById('scanAllBtn');
@@ -835,7 +915,7 @@
                 const startResp = await fetch('/api/txt/health_scan_all', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({})
+                    body: JSON.stringify({ checks: healthChecksPayload() })
                 });
                 const startData = await startResp.json();
 
@@ -867,7 +947,7 @@
             } finally {
                 isScanning = false;
                 btn.disabled = false;
-                btn.innerHTML = '🔍 扫描全部';
+                btn.innerHTML = '🔍 开始扫描';
                 setTimeout(() => {
                     document.getElementById('progressContainer').style.display = 'none';
                 }, 3000);
@@ -904,8 +984,8 @@
                         return item.issues.some(i => i.type === 'encoding' || i.type === 'encoding_non_utf8' || i.type === 'bom');
                     }
                     if (currentFilter === 'needfix') {
-                        // 只列出真正需要处理的问题（error / warning）
-                        return item.is_readable && (item.issues.length > 0 || item.suspicious_chars.length > 0);
+                        // 只列出「真的能修」的文件
+                        return hasFixableIssue(item);
                     }
                     if (currentFilter === 'readable') {
                         return item.is_readable && item.issues.length === 0 && item.suspicious_chars.length === 0;
@@ -919,7 +999,7 @@
                     <div class="empty-state">
                         <div class="icon">✅</div>
                         <h3>${allResults.length === 0 ? '暂无检测结果' : '没有符合条件的文件'}</h3>
-                        <p>${allResults.length === 0 ? '点击「扫描全部」开始检测' : '尝试切换筛选条件'}</p>
+                        <p>${allResults.length === 0 ? '点击「开始扫描」开始检测' : '尝试切换筛选条件'}</p>
                     </div>
                 `;
                 return;
@@ -1010,6 +1090,10 @@
                 }
                 
                 const escapedPath = item.file_path.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                // 没有可自动修复项的文件不显示修复按钮
+                const fixBtnHtml = hasFixableIssue(item)
+                    ? `<button class="btn btn-primary" onclick="fixSingle('${escapedPath}')">🔧 修复此文件</button>`
+                    : '';
                 
                 return `
                     <div class="${cardClass}" data-file-path="${escapeHtml(item.file_path)}">
@@ -1056,9 +1140,7 @@
                             ${issuesHtml}
                             
                             <div class="result-actions">
-                                <button class="btn btn-primary" onclick="fixSingle('${escapedPath}')">
-                                    🔧 修复此文件
-                                </button>
+                                ${fixBtnHtml}
                                 <button class="btn btn-secondary" onclick="checkSingle('${escapedPath}')">
                                     🔍 重新检测
                                 </button>
@@ -1175,7 +1257,7 @@
                 const response = await fetch('/api/txt/health_check', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ file_path: filePath })
+                    body: JSON.stringify({ file_path: filePath, checks: healthChecksPayload() })
                 });
                 
                 const data = await response.json();
@@ -1245,14 +1327,14 @@
                 return;
             }
             
-            let filesToFixList;
-            if (selectedFiles.size > 0) {
-                filesToFixList = Array.from(selectedFiles);
-            } else {
-                filesToFixList = allResults
-                    .filter(item => item.issues.length > 0 || item.suspicious_chars.length > 0 || !item.is_readable)
-                    .map(item => item.file_path);
-            }
+            // 只处理「有可自动修复项」的文件，其余会被过滤掉
+            const itemByPath = new Map(allResults.map(r => [r.file_path, r]));
+            const candidates = selectedFiles.size > 0
+                ? Array.from(selectedFiles)
+                : allResults.map(r => r.file_path);
+            const filesToFixList = candidates.filter(function (path) {
+                return hasFixableIssue(itemByPath.get(path));
+            });
             
             if (filesToFixList.length === 0) {
                 if (typeof showNotification === 'function') {
@@ -1382,8 +1464,8 @@
                 });
             }
             
-            // 自动开始扫描
-            setTimeout(scanAll, 2000);
+            // 不再自动扫描：先让人选检测项目，点「开始扫描」才开跑
+            initHealthItems();
         });
     </script>
 </body>

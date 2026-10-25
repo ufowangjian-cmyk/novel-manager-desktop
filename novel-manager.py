@@ -1833,6 +1833,71 @@ def is_chapter_line_strict(t):
     return False
 
 
+# ---------- 分章排版检查（体检用）----------
+# 「章节标题和正文写在同一行」会让章节列表被切碎：
+#   「第六章他推开门，屋里一片漆黑。」→ 整行被当成章名，正文也少了一段
+# 判据两条（任一命中即可）：
+#   1. 原正则认它是章节，但 is_chapter_line_strict 不认（裸词后接句子，如「尾声位于…」）
+#   2. 标题词后面还剩 >= 30 字（实测真标题最长 29 字，这类误判行最短 45 字，区间不重叠）
+_CH_HEAD_RES = {
+    1: re.compile(r'^\s*(?:第(?:\d+|[〇零一二三四五六七八九十百千万]+)[册集卷部]|[上下前后中终序][册集卷部])'),
+    2: re.compile(r'^\s*(?:第(?:\d+|[〇零一二三四五六七八九十百千万]+)[篇章]|[上下前后中终序][篇章]|楔子|引子|引言|前言|序言|正文|番外|后记|尾声)'),
+    3: re.compile(r'^\s*(?:第(?:\d+|[〇零一二三四五六七八九十百千万]+)[节回目幕])'),
+}
+_CH_HEAD_SEP = '：:·　 \t－-—'
+_CH_REST_LIMIT = 30
+# 快速预筛：只有以这些字开头的行才可能是章节标题，避免每行都跑三个正则
+_CH_HEAD_CHARS = set('第上下前后中终序楔引序正番尾')
+
+
+def detect_chapter_layout_issues(content, max_items=20, max_lines=3000, rest_limit=None):
+    """找出「章节标题和正文写在同一行」的疑似排版问题。
+
+    只看前 max_lines 行：章节判定集中在开头，全文扫太慢（全量体检会跑几千本）。
+    split('\n', max_lines) 限制切分次数，避免大文件被完整 splitlines 一遍。
+    rest_limit 默认 _CH_REST_LIMIT（30 字），由前端高级设置传入，范围在 _clamp_layout_opts 里夹紧。
+
+    返回 [{'line', 'head', 'rest_len', 'text', 'reason'}]，最多 max_items 条。
+    """
+    limit = rest_limit if isinstance(rest_limit, int) and rest_limit > 0 else _CH_REST_LIMIT
+    problems = []
+    for lineno, raw in enumerate(content.split('\n', max_lines)[:max_lines], 1):
+        t = raw.strip()
+        if not t or len(t) > 200:
+            continue
+        if t[0] not in _CH_HEAD_CHARS:
+            continue
+        if not (LEVEL1_PATTERN.match(t) or LEVEL2_PATTERN.match(t) or LEVEL3_PATTERN.match(t)):
+            continue
+
+        head = ''
+        rest_len = 0
+        for lv in (1, 2, 3):
+            m = _CH_HEAD_RES[lv].match(t)
+            if m:
+                head = m.group(0).strip()
+                rest_len = len(t[m.end():].strip(_CH_HEAD_SEP))
+                break
+
+        strict_ok = is_chapter_line_strict(t)
+        if strict_ok and rest_len < limit:
+            continue
+
+        reason = [] if strict_ok else ['裸词后接句子']
+        if rest_len >= limit:
+            reason.append('标题词后 %d 字' % rest_len)
+        problems.append({
+            'line': lineno,
+            'head': head,
+            'rest_len': rest_len,
+            'text': t,
+            'reason': '、'.join(reason),
+        })
+        if len(problems) >= max_items:
+            break
+    return problems
+
+
 def is_separator_line(t):
     """纯符号装饰行（分隔线）"""
     return bool(_SEPARATOR_RE.match(_clean_line(t)))
@@ -6556,7 +6621,89 @@ def _convert_fullwidth_text(text):
     return text.translate(translation)
 
 
-def check_txt_health(file_path):
+# 体检可选项目（编码 / 换行符 / 乱码与可疑字符），由体检页的勾选栏决定只跑哪些。
+# 全量体检几千本，全跑很慢，所以支持按项跳过。
+def _want_check(checks, key):
+    """checks 为空 / None 表示全跑（兼容老调用）。"""
+    return not checks or key in checks
+
+
+def _clamp_layout_opts(opts):
+    """清洗前端传来的分章排版参数，避免乱传导致全量体检跑几小时或误报。"""
+    opts = opts if isinstance(opts, dict) else {}
+
+    def as_int(key, default, low, high):
+        try:
+            val = int(opts.get(key))
+        except (TypeError, ValueError):
+            return default
+        return max(low, min(high, val))
+
+    return {
+        'rest_limit': as_int('rest_limit', _CH_REST_LIMIT, 10, 200),
+        'max_lines': as_int('max_lines', 3000, 200, 50000),
+    }
+
+
+def check_chapter_layout(file_path, rest_limit=None, max_lines=None):
+    """检测单本书「章节标题和正文写在同一行」的排版问题。
+
+    这是整理类工作（要走手工断行），单独成页，不混进 TXT 体检。
+    返回结构刻意做窄：只带定位所需信息，不跑编码/乱码检测。
+    """
+    opts = _clamp_layout_opts({'rest_limit': rest_limit, 'max_lines': max_lines})
+    result = {
+        'file_path': file_path,
+        'filename': os.path.basename(file_path),
+        'file_size': 0,
+        'total_lines': 0,
+        'scanned_lines': 0,
+        'problems': [],
+        'is_readable': True,
+        'error': None,
+    }
+
+    try:
+        if not os.path.exists(file_path):
+            result['is_readable'] = False
+            result['error'] = '文件不存在'
+            return result
+        if not os.path.isfile(file_path):
+            result['is_readable'] = False
+            result['error'] = '不是有效文件'
+            return result
+
+        result['file_size'] = os.path.getsize(file_path)
+        with open(file_path, 'rb') as f:
+            raw_data = f.read()
+
+        encoding_info = _detect_text_encoding(raw_data)
+        encoding = encoding_info['detected']
+        try:
+            if encoding_info['bom_type'] == 'utf-16-le':
+                content = raw_data[2:].decode('utf-16-le')
+            elif encoding_info['bom_type'] == 'utf-16-be':
+                content = raw_data[2:].decode('utf-16-be')
+            else:
+                content = raw_data.decode(encoding)
+        except UnicodeDecodeError:
+            content = raw_data.decode(encoding, errors='replace')
+        if content.startswith('\ufeff'):
+            content = content[1:]
+
+        result['total_lines'] = content.count('\n') + content.count('\r') + 1
+        problems = detect_chapter_layout_issues(
+            content, rest_limit=opts['rest_limit'], max_lines=opts['max_lines']
+        )
+        result['problems'] = problems
+        result['scanned_lines'] = min(result['total_lines'], opts['max_lines'])
+    except Exception as e:
+        result['is_readable'] = False
+        result['error'] = str(e)
+    return result
+
+
+def check_txt_health(file_path, checks=None):
     """检测 TXT 文件的编码、换行符和真正的乱码问题。
 
     只报告会影响阅读的问题：编码错误、乱码、异常控制字符、混合换行符。
@@ -6632,124 +6779,128 @@ def check_txt_health(file_path):
         total_lines = content.count('\n') + content.count('\r') + 1
         result['total_lines'] = total_lines
 
-        if not encoding_info['is_utf8']:
-            result['issues'].append(_issue(
-                'encoding', 'warning',
-                f'文件不是 UTF-8 编码，检测到 {encoding}，建议转换为 UTF-8'
-            ))
-        if encoding_info['has_bom']:
-            result['issues'].append(_issue(
-                'encoding', 'info',
-                f'文件包含 {encoding_info["bom_type"]} BOM 头'
-            ))
-
-        # 换行符：只报真正需要修的（混合 / 旧 Mac CR），CRLF 与末尾换行属正常，不告警
-        if line_info['is_mixed']:
-            result['issues'].append(_issue(
-                'line_endings', 'warning',
-                f'混合换行符：LF {line_info["lf"]} 个，CRLF {line_info["crlf"]} 个，CR {line_info["cr"]} 个'
-            ))
-        elif line_info['cr'] > 0:
-            result['issues'].append(_issue(
-                'line_endings', 'warning',
-                f'使用了旧 Mac 换行符 CR（{line_info["cr"]} 个），建议统一为 LF'
-            ))
-
-        # 单次扫描统计零宽/控制/空字符/替换字符/私用区字符
-        scan_counter = Counter(SUSPICIOUS_SCAN_RE.findall(content))
-
-        zero_width_names = {
-            '\u200b': '零宽空格',
-            '\u200c': '零宽非连接符',
-            '\u200d': '零宽连接符',
-            '\ufeff': '零宽不换行空格(BOM残留)',
-        }
-
-        null_count = scan_counter.get('\x00', 0)
-        if null_count:
-            result['suspicious_chars'].append({
-                'name': '空字符',
-                'code': 'NULL (0x00)',
-                'count': null_count,
-                'severity': 'error',
-                'description': '文件中的空白填充字符，可能导致阅读器显示异常',
-                'suggestion': '选择清理可疑字符修复'
-            })
-
-        replacement_count = scan_counter.get('\ufffd', 0)
-        if replacement_count:
-            result['suspicious_chars'].append({
-                'name': '乱码替换字符',
-                'code': 'U+FFFD',
-                'count': replacement_count,
-                'severity': 'error',
-                'description': '文件解码失败产生的替换符号，通常是编码不匹配导致',
-                'suggestion': '尝试用正确编码重新打开，或选择转换为 UTF-8 修复'
-            })
-
-        control_total = sum(
-            n for c, n in scan_counter.items()
-            if len(c) == 1 and ord(c) < 0x20 and c not in ('\t', '\n', '\r')
-        )
-        if control_total:
-            codes = ', '.join(
-                '0x%02X' % ord(c) for c in scan_counter
-                if len(c) == 1 and ord(c) < 0x20 and c not in ('\t', '\n', '\r')
-            )
-            result['suspicious_chars'].append({
-                'name': '不可见控制字符',
-                'code': codes,
-                'count': control_total,
-                'severity': 'warning',
-                'description': '文件中的格式控制符号（如换页符、退格符等），可能造成排版错乱',
-                'suggestion': '选择清理可疑字符修复'
-            })
-
-        zw_names = {
-            '\u200b': '零宽空格', '\u200c': '零宽非连接符',
-            '\u200d': '零宽连接符', '\ufeff': '零宽不换行空格(BOM残留)',
-        }
-        zw_total = 0
-        zw_parts = []
-        for c in ('\u200b', '\u200c', '\u200d', '\ufeff'):
-            n = scan_counter.get(c, 0)
-            if n:
-                zw_total += n
-                zw_parts.append('%s\u00d7%d' % (zw_names[c], n))
-        if zw_total:
-            result['suspicious_chars'].append({
-                'name': '零宽隐形字符',
-                'code': ', '.join(zw_parts),
-                'count': zw_total,
-                'severity': 'warning',
-                'description': '肉眼不可见的字符，会干扰搜索/复制，通常是复制粘贴引入',
-                'suggestion': '选择清理可疑字符修复'
-            })
-
-        # 双重编码文件常被误判成 GBK/BIG5，按该编码解码会让乱码特征消失。
-        # 此处用 UTF-8 容错解码再判一次，避免漏报。
-        if not MOJIBAKE_RE.findall(content):
-            try:
-                alt = raw_data.decode('utf-8', errors='ignore')
-            except Exception:
-                alt = ''
-            if MOJIBAKE_RE.findall(alt):
-                content = alt
+        if _want_check(checks, 'encoding'):
+            if not encoding_info['is_utf8']:
                 result['issues'].append(_issue(
                     'encoding', 'warning',
-                    '文件疑似被错误转码（双重编码），已按 UTF-8 重新读取以定位乱码'
+                    f'文件不是 UTF-8 编码，检测到 {encoding}，建议转换为 UTF-8'
+                ))
+            if encoding_info['has_bom']:
+                result['issues'].append(_issue(
+                    'encoding', 'info',
+                    f'文件包含 {encoding_info["bom_type"]} BOM 头'
                 ))
 
-        mojibake_matches = MOJIBAKE_RE.findall(content)
-        if mojibake_matches:
-            result['suspicious_chars'].append({
-                'name': '典型乱码',
-                'code': '、'.join(mojibake_matches[:5]),
-                'count': len(mojibake_matches),
-                'severity': 'error',
-                'description': '检测到锟斤拷、烫烫烫等常见编码转换乱码',
-                'suggestion': '尝试用正确编码重新打开；如无法恢复，可能需要原始文件'
-            })
+        # 换行符：只报真正需要修的（混合 / 旧 Mac CR），CRLF 与末尾换行属正常，不告警
+        if _want_check(checks, 'line_endings'):
+            if line_info['is_mixed']:
+                result['issues'].append(_issue(
+                    'line_endings', 'warning',
+                    f'混合换行符：LF {line_info["lf"]} 个，CRLF {line_info["crlf"]} 个，CR {line_info["cr"]} 个'
+                ))
+            elif line_info['cr'] > 0:
+                result['issues'].append(_issue(
+                    'line_endings', 'warning',
+                    f'使用了旧 Mac 换行符 CR（{line_info["cr"]} 个），建议统一为 LF'
+                ))
+
+        # 这段是全量正则扫描，最慢；没勾选「乱码与可疑字符」就整块跳过
+        if _want_check(checks, 'suspicious'):
+            # 单次扫描统计零宽/控制/空字符/替换字符/私用区字符
+            scan_counter = Counter(SUSPICIOUS_SCAN_RE.findall(content))
+
+            zero_width_names = {
+                '\u200b': '零宽空格',
+                '\u200c': '零宽非连接符',
+                '\u200d': '零宽连接符',
+                '\ufeff': '零宽不换行空格(BOM残留)',
+            }
+
+            null_count = scan_counter.get('\x00', 0)
+            if null_count:
+                result['suspicious_chars'].append({
+                    'name': '空字符',
+                    'code': 'NULL (0x00)',
+                    'count': null_count,
+                    'severity': 'error',
+                    'description': '文件中的空白填充字符，可能导致阅读器显示异常',
+                    'suggestion': '选择清理可疑字符修复'
+                })
+
+            replacement_count = scan_counter.get('\ufffd', 0)
+            if replacement_count:
+                result['suspicious_chars'].append({
+                    'name': '乱码替换字符',
+                    'code': 'U+FFFD',
+                    'count': replacement_count,
+                    'severity': 'error',
+                    'description': '文件解码失败产生的替换符号，通常是编码不匹配导致',
+                    'suggestion': '尝试用正确编码重新打开，或选择转换为 UTF-8 修复'
+                })
+
+            control_total = sum(
+                n for c, n in scan_counter.items()
+                if len(c) == 1 and ord(c) < 0x20 and c not in ('\t', '\n', '\r')
+            )
+            if control_total:
+                codes = ', '.join(
+                    '0x%02X' % ord(c) for c in scan_counter
+                    if len(c) == 1 and ord(c) < 0x20 and c not in ('\t', '\n', '\r')
+                )
+                result['suspicious_chars'].append({
+                    'name': '不可见控制字符',
+                    'code': codes,
+                    'count': control_total,
+                    'severity': 'warning',
+                    'description': '文件中的格式控制符号（如换页符、退格符等），可能造成排版错乱',
+                    'suggestion': '选择清理可疑字符修复'
+                })
+
+            zw_names = {
+                '\u200b': '零宽空格', '\u200c': '零宽非连接符',
+                '\u200d': '零宽连接符', '\ufeff': '零宽不换行空格(BOM残留)',
+            }
+            zw_total = 0
+            zw_parts = []
+            for c in ('\u200b', '\u200c', '\u200d', '\ufeff'):
+                n = scan_counter.get(c, 0)
+                if n:
+                    zw_total += n
+                    zw_parts.append('%s\u00d7%d' % (zw_names[c], n))
+            if zw_total:
+                result['suspicious_chars'].append({
+                    'name': '零宽隐形字符',
+                    'code': ', '.join(zw_parts),
+                    'count': zw_total,
+                    'severity': 'warning',
+                    'description': '肉眼不可见的字符，会干扰搜索/复制，通常是复制粘贴引入',
+                    'suggestion': '选择清理可疑字符修复'
+                })
+
+            # 双重编码文件常被误判成 GBK/BIG5，按该编码解码会让乱码特征消失。
+            # 此处用 UTF-8 容错解码再判一次，避免漏报。
+            if not MOJIBAKE_RE.findall(content):
+                try:
+                    alt = raw_data.decode('utf-8', errors='ignore')
+                except Exception:
+                    alt = ''
+                if MOJIBAKE_RE.findall(alt):
+                    content = alt
+                    result['issues'].append(_issue(
+                        'encoding', 'warning',
+                        '文件疑似被错误转码（双重编码），已按 UTF-8 重新读取以定位乱码'
+                    ))
+
+            mojibake_matches = MOJIBAKE_RE.findall(content)
+            if mojibake_matches:
+                result['suspicious_chars'].append({
+                    'name': '典型乱码',
+                    'code': '、'.join(mojibake_matches[:5]),
+                    'count': len(mojibake_matches),
+                    'severity': 'error',
+                    'description': '检测到锟斤拷、烫烫烫等常见编码转换乱码',
+                    'suggestion': '尝试用正确编码重新打开；如无法恢复，可能需要原始文件'
+                })
 
         # 评分：只对影响阅读的问题扣分，装饰性问题不参与计分
         score = 100
@@ -6953,12 +7104,13 @@ def api_txt_health_check():
     if not file_path:
         return jsonify({'success': False, 'message': '文件路径不合法或不是 TXT 文件'})
 
-    result = check_txt_health(file_path)
+    checks = data.get('checks') or None
+    result = check_txt_health(file_path, checks=checks)
     return jsonify({'success': True, 'result': result})
 
 
-def run_txt_health_scan_all_task(task_id):
-    """后台执行全量 TXT 健康检查。"""
+def run_txt_health_scan_all_task(task_id, checks=None):
+    """后台执行全量 TXT 健康检查（checks 为空则全项检测）。"""
     lock = _CrossProcessLock(TXT_HEALTH_SCAN_LOCK_FILE)
     lock.acquire()
     try:
@@ -6975,7 +7127,7 @@ def run_txt_health_scan_all_task(task_id):
 
         for novel in novels:
             file_path = novel.get('file_path')
-            result = check_txt_health(file_path)
+            result = check_txt_health(file_path, checks=checks)
             checked += 1
 
             if result['issues'] or result['suspicious_chars'] or not result['is_readable']:
@@ -7044,10 +7196,13 @@ def api_txt_health_scan_all():
             'message': '扫描正在进行中，请勿重复点击',
         })
 
+    data = request.get_json(silent=True) or {}
+    checks = data.get('checks') or None
+
     task_id = create_background_task('txt_health_scan_all', message='准备扫描 TXT 文件...')
     threading.Thread(
         target=run_txt_health_scan_all_task,
-        args=(task_id,),
+        args=(task_id, checks),
         daemon=True
     ).start()
     return jsonify({'success': True, 'task_id': task_id})
@@ -7176,10 +7331,113 @@ def api_txt_restore_backup():
         return jsonify({'success': False, 'message': str(e)})
 
 
+CHAPTER_SCAN_LOCK_FILE = os.path.join(tempfile.gettempdir(), 'novel_manager_chapter_scan.lock')
+
+
+def _novel_title_for_path(file_path):
+    for novel in novel_data:
+        if novel.get('file_path') == file_path:
+            return novel.get('title') or os.path.basename(file_path)
+    return os.path.basename(file_path)
+
+
+@app.route('/api/txt/chapter_check', methods=['POST'])
+def api_txt_chapter_check():
+    """章节排版检测：单个文件"""
+    data = request.get_json(silent=True) or {}
+    file_path = _resolve_txt_path(data.get('file_path', ''))
+    if not file_path:
+        return jsonify({'success': False, 'message': '文件路径不合法或不是 TXT 文件'})
+
+    opts = _clamp_layout_opts(data.get('chapter_layout'))
+    result = check_chapter_layout(file_path, rest_limit=opts['rest_limit'],
+                                  max_lines=opts['max_lines'])
+    result['title'] = _novel_title_for_path(file_path)
+    result['problem_count'] = len(result['problems'])
+    return jsonify({'success': True, 'result': result})
+
+
+def run_chapter_scan_all_task(task_id, rest_limit=None, max_lines=None):
+    """后台执行全量章节排版检测。"""
+    lock = _CrossProcessLock(CHAPTER_SCAN_LOCK_FILE)
+    lock.acquire()
+    try:
+        novels = [
+            n for n in list(novel_data)
+            if n.get('file_path') and os.path.exists(n.get('file_path'))
+        ]
+        total = len(novels)
+        update_background_task(task_id, total=total, current=0, message='正在检测章节排版...')
+
+        results = []
+        checked = 0
+        problem_count = 0
+
+        for novel in novels:
+            file_path = novel.get('file_path')
+            row = check_chapter_layout(file_path, rest_limit=rest_limit, max_lines=max_lines)
+            checked += 1
+
+            if row['problems'] or not row['is_readable']:
+                problem_count += 1
+                row['title'] = novel.get('title') or os.path.basename(file_path)
+                row['problem_count'] = len(row['problems'])
+                results.append(row)
+
+            update_background_task(
+                task_id,
+                current=checked,
+                message=f'检测中：{os.path.basename(file_path)[:30]}'
+            )
+
+        results.sort(key=lambda x: len(x.get('problems') or []), reverse=True)
+        finish_background_task(task_id, result={
+            'success': True,
+            'total_checked': checked,
+            'problem_count': problem_count,
+            'results': results
+        })
+        logger.info(f"章节检测完成 - 检查 {checked} 个文件, 发现问题 {problem_count} 个")
+    except Exception as e:
+        traceback.print_exc()
+        finish_background_task(task_id, error=e)
+    finally:
+        lock.release()
+
+
+@app.route('/api/txt/chapter_scan_all', methods=['POST'])
+def api_txt_chapter_scan_all():
+    existing = find_running_task('chapter_scan_all')
+    if existing:
+        return jsonify({
+            'success': False,
+            'duplicate': True,
+            'task_id': existing,
+            'message': '章节检测正在进行中，请勿重复点击',
+        })
+
+    data = request.get_json(silent=True) or {}
+    opts = _clamp_layout_opts(data.get('chapter_layout'))
+
+    task_id = create_background_task('chapter_scan_all', message='准备检测章节排版...')
+    threading.Thread(
+        target=run_chapter_scan_all_task,
+        args=(task_id, opts['rest_limit'], opts['max_lines']),
+        daemon=True
+    ).start()
+    return jsonify({'success': True, 'task_id': task_id})
+
+
 @app.route('/txt_health')
 def txt_health_page():
     """TXT 体检页面"""
     return render_template('txt_health.html', novel_data=novel_data)
+
+
+@app.route('/chapter_check')
+def chapter_check_page():
+    """章节检测页面：找出「章节标题和正文写在同一行」的排版问题"""
+    return render_template('chapter_check.html', novel_data=novel_data)
 
 # ===================== 托盘 =====================
 import threading
