@@ -82,14 +82,12 @@
                 {% for chapter in all_chapters %}
                 {% if chapter.get('is_empty') %}
                 <span class="chapter-item chapter-level{{ chapter.level }}" style="opacity:0.5;cursor:not-allowed;" title="空白章节（仅标题，无正文）">
-                    <span class="chapter-index">{{ loop.index }}.</span>
                     <span class="chapter-title">{{ chapter.text }}</span>
                     <span class="chapter-line">第{{ chapter.line_number }}行 · 空白</span>
                 </span>
                 {% else %}
                 <a href="{{ url_for('read_chapter', file_path=file_path, line_number=chapter.line_number, list_page=back_page, search=search_text, author=search_author, tag=search_tag, site=search_site) }}"
                     class="chapter-item chapter-level{{ chapter.level }}">
-                    <span class="chapter-index">{{ loop.index }}.</span>
                     <span class="chapter-title">{{ chapter.text }}</span>
                     <span class="chapter-line">第{{ chapter.line_number }}行</span>
                 </a>
