@@ -4578,6 +4578,10 @@ def read_chapter(file_path, line_number):
                     chapter_end_line = next_line - 1
                     break
 
+            # 已经在整章维度做过跨行高亮（分页前），末尾就不要按页再跑一遍，
+            # 否则重复包裹 span，行内标签会不配对。
+            lines_highlighted = False
+
             if is_virtual_chapter:
                 # 无章节结构时按行分页，避免把整本小说读进内存。
                 lines_per_page = CONFIG.get('virtual_lines_per_page')
@@ -4602,6 +4606,15 @@ def read_chapter(file_path, line_number):
 
                 total_words = sum(len(line) for line in chapter_lines)
                 if total_words > WORDS_PER_PAGE:
+                    # 跨行引号/括号必须按「整章」配对后再切页：
+                    # 若按页各跑一遍，页首正好落在长引号段落中间时，左引号在上页、
+                    # 本页只剩右引号，正则配不上对，整段高亮就丢了。
+                    # 高亮器对每一行输出各自闭合的 span、不改变行数，
+                    # 所以下面按「原始行字数」算出的切页下标依然有效。
+                    processed_lines = highlight_crossline_brackets(
+                        '\n'.join(processed_lines)).split('\n')
+                    lines_highlighted = True
+
                     prefix = [0]
                     for line in chapter_lines:
                         prefix.append(prefix[-1] + len(line))
@@ -4656,7 +4669,7 @@ def read_chapter(file_path, line_number):
             prev_page = page - 1 if page > 1 else None
             next_page = page + 1 if page < total_pages else None
 
-        if current_lines:
+        if current_lines and not lines_highlighted:
             full_text = '\n'.join(current_lines)
             processed_text = highlight_crossline_brackets(full_text)
             current_lines = processed_text.split('\n')
