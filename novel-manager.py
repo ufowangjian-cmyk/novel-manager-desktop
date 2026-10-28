@@ -1898,6 +1898,293 @@ def detect_chapter_layout_issues(content, max_items=20, max_lines=3000, rest_lim
     return problems
 
 
+# ---------- 章节序号连续性检查（缺号 / 重号 / 序号回退）----------
+# 「第12章」「第十二章」都算；楔子/番外/序言这类没有序号的标题不参与编号。
+# 只看「第N<单位>」开头、且整行不长的行：正文里"他翻了翻第三章"这种引用
+# 一般不以「第」开头，即便开头也往往带句读，靠长度上限再挡一道。
+# 抓一行里的所有「第N<单位>」：既用于行首判定，也用来数一行有几个章号
+_CH_NUM_ANY_RE = re.compile(
+    r'第\s*(\d+|[〇零一二三四五六七八九十百千万两]+)\s*([册集卷部篇章回节目幕])'
+)
+# 合并章节的编号连接符：「第0052章～第0053章」「第12章-第13章」
+_CH_RANGE_SEP_RE = re.compile(r'^\s*[～~\-－—–至到]?\s*$')
+# 一行覆盖多章的范围写法：「第0052章～第0053章」「第52-53章」「第52～55章」
+_CH_NUM_RANGE_RE = re.compile(
+    r'第\s*(\d+|[〇零一二三四五六七八九十百千万两]+)\s*[册集卷部篇章回节目幕]?\s*'
+    r'[～~\-－—–至到]\s*(?:第\s*)?'
+    r'(\d+|[〇零一二三四五六七八九十百千万两]+)\s*([册集卷部篇章回节目幕])'
+)
+_CH_RANGE_SPAN_MAX = 50      # 范围写法的跨度上限，防「第1章到第9999章」这种
+_CN_NUM_VAL = {
+    '零': 0, '〇': 0, '一': 1, '二': 2, '两': 2, '三': 3, '四': 4,
+    '五': 5, '六': 6, '七': 7, '八': 8, '九': 9,
+}
+_CN_NUM_UNIT = {'十': 10, '百': 100, '千': 1000}
+_CH_UNIT_LEVEL = {
+    '册': 1, '集': 1, '卷': 1, '部': 1,
+    '篇': 2, '章': 2,
+    '回': 3, '节': 3, '目': 3, '幕': 3,
+}
+_CH_NUM_LINE_MAX = 60        # 带序号标题行的长度上限，超过就当正文引用不算章名
+_CH_WEAK_PUNCT = '。，；'     # 句子标点：出现在以「第N章」开头的行里，多半是正文（降级为弱候选）
+_CH_MISSING_LINES_MAX = 200000  # 序号扫描的行数上限（普通小说远达不到）
+_CH_GAP_LIST_MAX = 50        # 一本最多列 50 个缺号段，避免「第1章跳到第9999章」刷爆页面
+_CH_GAP_RANGE_MAX = 30       # 单段缺号最多展开列出 30 个具体数字
+
+
+_CH_SPLIT_MARKS = ('上', '下', '中', '续', '前', '后', '一', '二', '三')
+_CH_SUBNUM_RE = re.compile(r'[（(]\s*[0-9一二三四五六七八九十]+\s*[）)]')
+
+
+def _is_merged_chapter(text, matches):
+    """「第0052章～第0053章·性起（三）」是不是合并章节（一行覆盖多个编号）。
+
+    连接处只允许空白或范围符；「第三章讲的是第五章的事」中间有实词，判为正文。
+    """
+    for i in range(1, len(matches)):
+        between = text[matches[i - 1].end():matches[i].start()]
+        if not _CH_RANGE_SEP_RE.match(between):
+            return False
+    return True
+
+
+def is_split_title(a, b):
+    """同号两行是否只是同一章的分节。
+
+    认两种写法，其余一概算重号：
+      「第一章 上 / 第一章 下」——尾巴是分节词
+      「第186章·（1）新人 / 第186章·（2）妹妹」——两行都带括号小节号
+    这样「第2章 b」和「第2章 b2」仍会报重号，不至于把真重复漏掉。
+    """
+    a, b = (a or '').strip(), (b or '').strip()
+    if not a or not b:
+        return False
+    if _CH_SUBNUM_RE.search(a) and _CH_SUBNUM_RE.search(b):
+        return True
+    if a == b:
+        return False
+    if len(a) > len(b):
+        a, b = b, a
+    if b.startswith(a):
+        tail = b[len(a):].strip(' 　:：、-—()（）【】[]')
+        return tail in _CH_SPLIT_MARKS
+    if len(a) == len(b):
+        diff = [(x, y) for x, y in zip(a, b) if x != y]
+        if len(diff) == 1 and diff[0][0] in _CH_SPLIT_MARKS and diff[0][1] in _CH_SPLIT_MARKS:
+            return True
+    return False
+
+
+def cn_num_to_int(text):
+    """「十二」「一百零三」「100」→ 整数，认不出返回 None。
+
+    支持到万级（第九千九百九十九章也认），比 _sim_cn_to_int 的两位数范围宽，
+    因为章节号经常上百上千。
+    """
+    t = (text or '').strip()
+    if not t:
+        return None
+    if t.isdigit():
+        try:
+            return int(t)
+        except ValueError:
+            return None
+    total = section = number = 0
+    for ch in t:
+        if ch in _CN_NUM_VAL:
+            number = _CN_NUM_VAL[ch]
+        elif ch in _CN_NUM_UNIT:
+            if number == 0:
+                number = 1        # 「十二」的十前面没数字，按 1 算
+            section += number * _CN_NUM_UNIT[ch]
+            number = 0
+        elif ch == '万':
+            section = (section + number) * 10000
+            total += section
+            section = number = 0
+        else:
+            return None
+    return total + section + number
+
+
+def detect_chapter_missing(content):
+    """检测章节序号是否缺号（章节缺失）、重号、序号回退。
+
+    按单位分组独立编号：「第1卷」和「第1章」互不干扰。
+    组内遇到序号变小（如分上/下部从头编号）就切段，每段单独判连续性——
+    不然「上部 1~30 章 + 下部 1~30 章」会被误报成 29 处重号。
+
+    候选分两档（这是压误报的关键）：
+      - 强候选：不含句子标点（，；。）的行，用来构建序号序列
+      - 弱候选：含句子标点的行（「第09章：那次激情澎湃的调教……」这种标题，
+        以及「第三章他推开门，屋里一片漆黑。」这种正文粘标题）
+        弱候选不进序列，**只在正好能填上某个缺口时才认它是标题**——
+        真标题被漏掉的情况因此不会误报缺号，正文里的引用也不会凭空插进序列。
+      万一整本书的标题都带标点（强候选不足 2 个），退化成全部按强候选处理。
+
+    返回：
+      groups: [{unit, level, count, segments, gaps, dups, starts, weak_count}]
+        gaps:   [{after, before, count, missing, line}]   缺号
+        dups:   [{num, lines}]                            重号
+        starts: [{num, line}]                             段首不是第 1 章
+        weak_count: 有几处缺口被「带标点的标题」填平（提示用户少报了）
+      gap_count / dup_count / restart_count / start_offset_count / weak_fill_count：汇总
+      problem：是否真的有问题（有缺号或有重号）
+    """
+    buckets = {}
+
+    def _push(unit, num, lineno, text, weak):
+        bucket = buckets.setdefault(unit, {'unit': unit,
+                                           'level': _CH_UNIT_LEVEL.get(unit, 0),
+                                           'items': []})
+        bucket['items'].append((lineno, num, text, weak))
+
+    for lineno, raw in enumerate(
+            content.split('\n', _CH_MISSING_LINES_MAX)[:_CH_MISSING_LINES_MAX], 1):
+        t = raw.strip()
+        if not t or len(t) > _CH_NUM_LINE_MAX or not t.startswith('第'):
+            continue
+        weak = any(ch in t for ch in _CH_WEAK_PUNCT)
+
+        # 「第0052章～第0053章·性起（三）」：一行覆盖多章。
+        # 这种行只当弱候选（补缺口用），不进主序列——正文里「第一章到第五章的内容」
+        # 这种句子长得一样，直接进序列会把号搅乱
+        rm = _CH_NUM_RANGE_RE.match(t)
+        if rm:
+            a = cn_num_to_int(rm.group(1))
+            b = cn_num_to_int(rm.group(2))
+            if a and b and 0 < a <= b and (b - a) <= _CH_RANGE_SPAN_MAX:
+                for n in range(a, b + 1):
+                    _push(rm.group(3), n, lineno, t, True)
+            continue
+
+        matches = list(_CH_NUM_ANY_RE.finditer(t))
+        if not matches or matches[0].start() != 0:
+            continue
+        # 一行两个完整章号：「第52章 第53章」同样是合并章节；
+        # 「第三章讲的是第五章的事」中间是实词，判为正文跳过
+        if len(matches) > 1 and not _is_merged_chapter(t, matches):
+            continue
+        for m in matches:
+            num = cn_num_to_int(m.group(1))
+            if num and num > 0:
+                _push(m.group(2), num, lineno, t, weak)
+
+    groups = []
+    gap_count = dup_count = restart_count = start_offset_count = 0
+    weak_fill_count = variant_count = 0
+
+    for unit, bucket in buckets.items():
+        items = bucket['items']
+        if len(items) < 2:
+            continue                      # 只出现一次的「第N章」判不出连续性
+
+        strong = [it for it in items if not it[3]]
+        if len(strong) < 2:
+            # 标题普遍带标点的书：全当强候选，否则整本都检测不出来
+            strong = items
+
+        weak_lines = {}
+        for it in items:
+            if it[3]:
+                weak_lines.setdefault(it[1], []).append(it[0])
+
+        # 切段：序号严格变小才开新段（分卷/上下部重新编号）；
+        # 序号相同不切段，留给下面当重号统计
+        segments, cur = [], []
+        for item in strong:
+            if cur and item[1] < cur[-1][1]:
+                segments.append(cur)
+                cur = []
+            cur.append(item)
+        if cur:
+            segments.append(cur)
+        restart_count += max(0, len(segments) - 1)   # 每多切一段就是一次序号回退
+
+        gaps, dups, starts, variants = [], [], [], []
+        weak_filled = 0
+        for seg in segments:
+            if seg[0][1] != 1:
+                # 段首不是第 1 章：若前面有过「第1章」的弱候选，说明首章只是带标点被跳过
+                first_line = seg[0][0]
+                if not any(L < first_line for L in weak_lines.get(1, [])):
+                    starts.append({'num': seg[0][1], 'line': first_line})
+                    start_offset_count += 1
+            for i in range(1, len(seg)):
+                prev_num, prev_line = seg[i - 1][1], seg[i - 1][0]
+                num, line = seg[i][1], seg[i][0]
+                if num == prev_num:
+                    # 同号两行：只是「上/下」分节 → 只提示；否则算真重号
+                    prev_text, cur_text = seg[i - 1][2].strip(), seg[i][2].strip()
+                    if is_split_title(prev_text, cur_text):
+                        if len(variants) < _CH_GAP_LIST_MAX:
+                            variants.append({'num': num, 'lines': [prev_line, line],
+                                             'texts': [prev_text[:40], cur_text[:40]]})
+                            variant_count += 1
+                    else:
+                        dups.append({'num': num, 'lines': [prev_line, line],
+                                     'text': cur_text[:40]})
+                        dup_count += 1
+                elif num > prev_num + 1:
+                    if len(gaps) >= _CH_GAP_LIST_MAX:
+                        continue
+                    missing = []
+                    for n in range(prev_num + 1, num):
+                        if any(prev_line < L < line for L in weak_lines.get(n, [])):
+                            weak_filled += 1        # 带标点的标题填上了这个号
+                        else:
+                            missing.append(n)
+                    if not missing:
+                        continue
+                    gaps.append({
+                        'after': prev_num,
+                        'before': num,
+                        'count': len(missing),
+                        'missing': missing[:_CH_GAP_RANGE_MAX],
+                        'line': line,
+                    })
+                    gap_count += len(missing)
+        weak_fill_count += weak_filled
+
+        groups.append({
+            'unit': unit,
+            'level': bucket['level'],
+            'count': len(strong),
+            'segments': len(segments),
+            'first': strong[0][1],
+            'last': strong[-1][1],
+            'gaps': gaps,
+            'dups': dups,
+            'starts': starts,
+            'variants': variants,
+            'weak_count': weak_filled,
+            'ok': not gaps and not dups,
+        })
+
+    # 大单位在前（卷 > 章 > 节），同级按出现数量多的在前
+    groups.sort(key=lambda g: (g['level'], -g['count']))
+
+    parts = []
+    if gap_count:
+        parts.append(f'缺号 {gap_count} 章')
+    if dup_count:
+        parts.append(f'重号 {dup_count} 处')
+    if restart_count:
+        parts.append(f'序号回退 {restart_count} 处')
+
+    return {
+        'groups': groups,
+        'gap_count': gap_count,
+        'dup_count': dup_count,
+        'restart_count': restart_count,
+        'start_offset_count': start_offset_count,
+        'weak_fill_count': weak_fill_count,
+        'variant_count': variant_count,
+        'problem': bool(gap_count or dup_count),
+        'summary': '、'.join(parts),
+    }
+
+
 def is_separator_line(t):
     """纯符号装饰行（分隔线）"""
     return bool(_SEPARATOR_RE.match(_clean_line(t)))
@@ -6645,13 +6932,27 @@ def _clamp_layout_opts(opts):
     }
 
 
-def check_chapter_layout(file_path, rest_limit=None, max_lines=None):
-    """检测单本书「章节标题和正文写在同一行」的排版问题。
+CHAPTER_CHECK_KEYS = ('layout', 'missing')
 
-    这是整理类工作（要走手工断行），单独成页，不混进 TXT 体检。
+
+def normalize_chapter_checks(raw):
+    """清洗前端传来的检测项；空/非法一律当全跑，兼容老调用。"""
+    if not isinstance(raw, (list, tuple, set)):
+        return list(CHAPTER_CHECK_KEYS)
+    picked = [k for k in raw if k in CHAPTER_CHECK_KEYS]
+    return picked or list(CHAPTER_CHECK_KEYS)
+
+
+def check_chapter_layout(file_path, rest_limit=None, max_lines=None, checks=None):
+    """章节检测：单本书的排版问题 + 序号缺号/重号。
+
+    checks 决定跑哪几项：'layout'（标题正文同行）、'missing'（缺号/重号）。
+    为空表示全跑，兼容老调用。
     返回结构刻意做窄：只带定位所需信息，不跑编码/乱码检测。
     """
     opts = _clamp_layout_opts({'rest_limit': rest_limit, 'max_lines': max_lines})
+    want_layout = _want_check(checks, 'layout')
+    want_missing = _want_check(checks, 'missing')
     result = {
         'file_path': file_path,
         'filename': os.path.basename(file_path),
@@ -6659,6 +6960,9 @@ def check_chapter_layout(file_path, rest_limit=None, max_lines=None):
         'total_lines': 0,
         'scanned_lines': 0,
         'problems': [],
+        'missing': None,
+        'checks': [k for k in CHAPTER_CHECK_KEYS
+                   if (k == 'layout' and want_layout) or (k == 'missing' and want_missing)],
         'is_readable': True,
         'error': None,
     }
@@ -6692,11 +6996,18 @@ def check_chapter_layout(file_path, rest_limit=None, max_lines=None):
             content = content[1:]
 
         result['total_lines'] = content.count('\n') + content.count('\r') + 1
-        problems = detect_chapter_layout_issues(
-            content, rest_limit=opts['rest_limit'], max_lines=opts['max_lines']
+        if want_layout:
+            result['problems'] = detect_chapter_layout_issues(
+                content, rest_limit=opts['rest_limit'], max_lines=opts['max_lines']
+            )
+            result['scanned_lines'] = min(result['total_lines'], opts['max_lines'])
+        if want_missing:
+            # 缺号要扫全文：章节号断在书尾的情况最多，只扫开头会漏
+            result['missing'] = detect_chapter_missing(content)
+        result['scanned_lines'] = max(
+            result['scanned_lines'],
+            result['total_lines'] if want_missing else 0
         )
-        result['problems'] = problems
-        result['scanned_lines'] = min(result['total_lines'], opts['max_lines'])
     except Exception as e:
         result['is_readable'] = False
         result['error'] = str(e)
@@ -7341,47 +7652,176 @@ def _novel_title_for_path(file_path):
     return os.path.basename(file_path)
 
 
+# ==================== 章节检测忽略列表 ====================
+# 和媒体检测的忽略列表分开存：那边忽略的是配图文件夹，这边忽略的整本书不做章节检测。
+CHAPTER_IGNORE_FILE = os.path.join(DATA_DIR, 'chapter_ignore.json')
+
+
+def load_chapter_ignore_list():
+    """加载章节检测忽略列表（保证返回 list）。"""
+    data = load_json_file(CHAPTER_IGNORE_FILE, [])
+    if not isinstance(data, list):
+        return []
+    return [item for item in data if isinstance(item, dict) and item.get('file_path')]
+
+
+def save_chapter_ignore_list(items):
+    """保存章节检测忽略列表。"""
+    return save_json_file(CHAPTER_IGNORE_FILE, list(items or []))
+
+
+def chapter_ignore_keys():
+    """忽略列表的路径指纹集合，扫描时用它跳文件。"""
+    return {_media_path_key(item.get('file_path'))
+            for item in load_chapter_ignore_list()}
+
+
+@app.route('/api/txt/chapter_ignore/list')
+def api_chapter_ignore_list():
+    """忽略列表"""
+    items = load_chapter_ignore_list()
+    for item in items:
+        item['title'] = item.get('title') or os.path.splitext(
+            os.path.basename(item.get('file_path') or ''))[0]
+    return jsonify({'success': True, 'ignore_list': items})
+
+
+@app.route('/api/txt/chapter_ignore/add', methods=['POST'])
+def api_chapter_ignore_add():
+    """忽略某本书（以后全量检测直接跳过）"""
+    data = request.get_json(silent=True) or {}
+    file_path = str(data.get('file_path', '') or '').strip()
+    reason = str(data.get('reason', '') or '').strip()
+    summary = str(data.get('summary', '') or '').strip()
+
+    if not file_path:
+        return jsonify({'success': False, 'message': '文件路径不能为空'})
+
+    real_path = os.path.realpath(file_path)
+    if not is_path_within(NOVEL_DIR, real_path):
+        return jsonify({'success': False, 'message': '路径不合法'})
+
+    items = load_chapter_ignore_list()
+    key = _media_path_key(real_path)
+    for item in items:
+        if _media_path_key(item.get('file_path')) == key:
+            return jsonify({'success': False, 'message': '已在忽略列表中'})
+
+    items.append({
+        'file_path': real_path,
+        'title': os.path.splitext(os.path.basename(real_path))[0],
+        'reason': reason,
+        'summary': summary,          # 忽略时的检测结论，方便回头想起为什么忽略
+        'added_at': datetime.now().isoformat(),
+    })
+    save_chapter_ignore_list(items)
+    return jsonify({'success': True, 'message': '已加入忽略列表'})
+
+
+@app.route('/api/txt/chapter_ignore/remove', methods=['POST'])
+def api_chapter_ignore_remove():
+    """取消忽略"""
+    data = request.get_json(silent=True) or {}
+    file_path = str(data.get('file_path', '') or '').strip()
+    if not file_path:
+        return jsonify({'success': False, 'message': '文件路径不能为空'})
+
+    target = _media_path_key(file_path)
+    items = load_chapter_ignore_list()
+    save_chapter_ignore_list(
+        [item for item in items if _media_path_key(item.get('file_path')) != target]
+    )
+    return jsonify({'success': True, 'message': '已取消忽略'})
+
+
+@app.route('/api/txt/chapter_ignore/clear', methods=['POST'])
+def api_chapter_ignore_clear():
+    """清空忽略列表"""
+    save_chapter_ignore_list([])
+    return jsonify({'success': True, 'message': '已清空忽略列表'})
+
+
+@app.route('/api/txt/chapter_ignore/update', methods=['POST'])
+def api_chapter_ignore_update():
+    """改忽略备注"""
+    data = request.get_json(silent=True) or {}
+    file_path = str(data.get('file_path', '') or '').strip()
+    reason = str(data.get('reason', '') or '').strip()
+    if not file_path:
+        return jsonify({'success': False, 'message': '文件路径不能为空'})
+
+    target = _media_path_key(file_path)
+    items = load_chapter_ignore_list()
+    found = False
+    for item in items:
+        if _media_path_key(item.get('file_path')) == target:
+            item['reason'] = reason
+            found = True
+            break
+    if not found:
+        return jsonify({'success': False, 'message': '忽略项不存在'})
+
+    save_chapter_ignore_list(items)
+    return jsonify({'success': True, 'message': '备注已更新'})
+
+
 @app.route('/api/txt/chapter_check', methods=['POST'])
 def api_txt_chapter_check():
-    """章节排版检测：单个文件"""
+    """章节检测：单个文件（排版 / 缺号，按前端勾选的项目跑）"""
     data = request.get_json(silent=True) or {}
     file_path = _resolve_txt_path(data.get('file_path', ''))
     if not file_path:
         return jsonify({'success': False, 'message': '文件路径不合法或不是 TXT 文件'})
 
     opts = _clamp_layout_opts(data.get('chapter_layout'))
+    checks = normalize_chapter_checks(data.get('checks'))
     result = check_chapter_layout(file_path, rest_limit=opts['rest_limit'],
-                                  max_lines=opts['max_lines'])
+                                  max_lines=opts['max_lines'], checks=checks)
     result['title'] = _novel_title_for_path(file_path)
     result['problem_count'] = len(result['problems'])
+    result['missing_count'] = (result.get('missing') or {}).get('gap_count', 0)
+    result['has_issue'] = bool(result['problem_count'] or result['missing_count'])
     return jsonify({'success': True, 'result': result})
 
 
-def run_chapter_scan_all_task(task_id, rest_limit=None, max_lines=None):
-    """后台执行全量章节排版检测。"""
+def run_chapter_scan_all_task(task_id, rest_limit=None, max_lines=None, checks=None):
+    """后台执行全量章节检测（排版 + 缺号）。"""
     lock = _CrossProcessLock(CHAPTER_SCAN_LOCK_FILE)
     lock.acquire()
     try:
-        novels = [
+        all_novels = [
             n for n in list(novel_data)
             if n.get('file_path') and os.path.exists(n.get('file_path'))
         ]
+        # 忽略列表里的书直接跳过：那些是确认过「不是问题」的误报
+        ignore_keys = chapter_ignore_keys()
+        novels = [n for n in all_novels
+                  if _media_path_key(n.get('file_path')) not in ignore_keys]
+        ignored_count = len(all_novels) - len(novels)
         total = len(novels)
-        update_background_task(task_id, total=total, current=0, message='正在检测章节排版...')
+        update_background_task(task_id, total=total, current=0,
+                               message='正在检测章节...' if not ignored_count
+                               else f'正在检测章节（跳过忽略 {ignored_count} 本）...')
 
         results = []
         checked = 0
         problem_count = 0
+        missing_count = 0
 
         for novel in novels:
             file_path = novel.get('file_path')
-            row = check_chapter_layout(file_path, rest_limit=rest_limit, max_lines=max_lines)
+            row = check_chapter_layout(file_path, rest_limit=rest_limit,
+                                       max_lines=max_lines, checks=checks)
             checked += 1
 
-            if row['problems'] or not row['is_readable']:
+            row['problem_count'] = len(row['problems'])
+            row['missing_count'] = (row.get('missing') or {}).get('gap_count', 0)
+            row['has_issue'] = bool(row['problem_count'] or row['missing_count'])
+
+            if row['has_issue'] or not row['is_readable']:
                 problem_count += 1
+                missing_count += row['missing_count']
                 row['title'] = novel.get('title') or os.path.basename(file_path)
-                row['problem_count'] = len(row['problems'])
                 results.append(row)
 
             update_background_task(
@@ -7390,14 +7830,20 @@ def run_chapter_scan_all_task(task_id, rest_limit=None, max_lines=None):
                 message=f'检测中：{os.path.basename(file_path)[:30]}'
             )
 
-        results.sort(key=lambda x: len(x.get('problems') or []), reverse=True)
+        results.sort(key=lambda x: (x.get('missing_count') or 0,
+                                    len(x.get('problems') or [])), reverse=True)
         finish_background_task(task_id, result={
             'success': True,
             'total_checked': checked,
             'problem_count': problem_count,
+            'missing_count': missing_count,
+            'ignored_count': ignored_count,
+            'checks': normalize_chapter_checks(checks),
             'results': results
         })
-        logger.info(f"章节检测完成 - 检查 {checked} 个文件, 发现问题 {problem_count} 个")
+        logger.info(f"章节检测完成 - 检查 {checked} 个文件（跳过忽略 {ignored_count} 本）, "
+                    f"发现异常 {problem_count} 个, 缺号 {missing_count} 章")
+
     except Exception as e:
         traceback.print_exc()
         finish_background_task(task_id, error=e)
@@ -7418,14 +7864,16 @@ def api_txt_chapter_scan_all():
 
     data = request.get_json(silent=True) or {}
     opts = _clamp_layout_opts(data.get('chapter_layout'))
+    checks = normalize_chapter_checks(data.get('checks'))
 
-    task_id = create_background_task('chapter_scan_all', message='准备检测章节排版...')
+    task_id = create_background_task('chapter_scan_all', message='准备检测章节...')
     threading.Thread(
         target=run_chapter_scan_all_task,
-        args=(task_id, opts['rest_limit'], opts['max_lines']),
+        args=(task_id, opts['rest_limit'], opts['max_lines'], checks),
         daemon=True
     ).start()
     return jsonify({'success': True, 'task_id': task_id})
+
 
 
 @app.route('/txt_health')
@@ -7436,7 +7884,7 @@ def txt_health_page():
 
 @app.route('/chapter_check')
 def chapter_check_page():
-    """章节检测页面：找出「章节标题和正文写在同一行」的排版问题"""
+    """章节检测页面：排版（标题正文同行）+ 序号连续性（缺号/重号），检测项可勾选"""
     return render_template('chapter_check.html', novel_data=novel_data)
 
 # ===================== 托盘 =====================

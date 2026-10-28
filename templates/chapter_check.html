@@ -170,6 +170,153 @@
         .btn-open:hover {
             background: #38a169;
         }
+        .btn-ignore {
+            background: #9b59b6;
+            color: white;
+        }
+        .btn-ignore:hover {
+            background: #8e44ad;
+        }
+        .btn-sm {
+            padding: 5px 12px !important;
+            font-size: 0.85em;
+        }
+
+        /* 忽略管理弹窗 */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: #fff;
+            border-radius: 15px;
+            max-width: 1000px;
+            width: 90%;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 25px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.4em;
+            color: #2d3748;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+            padding: 0 8px;
+            line-height: 1;
+        }
+        .modal-close:hover {
+            color: #333;
+        }
+        .modal-body {
+            padding: 20px 25px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .ignore-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            background: #f7fafc;
+            border-radius: 8px;
+            color: #4a5568;
+        }
+        .ignore-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        .ignore-table th {
+            text-align: left;
+            padding: 10px 12px;
+            background: #f7fafc;
+            border-bottom: 2px solid #e2e8f0;
+            font-weight: 600;
+            color: #2d3748;
+        }
+        .ignore-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #edf2f7;
+            vertical-align: middle;
+            color: #4a5568;
+            word-break: break-all;
+        }
+        .ignore-table td:last-child {
+            white-space: nowrap;
+            word-break: normal;
+        }
+        .ignore-table td .btn-sm {
+            margin-right: 6px;
+        }
+        .ignore-table tr:hover td {
+            background: #f7fafc;
+        }
+        .ignore-table th:nth-child(1) { width: 30%; }
+        .ignore-table th:nth-child(2) { width: 13%; }
+        .ignore-table th:nth-child(3) { width: 21%; }
+        .ignore-table th:nth-child(4) { width: 17%; }
+        .ignore-table th:nth-child(5) { width: 190px; }
+        .ignore-reason {
+            color: #718096;
+            font-size: 0.9em;
+            max-width: 220px;
+            display: inline-block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .ignore-reason-empty {
+            color: #cbd5e0;
+            font-size: 0.9em;
+        }
+        body.dark-mode .modal-content {
+            background: #2d3748;
+        }
+        body.dark-mode .modal-header {
+            border-color: #4a5568;
+        }
+        body.dark-mode .modal-header h2 {
+            color: #e2e8f0;
+        }
+        body.dark-mode .modal-body {
+            color: #e2e8f0;
+        }
+        body.dark-mode .ignore-stats {
+            background: rgba(255, 255, 255, 0.06);
+            color: #cbd5e0;
+        }
+        body.dark-mode .ignore-table th {
+            background: rgba(255, 255, 255, 0.06);
+            color: #e2e8f0;
+            border-color: #4a5568;
+        }
+        body.dark-mode .ignore-table td {
+            color: #cbd5e0;
+            border-color: #3a4556;
+        }
+        body.dark-mode .ignore-table tr:hover td {
+            background: rgba(255, 255, 255, 0.04);
+        }
 
         /* 深色模式 */
         body.dark-mode .btn-open {
@@ -504,6 +651,65 @@
             background: #fff;
         }
 
+        /* 检测项目复选框 */
+        .check-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            color: #4a5568;
+            user-select: none;
+        }
+        .check-item input[type="checkbox"] {
+            width: 15px;
+            height: 15px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+        .check-items-bar.is-off {
+            opacity: 0.45;
+        }
+        .check-items-bar.is-off .layout-num {
+            cursor: not-allowed;
+        }
+        body.dark-mode .check-item {
+            color: #e2e8f0;
+        }
+
+        /* 缺号分组 */
+        .block-title {
+            font-size: 0.95em;
+            font-weight: 600;
+            color: #4a5568;
+            margin: 16px 0 8px;
+        }
+        body.dark-mode .block-title {
+            color: #e2e8f0;
+        }
+        .missing-group {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 10px;
+            background: #fafbfc;
+        }
+        .missing-group-head {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            font-size: 0.88em;
+            color: #4a5568;
+            margin-bottom: 6px;
+        }
+        body.dark-mode .missing-group {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: #4a5568;
+        }
+        body.dark-mode .missing-group-head {
+            color: #cbd5e0;
+        }
+
         /* 章节检测专用 */
         .layout-opts {
             display: inline-flex;
@@ -560,20 +766,36 @@
         <!-- 头部 -->
         <div class="health-header">
             <h1>📑 章节检测</h1>
-            <div class="health-header-desc">找出「章节标题和正文写在同一行」的排版问题，改法是在标题词后手工断行</div>
+            <div class="health-header-desc">检查章节结构：标题和正文挤在一行、章节序号缺号或重号</div>
             <div class="health-header-actions">
                 <a href="/" class="btn-back">🏠 返回主页</a>
                 <div class="health-stats">
                     <span>📁 小说总数: <span class="num" id="totalNovels">{{ novel_data|length }}</span></span>
                     <span>⚠️ 问题文件: <span class="num" id="problemCount">0</span></span>
-                    <span>📍 问题处数: <span class="num" id="lineCount">0</span></span>
+                    <span>📍 排版处数: <span class="num" id="lineCount">0</span></span>
+                    <span>🔢 缺号: <span class="num" id="missingCount">0</span> 章</span>
+                    <span>🚫 已忽略: <span class="num" id="ignoredCount">0</span></span>
                 </div>
             </div>
         </div>
 
-        <!-- 检测参数 -->
+        <!-- 检测项目 -->
         <div class="check-items-bar">
-            <span class="check-items-label">⚙️ 检测参数</span>
+            <span class="check-items-label">🔍 检测项目</span>
+            <label class="check-item" title="章节标题和正文写在同一行，会把章名切碎">
+                <input type="checkbox" id="chkLayout" checked>
+                <span>标题正文同行（排版）</span>
+            </label>
+            <label class="check-item" title="按「第N章/卷/节」的序号找缺号、重号">
+                <input type="checkbox" id="chkMissing" checked>
+                <span>章节缺号 / 重号</span>
+            </label>
+            <span class="check-items-hint" id="checkHint">至少勾一项；两项都只读不改文件</span>
+        </div>
+
+        <!-- 检测参数（仅排版检测使用） -->
+        <div class="check-items-bar" id="layoutOptsBar">
+            <span class="check-items-label">⚙️ 排版参数</span>
             <span class="layout-opts">
                 <span class="check-items-hint">标题词后超过</span>
                 <input type="number" id="layoutRestLimit" class="layout-num" value="30" min="10" max="200"
@@ -594,6 +816,7 @@
             <button class="btn btn-outline" onclick="expandAll()">展开全部</button>
             <button class="btn btn-outline" onclick="collapseAll()">折叠全部</button>
             <span style="flex:1;"></span>
+            <button class="btn btn-ignore" onclick="openIgnoreManager()">🚫 忽略管理</button>
             <button class="btn btn-danger" onclick="confirmClearAll()">🗑️ 清空结果</button>
         </div>
 
@@ -613,10 +836,34 @@
             <div class="empty-state">
                 <div class="icon">📑</div>
                 <h3>暂无检测结果</h3>
-                <p>点击「开始扫描」找出章节标题和正文挤在同一行的文件</p>
+                <p>点击「开始扫描」，按勾选的项目检查章节结构</p>
                 <p style="font-size:0.85em;color:#a0aec0;margin-top:8px;">
-                    改法：在标题词后面断行，正文一个字都不会丢
+                    📐 排版问题：在标题词后面断行，正文一个字都不会丢<br>
+                    🔢 缺号：按「第N章」的序号找漏掉的章节、重复的章节号
                 </p>
+            </div>
+        </div>
+
+        <!-- 忽略管理弹窗 -->
+        <div class="modal-overlay" id="ignoreModal" style="display:none;"
+             onclick="if (event.target === this) closeIgnoreModal()">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>🚫 忽略列表管理</h2>
+                    <button class="modal-close" onclick="closeIgnoreModal()">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="ignore-stats">
+                        <span>已忽略: <strong id="ignoreModalCount">0</strong> 本 · 这些书在「开始扫描」时会被跳过</span>
+                        <button class="btn btn-danger btn-sm" onclick="clearAllIgnores()">清空全部</button>
+                    </div>
+                    <div id="ignoreListContainer">
+                        <div class="empty-state" style="padding:20px;">
+                            <div class="icon">📋</div>
+                            <p>暂无忽略项</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -639,9 +886,38 @@
             };
         }
 
+        // 当前勾选的检测项目；元素缺失时按勾选处理，避免老缓存页面发空数组
+        function chapterChecks() {
+            const picks = [];
+            const layoutEl = document.getElementById('chkLayout');
+            const missingEl = document.getElementById('chkMissing');
+            if (!layoutEl || layoutEl.checked) picks.push('layout');
+            if (!missingEl || missingEl.checked) picks.push('missing');
+            return picks;
+        }
+
+        // 没勾排版时参数栏置灰（缺号检测走全文，用不到这两个参数）
+        function syncCheckUI() {
+            const bar = document.getElementById('layoutOptsBar');
+            const on = chapterChecks().indexOf('layout') >= 0;
+            if (bar) bar.classList.toggle('is-off', !on);
+            ['layoutRestLimit', 'layoutMaxLines'].forEach(function (id) {
+                const el = document.getElementById(id);
+                if (el) el.disabled = !on;
+            });
+            const hint = document.getElementById('checkHint');
+            if (hint) {
+                hint.textContent = chapterChecks().length
+                    ? '至少勾一项；两项都只读不改文件'
+                    : '⚠️ 至少勾选一项才能扫描';
+            }
+        }
+
         function saveOpts() {
             try {
-                localStorage.setItem(OPTS_KEY, JSON.stringify(chapterLayoutOpts()));
+                localStorage.setItem(OPTS_KEY, JSON.stringify(Object.assign(
+                    chapterLayoutOpts(), { checks: chapterChecks() }
+                )));
             } catch (e) { }
         }
 
@@ -655,11 +931,35 @@
                 const linesEl = document.getElementById('layoutMaxLines');
                 if (restEl && saved.rest_limit) restEl.value = saved.rest_limit;
                 if (linesEl && saved.max_lines) linesEl.value = saved.max_lines;
+                if (Array.isArray(saved.checks)) {
+                    const layoutEl = document.getElementById('chkLayout');
+                    const missingEl = document.getElementById('chkMissing');
+                    if (layoutEl) layoutEl.checked = saved.checks.indexOf('layout') >= 0;
+                    if (missingEl) missingEl.checked = saved.checks.indexOf('missing') >= 0;
+                }
             }
-            ['layoutRestLimit', 'layoutMaxLines'].forEach(function (id) {
+            ['layoutRestLimit', 'layoutMaxLines', 'chkLayout', 'chkMissing'].forEach(function (id) {
                 const el = document.getElementById(id);
-                if (el) el.addEventListener('change', saveOpts);
+                if (!el) return;
+                el.addEventListener('change', function () {
+                    syncCheckUI();
+                    saveOpts();
+                });
             });
+            syncCheckUI();
+        }
+
+        // 顶部统计：排版处数 / 缺号总数
+        function updateTotals() {
+            let layoutCount = 0, missCount = 0;
+            allResults.forEach(function (r) {
+                layoutCount += (r.problems || []).length;
+                missCount += (r.missing_count !== undefined && r.missing_count !== null)
+                    ? r.missing_count
+                    : ((r.missing || {}).gap_count || 0);
+            });
+            document.getElementById('lineCount').textContent = layoutCount;
+            document.getElementById('missingCount').textContent = missCount;
         }
 
         // 轮询后台任务进度
@@ -689,15 +989,16 @@
                 }
 
                 allResults = data.results || [];
-                document.getElementById('problemCount').textContent = data.problem_count || 0;
-                document.getElementById('lineCount').textContent =
-                    allResults.reduce((sum, r) => sum + (r.problems || []).length, 0);
+                document.getElementById('problemCount').textContent =
+                    data.problem_count || allResults.length;
+                updateTotals();
 
                 renderResults();
 
                 document.getElementById('progressFill').style.width = '100%';
                 document.getElementById('progressText').textContent =
-                    `检测完成！共扫描 ${data.total_checked || 0} 个文件，发现 ${data.problem_count || 0} 个问题文件`;
+                    `检测完成！共扫描 ${data.total_checked || 0} 个文件，发现 ${data.problem_count || 0} 个问题文件`
+                    + (data.ignored_count ? `（已跳过忽略 ${data.ignored_count} 本）` : '');
                 document.getElementById('progressCount').textContent =
                     `${data.total_checked || 0} / ${data.total_checked || 0}`;
 
@@ -712,6 +1013,15 @@
             if (isScanning) {
                 if (typeof showNotification === 'function') {
                     showNotification('检测正在进行中，请勿重复点击', 'warning');
+                }
+                return;
+            }
+            const checks = chapterChecks();
+            if (checks.length === 0) {
+                if (typeof showNotification === 'function') {
+                    showNotification('至少勾选一个检测项目', 'warning');
+                } else {
+                    alert('至少勾选一个检测项目');
                 }
                 return;
             }
@@ -732,7 +1042,10 @@
                 const startResp = await fetch('/api/txt/chapter_scan_all', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ chapter_layout: chapterLayoutOpts() })
+                    body: JSON.stringify({
+                        chapter_layout: chapterLayoutOpts(),
+                        checks: checks
+                    })
                 });
                 const startData = await startResp.json();
 
@@ -785,17 +1098,98 @@
             return (bytes / 1024 / 1024).toFixed(2) + ' MB';
         }
 
+        // 序号连续性区块：按单位（卷/章/节）分组展示缺号、重号、起点偏移
+        function renderMissingBlock(missing) {
+            const head = '<div class="block-title">🔢 序号连续性</div>';
+            if (!missing) return '';
+            const groups = missing.groups || [];
+            if (!groups.length) {
+                return head + '<p style="color:#48bb78;">✅ 没找到带序号的章节标题（或只识别到一章），判断不出连续性</p>';
+            }
+
+            return head + groups.map(function (g) {
+                const tag = g.level === 1 ? '卷/册' : (g.level === 2 ? '章/篇' : '节/回');
+                let rows = '';
+
+                (g.gaps || []).forEach(function (gap) {
+                    let list;
+                    if (gap.count <= 5) {
+                        list = gap.missing.map(n => '第' + n + g.unit).join('、');
+                    } else {
+                        const last = gap.missing[0] + gap.count - 1;
+                        list = '第' + gap.missing[0] + '~' + last + g.unit;
+                    }
+                    rows += `<li class="issue-item error" style="flex-wrap:wrap;">
+                        <span>⚠️ 缺 <strong>${escapeHtml(list)}</strong>，共 ${gap.count} ${escapeHtml(g.unit)}</span>
+                        <span style="opacity:0.75;">第${gap.after}${escapeHtml(g.unit)} → 第${gap.before}${escapeHtml(g.unit)}，断在第 ${gap.line} 行</span>
+                    </li>`;
+                });
+
+                (g.dups || []).forEach(function (d) {
+                    rows += `<li class="issue-item warning" style="flex-wrap:wrap;">
+                        <span>♻️ 重号 <strong>第${d.num}${escapeHtml(g.unit)}</strong> 出现 ${d.lines.length} 次</span>
+                        <span style="opacity:0.75;">第 ${d.lines.join('、')} 行${d.text ? '，标题「' + escapeHtml(d.text) + '」重复' : ''}</span>
+                    </li>`;
+                });
+
+                (g.variants || []).forEach(function (v) {
+                    rows += `<li class="issue-item info" style="flex-wrap:wrap;">
+                        <span>ℹ️ 第${v.num}${escapeHtml(g.unit)} 出现两次但标题不同</span>
+                        <span style="opacity:0.75;">「${escapeHtml(v.texts[0])}」/「${escapeHtml(v.texts[1])}」· 第 ${v.lines.join('、')} 行，多半是同一章分小节（上/下、（1）（2）），不算重号</span>
+                    </li>`;
+                });
+
+                (g.starts || []).forEach(function (s) {
+                    rows += `<li class="issue-item info" style="flex-wrap:wrap;">
+                        <span>ℹ️ 序列从 <strong>第${s.num}${escapeHtml(g.unit)}</strong> 开始</span>
+                        <span style="opacity:0.75;">前面可能还有章节不在本文件（第 ${s.line} 行）</span>
+                    </li>`;
+                });
+
+                if (g.segments > 1) {
+                    rows += `<li class="issue-item info" style="flex-wrap:wrap;">
+                        <span>ℹ️ 序号中途回退 ${g.segments - 1} 次</span>
+                        <span style="opacity:0.75;">多半是分卷/上下部重新编号，缺号按段单独判</span>
+                    </li>`;
+                }
+
+                if (!rows) {
+                    rows = '<li class="issue-item" style="background:#f0fff4;color:#276749;">✅ 序号连续，没发现缺号</li>';
+                }
+
+                const gapBadge = (g.gaps && g.gaps.length)
+                    ? `<span class="badge badge-error">缺 ${g.gaps.reduce((s, x) => s + x.count, 0)} ${escapeHtml(g.unit)}</span>`
+                    : '';
+
+                return `<div class="missing-group">
+                    <div class="missing-group-head">
+                        <strong>${tag}</strong>
+                        <span>单位「${escapeHtml(g.unit)}」· 共 ${g.count} ${escapeHtml(g.unit)}</span>
+                        <span>第 ${g.first} → 第 ${g.last}</span>
+                        ${g.segments > 1 ? `<span class="badge badge-warning">${g.segments} 段</span>` : ''}
+                        ${g.weak_count ? `<span class="badge" style="background:#e6fffa;color:#2c7a7b;" title="这些章节号来自带句子标点的标题，或「第52～53章」这种一行覆盖多章的写法，已计入序号">补充识别 ${g.weak_count}</span>` : ''}
+                        ${gapBadge}
+                    </div>
+                    <ul class="issue-list" style="margin:0;">${rows}</ul>
+                </div>`;
+            }).join('');
+        }
+
         function renderResults() {
             const container = document.getElementById('resultsContainer');
 
             if (allResults.length === 0) {
+                const picked = chapterChecks();
+                const names = [];
+                if (picked.indexOf('layout') >= 0) names.push('标题正文同行');
+                if (picked.indexOf('missing') >= 0) names.push('章节缺号/重号');
                 container.innerHTML = `
                     <div class="empty-state">
                         <div class="icon">✅</div>
-                        <h3>没有发现章节排版问题</h3>
-                        <p>所有书籍的章节标题都独立成行</p>
+                        <h3>没有发现章节结构问题</h3>
+                        <p>本次检查了：${names.join(' + ') || '（未选择项目）'}</p>
                         <p style="font-size:0.85em;color:#a0aec0;margin-top:8px;">
-                            如果觉得有遗漏，可以调小「标题词后超过 N 字」再扫一次
+                            想查得更细，可以调小「标题词后超过 N 字」再扫一次
                         </p>
                     </div>
                 `;
@@ -803,39 +1197,60 @@
             }
 
             container.innerHTML = allResults.map(item => {
-                const count = (item.problems || []).length;
-                const cardClass = item.is_readable ? 'result-card has-warning' : 'result-card has-error';
+                const layoutCount = (item.problems || []).length;
+                const missCount = (item.missing_count !== undefined && item.missing_count !== null)
+                    ? item.missing_count
+                    : ((item.missing || {}).gap_count || 0);
+                const checks = item.checks || ['layout', 'missing'];
+                const cardClass = (!item.is_readable || missCount)
+                    ? 'result-card has-error' : 'result-card has-warning';
                 const escapedPath = item.file_path.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
                 let badges = '';
                 if (!item.is_readable) {
                     badges += '<span class="badge badge-error">无法读取</span>';
                 } else {
-                    badges += `<span class="badge badge-warning">${count} 处</span>`;
+                    if (checks.indexOf('layout') >= 0 && layoutCount) {
+                        badges += `<span class="badge badge-warning">排版 ${layoutCount} 处</span>`;
+                    }
+                    if (checks.indexOf('missing') >= 0 && missCount) {
+                        badges += `<span class="badge badge-error">缺号 ${missCount} 章</span>`;
+                    }
+                    if (!layoutCount && !missCount) {
+                        badges += '<span class="badge" style="background:#c6f6d5;color:#276749;">正常</span>';
+                    }
                 }
 
                 let inner = '';
                 if (!item.is_readable) {
                     inner = `<p style="color:#f56565;">❌ ${escapeHtml(item.error || '无法读取')}</p>`;
-                } else if (count === 0) {
-                    inner = '<p style="color:#48bb78;">✅ 未发现问题</p>';
                 } else {
-                    inner = '<ul class="issue-list">' + item.problems.map(p => {
-                        return `<li class="issue-item warning">
-                            <div class="chapter-line">
-                                <div class="chapter-line-head">
-                                    <strong>第 ${p.line} 行</strong>
-                                    <span class="badge badge-warning">词后 ${p.rest_len} 字</span>
-                                    <span style="opacity:0.8;">标题词「${escapeHtml(p.head || '')}」</span>
-                                </div>
-                                <div class="chapter-line-text">${escapeHtml(p.text || '')}</div>
-                            </div>
-                        </li>`;
-                    }).join('') + '</ul>';
+                    if (checks.indexOf('layout') >= 0) {
+                        inner += '<div class="block-title">📐 标题正文同行</div>';
+                        if (layoutCount === 0) {
+                            inner += '<p style="color:#48bb78;">✅ 未发现排版问题</p>';
+                        } else {
+                            inner += '<ul class="issue-list">' + item.problems.map(p => {
+                                return `<li class="issue-item warning">
+                                    <div class="chapter-line">
+                                        <div class="chapter-line-head">
+                                            <strong>第 ${p.line} 行</strong>
+                                            <span class="badge badge-warning">词后 ${p.rest_len} 字</span>
+                                            <span style="opacity:0.8;">标题词「${escapeHtml(p.head || '')}」</span>
+                                        </div>
+                                        <div class="chapter-line-text">${escapeHtml(p.text || '')}</div>
+                                    </div>
+                                </li>`;
+                            }).join('') + '</ul>';
+                        }
+                    }
+                    if (checks.indexOf('missing') >= 0) {
+                        inner += renderMissingBlock(item.missing);
+                    }
                 }
 
                 return `
-                    <div class="${cardClass}" data-file-path="${escapeHtml(item.file_path)}">
+                    <div class="${cardClass}${expandedPaths.has(item.file_path) ? ' expanded' : ''}" data-file-path="${escapeHtml(item.file_path)}">
                         <div class="result-header" onclick="toggleCard(this)">
                             <div class="result-title">
                                 <span>${escapeHtml(item.title || item.filename)}</span>
@@ -862,7 +1277,6 @@
                                 </div>
                             </div>
 
-                            <h4 style="margin-bottom:10px;color:#4a5568;">疑似问题</h4>
                             ${inner}
 
                             <div class="result-actions">
@@ -872,6 +1286,9 @@
                                 <button class="btn btn-open" onclick="openTxtFile('${escapedPath}')">
                                     📂 打开文件
                                 </button>
+                                <button class="btn btn-ignore" onclick="ignoreNovel('${escapedPath}')">
+                                    🚫 忽略这本
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -879,16 +1296,34 @@
             }).join('');
         }
 
+        // 展开状态记在这里：重绘结果（忽略、重新检测）后按它恢复，不然一操作就全折叠了
+        const expandedPaths = new Set();
+
+        function markExpanded(card, want) {
+            const path = card.getAttribute('data-file-path');
+            if (!path) return;
+            if (want) expandedPaths.add(path);
+            else expandedPaths.delete(path);
+        }
+
         function toggleCard(header) {
-            header.closest('.result-card').classList.toggle('expanded');
+            const card = header.closest('.result-card');
+            card.classList.toggle('expanded');
+            markExpanded(card, card.classList.contains('expanded'));
         }
 
         function expandAll() {
-            document.querySelectorAll('.result-card').forEach(card => card.classList.add('expanded'));
+            document.querySelectorAll('.result-card').forEach(card => {
+                card.classList.add('expanded');
+                markExpanded(card, true);
+            });
         }
 
         function collapseAll() {
-            document.querySelectorAll('.result-card').forEach(card => card.classList.remove('expanded'));
+            document.querySelectorAll('.result-card').forEach(card => {
+                card.classList.remove('expanded');
+                markExpanded(card, false);
+            });
         }
 
         async function checkSingle(filePath) {
@@ -896,7 +1331,11 @@
                 const response = await fetch('/api/txt/chapter_check', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ file_path: filePath, chapter_layout: chapterLayoutOpts() })
+                    body: JSON.stringify({
+                        file_path: filePath,
+                        chapter_layout: chapterLayoutOpts(),
+                        checks: chapterChecks()
+                    })
                 });
                 const data = await response.json();
                 if (!data.success) {
@@ -905,12 +1344,14 @@
                 const index = allResults.findIndex(r => r.file_path === filePath);
                 if (index >= 0) {
                     allResults[index] = Object.assign({}, allResults[index], data.result);
-                    document.getElementById('lineCount').textContent =
-                        allResults.reduce((sum, r) => sum + (r.problems || []).length, 0);
+                    updateTotals();
                     renderResults();
                 }
                 if (typeof showNotification === 'function') {
-                    showNotification(`检测完成，发现 ${data.result.problem_count || 0} 处`, 'success');
+                    const parts = [];
+                    if (data.result.problem_count) parts.push(`排版 ${data.result.problem_count} 处`);
+                    if (data.result.missing_count) parts.push(`缺号 ${data.result.missing_count} 章`);
+                    showNotification(`检测完成${parts.length ? '，发现 ' + parts.join('、') : '，未发现问题'}`, 'success');
                 }
             } catch (error) {
                 if (typeof showNotification === 'function') {
@@ -952,9 +1393,227 @@
         function confirmClearAll() {
             if (!confirm('清空所有检测结果？')) return;
             allResults = [];
+            expandedPaths.clear();
             document.getElementById('problemCount').textContent = '0';
-            document.getElementById('lineCount').textContent = '0';
+            updateTotals();
             renderResults();
+        }
+
+        // ---------- 忽略列表 ----------
+        let ignoreList = [];
+
+        async function loadIgnoreList() {
+            try {
+                const resp = await fetch('/api/txt/chapter_ignore/list');
+                const data = await resp.json();
+                if (data.success) {
+                    ignoreList = data.ignore_list || [];
+                }
+            } catch (error) {
+                console.error('加载忽略列表失败:', error);
+            }
+            const topEl = document.getElementById('ignoredCount');
+            if (topEl) topEl.textContent = ignoreList.length;
+            const modalEl = document.getElementById('ignoreModalCount');
+            if (modalEl) modalEl.textContent = ignoreList.length;
+        }
+
+        // 卡片上的「忽略这本」：直接加进去并把这张卡从结果里去掉
+        async function ignoreNovel(filePath) {
+            const item = allResults.find(r => r.file_path === filePath);
+            const parts = [];
+            if (item) {
+                const layoutCount = (item.problems || []).length;
+                const missCount = (item.missing || {}).gap_count || 0;
+                if (layoutCount) parts.push(`排版 ${layoutCount} 处`);
+                if (missCount) parts.push(`缺号 ${missCount} 章`);
+            }
+            const summary = parts.join('、');
+
+            try {
+                const resp = await fetch('/api/txt/chapter_ignore/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file_path: filePath, reason: '', summary: summary })
+                });
+                const data = await resp.json();
+                if (!data.success) {
+                    if (typeof showNotification === 'function') {
+                        showNotification('忽略失败：' + (data.message || ''), 'error');
+                    }
+                    return;
+                }
+                allResults = allResults.filter(r => r.file_path !== filePath);
+                expandedPaths.delete(filePath);
+                document.getElementById('problemCount').textContent = allResults.length;
+                updateTotals();
+                renderResults();
+                await loadIgnoreList();
+                if (typeof showNotification === 'function') {
+                    showNotification('已忽略，以后扫描会跳过这本', 'success');
+                }
+            } catch (error) {
+                if (typeof showNotification === 'function') {
+                    showNotification('操作失败: ' + error.message, 'error');
+                }
+            }
+        }
+
+        async function openIgnoreManager() {
+            document.getElementById('ignoreModal').style.display = 'flex';
+            await loadIgnoreList();
+            renderIgnoreList();
+        }
+
+        function closeIgnoreModal() {
+            document.getElementById('ignoreModal').style.display = 'none';
+        }
+
+        function renderIgnoreList() {
+            const container = document.getElementById('ignoreListContainer');
+            if (!ignoreList || ignoreList.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state" style="padding:20px;">
+                        <div class="icon">📋</div>
+                        <p>暂无忽略项</p>
+                        <p style="font-size:0.85em;color:#a0aec0;margin-top:6px;">
+                            在结果卡片里点「🚫 忽略这本」，误报的书就不会再出现在扫描结果里
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+
+            let rows = '';
+            ignoreList.forEach(function (item) {
+                const filePath = item.file_path || '';
+                const title = item.title || (filePath.split(/[\\/]/).pop() || '').replace(/\.txt$/i, '');
+                const reasonHtml = item.reason
+                    ? `<span class="ignore-reason">${escapeHtml(item.reason)}</span>`
+                    : `<span class="ignore-reason-empty">未填写</span>`;
+                const summaryHtml = item.summary
+                    ? `<span style="font-size:0.85em;color:#a0aec0;">${escapeHtml(item.summary)}</span>`
+                    : `<span class="ignore-reason-empty">—</span>`;
+                const addedAt = item.added_at
+                    ? (function (d) {
+                        if (isNaN(d.getTime())) return '未知';
+                        return d.toLocaleDateString('zh-CN') + '<br>'
+                             + '<span style="color:#a0aec0;">'
+                             + d.toLocaleTimeString('zh-CN', { hour12: false }) + '</span>';
+                    })(new Date(item.added_at))
+                    : '未知';
+                const encoded = encodeURIComponent(filePath).replace(/'/g, '%27');
+
+                rows += `
+                    <tr>
+                        <td><strong>${escapeHtml(title)}</strong></td>
+                        <td>${summaryHtml}</td>
+                        <td>${reasonHtml}</td>
+                        <td>${addedAt}</td>
+                        <td>
+                            <button class="btn btn-secondary btn-sm" onclick="editIgnoreReason('${encoded}')">✏️ 备注</button>
+                            <button class="btn btn-danger btn-sm" onclick="removeIgnore('${encoded}')">取消忽略</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            container.innerHTML = `
+                <table class="ignore-table">
+                    <thead>
+                        <tr>
+                            <th>📖 书名</th>
+                            <th>📊 结论</th>
+                            <th>📝 备注</th>
+                            <th>📅 添加时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            `;
+        }
+
+        async function editIgnoreReason(filePath) {
+            const decoded = decodeURIComponent(filePath);
+            const item = ignoreList.find(i => i.file_path === decoded)
+                || ignoreList.find(i => (i.title || '') === decoded);
+            const oldReason = item ? (item.reason || '') : '';
+            const newReason = prompt('忽略备注（可留空）：', oldReason);
+            if (newReason === null) return;
+
+            try {
+                const resp = await fetch('/api/txt/chapter_ignore/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file_path: decoded, reason: newReason })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    await loadIgnoreList();
+                    renderIgnoreList();
+                    if (typeof showNotification === 'function') {
+                        showNotification('备注已更新', 'success');
+                    }
+                } else {
+                    if (typeof showNotification === 'function') {
+                        showNotification('更新失败：' + (data.message || ''), 'error');
+                    }
+                }
+            } catch (error) {
+                if (typeof showNotification === 'function') {
+                    showNotification('操作失败: ' + error.message, 'error');
+                }
+            }
+        }
+
+        async function removeIgnore(filePath) {
+            const decoded = decodeURIComponent(filePath);
+            const name = decoded.split(/[\\/]/).pop() || decoded;
+            if (!confirm(`取消忽略「${name}」？以后扫描会重新检查这本。`)) return;
+
+            try {
+                const resp = await fetch('/api/txt/chapter_ignore/remove', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file_path: decoded })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    await loadIgnoreList();
+                    renderIgnoreList();
+                    if (typeof showNotification === 'function') {
+                        showNotification('已取消忽略', 'success');
+                    }
+                } else {
+                    if (typeof showNotification === 'function') {
+                        showNotification('操作失败：' + (data.message || ''), 'error');
+                    }
+                }
+            } catch (error) {
+                if (typeof showNotification === 'function') {
+                    showNotification('操作失败: ' + error.message, 'error');
+                }
+            }
+        }
+
+        async function clearAllIgnores() {
+            if (!confirm('清空整个忽略列表？清空后这些书会重新参与扫描。')) return;
+            try {
+                const resp = await fetch('/api/txt/chapter_ignore/clear', { method: 'POST' });
+                const data = await resp.json();
+                if (data.success) {
+                    await loadIgnoreList();
+                    renderIgnoreList();
+                    if (typeof showNotification === 'function') {
+                        showNotification('已清空忽略列表', 'success');
+                    }
+                }
+            } catch (error) {
+                if (typeof showNotification === 'function') {
+                    showNotification('操作失败: ' + error.message, 'error');
+                }
+            }
         }
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -965,6 +1624,7 @@
                 });
             }
             initOpts();
+            loadIgnoreList();
         });
     </script>
 </body>
