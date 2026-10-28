@@ -15,10 +15,29 @@ let scanning = false;
 let progressInterval = null;
 let displayedProgress = 0;   // 进度条已显示的百分比，只增不减
 
+// 同步胶囊里那个圆形扫描按钮的状态（扫描中转圈 + 不可点）
+function syncScanButtons() {
+    const statsScanBtn = document.getElementById('statsScanBtn');
+    if (!statsScanBtn) return;
+    statsScanBtn.disabled = scanning;
+    statsScanBtn.classList.toggle('is-scanning', scanning);
+    // 读屏友好：转圈时告诉辅助技术「正在扫描」
+    if (scanning) {
+        statsScanBtn.setAttribute('aria-busy', 'true');
+    } else {
+        statsScanBtn.removeAttribute('aria-busy');
+    }
+}
+
 // 开始扫描
 function startScan(fullScan = false) {
-    if (scanning) return;
-    
+    if (scanning) {
+        if (typeof showNotification === 'function') {
+            showNotification('扫描任务已在运行中', 'warning');
+        }
+        return;
+    }
+
     scanning = true;
     displayedProgress = 0;
     const scanBtn = document.getElementById('scanBtn');
@@ -28,6 +47,7 @@ function startScan(fullScan = false) {
     if (scanBtn) scanBtn.disabled = true;
     if (scanFullBtn) scanFullBtn.disabled = true;
     if (progressContainer) progressContainer.style.display = 'block';
+    syncScanButtons();
     
     const url = fullScan ? '/api/start_scan?full=true' : '/api/start_scan';
     
@@ -38,7 +58,88 @@ function startScan(fullScan = false) {
                 progressInterval = setInterval(checkProgress, 500);
             }
         })
-        .catch(error => console.error('扫描启动失败:', error));
+        .catch(error => {
+            console.error('扫描启动失败:', error);
+            scanning = false;
+            syncScanButtons();
+            if (typeof showNotification === 'function') {
+                showNotification('无法启动扫描', 'error');
+            }
+        });
+}
+
+// ===== 扫描完成后只换书架区，不整页刷新 =====
+// 保留滚动位置、工具箱抽屉展开状态，避免整页重载的白屏和跳顶。
+// 用当前 URL 重新请求首页（带分页/排序/筛选参数），只取其中的 .table-wrapper 换上去。
+// 任何一步不顺利都返回 false，由调用方回退到整页刷新，不会停在半新半旧的状态。
+async function refreshNovelList() {
+    const oldWrap = document.querySelector('.table-wrapper');
+    if (!oldWrap) return false;
+
+    const prevScroll = window.scrollY;
+    const oldMeta = document.getElementById('app-data');
+
+    try {
+        const fetchOpts = {
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-cache' }
+        };
+        const parse = (h) => new DOMParser().parseFromString(h, 'text/html');
+
+        const resp = await fetch(window.location.href, fetchOpts);
+        if (!resp.ok) return false;
+        let doc = parse(await resp.text());
+
+        // 删书后总页数会变少，而桌面版后端没有页码越界纠正：
+        // 停在超出范围的页码上会刷出空书架。这里退到新的最后一页再取一次，
+        // 并用 replaceState 把地址栏一起改掉，后续操作不会继续带着越界页码。
+        let newMeta = doc.getElementById('app-data');
+        const newPages = parseInt((newMeta && newMeta.dataset.paginationPages) || '1', 10) || 1;
+        const curPage = parseInt(new URLSearchParams(window.location.search).get('page') || '1', 10) || 1;
+        if (curPage > newPages && newPages > 0) {
+            const target = new URL(window.location.href);
+            target.searchParams.set('page', newPages);
+            const retry = await fetch(target.toString(), fetchOpts);
+            if (!retry.ok) return false;
+            doc = parse(await retry.text());
+            history.replaceState(null, '', target.toString());
+            newMeta = doc.getElementById('app-data');
+        }
+
+        const newWrap = doc.querySelector('.table-wrapper');
+        if (!newWrap) return false;
+
+        // 总页数可能变了（增删书）：meta 与全局变量一起更新，跳页才不会越界
+        if (newMeta && oldMeta) {
+            const pages = newMeta.dataset.paginationPages || '1';
+            oldMeta.dataset.paginationPages = pages;
+            window.paginationPages = parseInt(pages, 10) || 1;
+        }
+
+        oldWrap.replaceWith(newWrap);
+
+        // 头部胶囊里的「共 N 本小说」
+        const newCount = doc.querySelector('.count-info');
+        const curCount = document.querySelector('.count-info');
+        if (newCount && curCount) curCount.innerHTML = newCount.innerHTML;
+
+        // 筛选提示条上的「共 N 本」（只在有筛选时存在）
+        const newNotice = doc.querySelector('.filter-notice');
+        const curNotice = document.querySelector('.filter-notice');
+        if (newNotice && curNotice) curNotice.replaceWith(newNotice);
+
+        // 新 DOM 需要重新跑一遍：书名格式化/高亮、分页输入框、列表区那几处直接绑定的事件
+        if (typeof formatNovelTitlesAndHighlight === 'function') formatNovelTitlesAndHighlight();
+        if (typeof initPagination === 'function') initPagination(window.paginationPages);
+        if (typeof window.bindListInteractions === 'function') window.bindListInteractions();
+
+        // 回到原来的滚动位置（新列表更短时浏览器会自动夹到底部）
+        window.scrollTo(0, prevScroll);
+        return true;
+    } catch (err) {
+        console.error('局部刷新书架失败，将回退整页刷新:', err);
+        return false;
+    }
 }
 
 // 检查进度
@@ -50,15 +151,27 @@ function checkProgress() {
             
             if (data.status === 'completed' || data.status === 'error') {
                 clearInterval(progressInterval);
+                progressInterval = null;
                 scanning = false;
-                
+
                 const scanBtn = document.getElementById('scanBtn');
                 const scanFullBtn = document.getElementById('scanFullBtn');
                 if (scanBtn) scanBtn.disabled = false;
                 if (scanFullBtn) scanFullBtn.disabled = false;
-                
+
+                syncScanButtons();
+
                 if (data.status === 'completed') {
-                    setTimeout(() => window.location.reload(), 1000);
+                    // 后端 message 里已经写好了「新增 3 本, 更新 2 本」这类明细，直接拿来当提示
+                    if (typeof showNotification === 'function') {
+                        showNotification(data.message || '扫描完成', 'success');
+                    }
+                    // 只换书架区，不整页刷新；失败才回退（延迟一点让提示先出来）
+                    refreshNovelList().then(function (ok) {
+                        if (!ok) setTimeout(() => window.location.reload(), 600);
+                    });
+                } else if (typeof showNotification === 'function') {
+                    showNotification(data.message || '扫描出错', 'error');
                 }
             }
         });

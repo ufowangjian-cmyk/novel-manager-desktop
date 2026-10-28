@@ -84,6 +84,17 @@
                 <span class="dir-info">📁 {{ novel_dir }}</span>
                 <span class="sep">|</span>
                 <span class="count-info">🔞 共 {{ total_count }} 本小说</span>
+                {# 增量扫描：与「扫描管理」里的按钮同一个动作，扫描中图标转圈（main.js syncScanButtons） #}
+                <button type="button" class="stats-scan-btn" id="statsScanBtn"
+                    title="增量扫描" aria-label="增量扫描" onclick="startScan(false)">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                        <path d="M21 3v5h-5" />
+                        <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                        <path d="M8 16H3v5" />
+                    </svg>
+                </button>
             </div>
         </div>
 
@@ -760,39 +771,61 @@
             return true;
         }
 
+        // ===== 列表区事件绑定（可重复调用）=====
+        // 扫描完成后只替换 .table-wrapper，绑定在它内部元素上的事件会一起消失，
+        // 所以把「打开文件 / 排序偏好 / 跳页」抽成函数，局部刷新后再挂一次。
+        window.bindListInteractions = function () {
+            const wrapper = document.querySelector('.table-wrapper');
+
+            if (wrapper) {
+                // 打开文件按钮（事件委托）
+                wrapper.addEventListener('click', function (e) {
+                    const openBtn = e.target.closest('.open-btn');
+                    if (openBtn) {
+                        e.preventDefault();
+                        const filePath = openBtn.getAttribute('data-file-path');
+                        if (filePath && typeof openFile === 'function') {
+                            openFile(filePath);
+                        }
+                    }
+                });
+            }
+
+            // 排序链接：点击时记住排序偏好（打标记避免重复绑定）
+            document.querySelectorAll('.sortable-th').forEach(link => {
+                if (link.dataset.sortBound) return;
+                link.dataset.sortBound = '1';
+                link.addEventListener('click', function () {
+                    const href = this.getAttribute('href');
+                    if (!href) return;
+                    const urlParams = new URLSearchParams(href.split('?')[1]);
+                    const sortBy = urlParams.get('sort');
+                    const sortOrder = urlParams.get('order');
+                    if (sortBy && sortOrder) {
+                        saveSortPreference(sortBy, sortOrder);
+                    }
+                });
+            });
+
+            // 分页跳转按钮
+            const gotoPageBtn = document.getElementById('gotoPageBtn');
+            if (gotoPageBtn) {
+                gotoPageBtn.addEventListener('click', function () {
+                    if (typeof gotoPage === 'function') gotoPage(window.paginationPages);
+                });
+            }
+        };
+
         document.addEventListener('DOMContentLoaded', function () {
             // 初始化分页
             if (typeof initPagination === 'function') {
                 initPagination(window.paginationPages);
             }
 
-            // 绑定打开文件按钮（使用事件委托）
-            document.querySelector('.table-wrapper').addEventListener('click', function (e) {
-                const openBtn = e.target.closest('.open-btn');
-                if (openBtn) {
-                    e.preventDefault();
-                    const filePath = openBtn.getAttribute('data-file-path');
-                    if (filePath && typeof openFile === 'function') {
-                        openFile(filePath);
-                    }
-                }
-            });
-
-            // 绑定排序链接，添加点击保存功能
-            document.querySelectorAll('.sortable-th').forEach(link => {
-                link.addEventListener('click', function (e) {
-                    const href = this.getAttribute('href');
-                    if (href) {
-                        // 从 href 中解析排序参数
-                        const urlParams = new URLSearchParams(href.split('?')[1]);
-                        const sortBy = urlParams.get('sort');
-                        const sortOrder = urlParams.get('order');
-                        if (sortBy && sortOrder) {
-                            saveSortPreference(sortBy, sortOrder);
-                        }
-                    }
-                });
-            });
+            // 列表区交互（打开文件 / 排序偏好 / 跳页）
+            if (typeof window.bindListInteractions === 'function') {
+                window.bindListInteractions();
+            }
 
             // 绑定扫描按钮
             const scanBtn = document.getElementById('scanBtn');
@@ -830,13 +863,6 @@
                 }
             });
 
-            // 绑定分页跳转按钮
-            const gotoPageBtn = document.getElementById('gotoPageBtn');
-            if (gotoPageBtn) {
-                gotoPageBtn.addEventListener('click', function () {
-                    if (typeof gotoPage === 'function') gotoPage(window.paginationPages);
-                });
-            }
         });
     </script>
 </body>
