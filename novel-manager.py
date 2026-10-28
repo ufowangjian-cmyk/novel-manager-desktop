@@ -1879,11 +1879,23 @@ def detect_chapter_layout_issues(content, max_items=20, max_lines=3000, rest_lim
                 rest_len = len(t[m.end():].strip(_CH_HEAD_SEP))
                 break
 
-        strict_ok = is_chapter_line_strict(t)
-        if strict_ok and rest_len < limit:
-            continue
+        if head in _BARE_CH_TITLES:
+            # 裸词（番外/后记/尾声/引子/前言…）后面带文字本身就是常见标题写法，
+            # 「番外小剧场（5）LOL同人剧NBOL」「后记 二〇一五年冬」都不是排版问题。
+            # is_chapter_line_strict 那条「词后不超过 8 字」对它们太紧，误报很多，
+            # 这里只用两条判据：
+            #   ① 行内出现句号 —— 真标题不会用句号断句，这是「尾声位于…村。这里的…」
+            #   ② 词后字数达到阈值 —— 标题不会这么长
+            has_period = '。' in t
+            if not has_period and rest_len < limit:
+                continue
+            reason = ['裸词后接句子'] if has_period else []
+        else:
+            strict_ok = is_chapter_line_strict(t)
+            if strict_ok and rest_len < limit:
+                continue
+            reason = [] if strict_ok else ['裸词后接句子']
 
-        reason = [] if strict_ok else ['裸词后接句子']
         if rest_len >= limit:
             reason.append('标题词后 %d 字' % rest_len)
         problems.append({
@@ -1908,6 +1920,8 @@ _CH_NUM_ANY_RE = re.compile(
 )
 # 合并章节的编号连接符：「第0052章～第0053章」「第12章-第13章」
 _CH_RANGE_SEP_RE = re.compile(r'^\s*[～~\-－—–至到]?\s*$')
+# 标题里的分隔符（不含范围符）：「第43章·第二回合」的两段之间只隔了「·」
+_CH_TITLE_SEP_RE = re.compile(r'^[\s：:·、\-—－~～]*$')
 # 一行覆盖多章的范围写法：「第0052章～第0053章」「第52-53章」「第52～55章」
 _CH_NUM_RANGE_RE = re.compile(
     r'第\s*(\d+|[〇零一二三四五六七八九十百千万两]+)\s*[册集卷部篇章回节目幕]?\s*'
@@ -1935,6 +1949,24 @@ _CH_GAP_RANGE_MAX = 30       # 单段缺号最多展开列出 30 个具体数字
 _CH_SPLIT_MARKS = ('上', '下', '中', '续', '前', '后', '一', '二', '三')
 _CH_SUBNUM_RE = re.compile(r'[（(]\s*[0-9一二三四五六七八九十]+\s*[）)]')
 
+# 标题里常引用别的章：「第02章：主题摄影（《贤妻悲鸣》第九章同人）」
+# 「第十章：…（我觉得这个标题还是弄到第十章好一点）」。这些括号里的章号
+# 不是本章编号，混进来会让整行被当成「一行两章」而丢弃，从而误报缺号。
+_CH_BRACKET_PAIRS = {'（': '）', '(': ')', '【': '】', '[': ']',
+                     '《': '》', '〈': '〉', '「': '」', '『': '』'}
+
+
+def _bracket_spans(text):
+    """返回文中括号区间的 [(起, 止)]，未闭合的开括号一直算到行尾。"""
+    spans, stack = [], []
+    for i, ch in enumerate(text):
+        if ch in _CH_BRACKET_PAIRS:
+            stack.append((ch, i))
+        elif stack and _CH_BRACKET_PAIRS.get(stack[-1][0]) == ch:
+            spans.append((stack.pop()[1], i))
+    spans.extend((open_i, len(text)) for _, open_i in stack)
+    return spans
+
 
 def _is_merged_chapter(text, matches):
     """「第0052章～第0053章·性起（三）」是不是合并章节（一行覆盖多个编号）。
@@ -1948,12 +1980,83 @@ def _is_merged_chapter(text, matches):
     return True
 
 
-def is_split_title(a, b):
-    """同号两行是否只是同一章的分节。
+# 「续一」「再续」「续3」这类续写标记
+_CH_CONT_RE = re.compile(r'^(?:再)?(?:续|接上|承接)[一二三四五六七八九十0-9]*$')
+_CH_CONT_NUM_RE = re.compile(r'^(.*?)(?:再)?续([一二三四五六七八九十0-9]+)$')
+# 只取章号本身（用于判断「整行除了章号只剩续写标记」）
+_CH_HEAD_ONLY_RE = re.compile(
+    r'^\s*第\s*(?:\d+|[〇零一二三四五六七八九十百千万两]+)\s*[册集卷部篇章回节目幕]\s*[：:·、\-—　 ]*')
 
-    认两种写法，其余一概算重号：
+
+# 结尾的「28天」「26-23天」「第四十天」这类进度标记（必须带时间单位，避免把「b2」也算进来）
+_CH_NUMTAIL_RE = re.compile(
+    r'[\d〇零一二三四五六七八九十百千万两]+'
+    r'(?:\s*[-—~～至到]\s*[\d〇零一二三四五六七八九十百千万两]+)?'
+    r'\s*[天日周月年岁号]$')
+
+
+def _numeric_tail_key(text):
+    """去掉结尾的进度数字（必须带天/日/周/月/年/岁/号），返回主体。
+
+    「第三十一章：倒计时26-23天」→「第三十一章：倒计时」；
+    「第2章 b2」不会被剥（2 后面没有单位），仍按两章处理。
+    """
+    key = text.strip()
+    for _ in range(6):
+        new = _CH_NUMTAIL_RE.sub('', key).strip(' 　:：·、-—')
+        if new == key or len(new) < 5:
+            break
+        key = new
+    return key
+
+
+def _bracket_tail(text):
+    """把标题拆成 (括号前主体, 括号内说明)。尾部没有括号则返回 None。"""
+    spans = _bracket_spans(text)
+    if not spans:
+        return None
+    start, end = spans[-1]
+    if text[end + 1:].strip(' 　:：、-—·'):
+        return None                     # 括号后面还有字，不算尾部说明
+    return text[:start].strip(' 　:：、-—·'), text[start + 1:end].strip()
+
+
+# 「第N章：第M节」——章标题里带节号，说明这一章被拆成多节
+_CH_SECONDARY_RE = re.compile(
+    r'^[\s：:·、\-—]*第\s*(?:\d+|[〇零一二三四五六七八九十百千万两]+)\s*[节回幕目]')
+
+
+def _has_section_marker(text):
+    """章号后面紧跟着「第M节/第M回」，说明这是同一章里的小节标题。"""
+    m = _CH_HEAD_ONLY_RE.match(text)
+    rest = text[m.end():] if m else text
+    return bool(_CH_SECONDARY_RE.match(rest))
+
+
+def _is_continue_only(text):
+    """整行除了章号就只剩「续一 / 再续」这类续写标记。"""
+    m = _CH_HEAD_ONLY_RE.match(text)
+    rest = text[m.end():] if m else text
+    return bool(_CH_CONT_RE.match(rest.strip(' 　:：、-—()（）【】[]·')))
+
+
+def _continue_series(text):
+    """「…续一」「…续三」→ (去掉序号的共同主体, 序号)；不是续写标记返回 None。"""
+    m = _CH_CONT_NUM_RE.match(text.strip())
+    if not m:
+        return None
+    return m.group(1).strip(' 　:：、-—·'), m.group(2)
+
+
+def is_split_title(a, b):
+    """同号两行是否只是同一章的分节（不算重号）。
+
+    认五种写法，其余一概算真重号：
       「第一章 上 / 第一章 下」——尾巴是分节词
       「第186章·（1）新人 / 第186章·（2）妹妹」——两行都带括号小节号
+      「第十八章：第二周（第一天）/（第二天）」——括号前完全相同、括号里说明不同
+      「第二十八章：布局 / 布局续一」「…续三 / …续四」——续写标记
+      「第二十七章：第二个孩子 / 续一」——其中一行只有续写标记
     这样「第2章 b」和「第2章 b2」仍会报重号，不至于把真重复漏掉。
     """
     a, b = (a or '').strip(), (b or '').strip()
@@ -1963,11 +2066,33 @@ def is_split_title(a, b):
         return True
     if a == b:
         return False
+
+    # 括号前主体相同、括号里的说明不同 → 同一章的不同小节
+    ta, tb = _bracket_tail(a), _bracket_tail(b)
+    if ta and tb and ta[0] == tb[0] and ta[1] != tb[1]:
+        return True
+
+    # 「第二十四章：我回来了 / 第二十四章：第二节」→ 同一章下的分节
+    if _has_section_marker(a) or _has_section_marker(b):
+        return True
+
+    # 只差结尾的进度数字（倒计时28天 / 倒计时26-23天）→ 同一章的分段
+    ka, kb = _numeric_tail_key(a), _numeric_tail_key(b)
+    if ka == kb and ka != a.strip() and kb != b.strip() and len(ka) >= 5:
+        return True
+
+    # 续写标记：整行只有「续N」，或两行只差续写序号
+    if _is_continue_only(a) or _is_continue_only(b):
+        return True
+    sa, sb = _continue_series(a), _continue_series(b)
+    if sa and sb and sa[0] == sb[0] and sa[1] != sb[1]:
+        return True
+
     if len(a) > len(b):
         a, b = b, a
     if b.startswith(a):
-        tail = b[len(a):].strip(' 　:：、-—()（）【】[]')
-        return tail in _CH_SPLIT_MARKS
+        tail = b[len(a):].strip(' 　:：、-—()（）【】[]·')
+        return tail in _CH_SPLIT_MARKS or bool(_CH_CONT_RE.match(tail))
     if len(a) == len(b):
         diff = [(x, y) for x, y in zip(a, b) if x != y]
         if len(diff) == 1 and diff[0][0] in _CH_SPLIT_MARKS and diff[0][1] in _CH_SPLIT_MARKS:
@@ -2061,10 +2186,32 @@ def detect_chapter_missing(content):
         matches = list(_CH_NUM_ANY_RE.finditer(t))
         if not matches or matches[0].start() != 0:
             continue
-        # 一行两个完整章号：「第52章 第53章」同样是合并章节；
-        # 「第三章讲的是第五章的事」中间是实词，判为正文跳过
+        # 括号里引用的章号不算本章编号（详见 _bracket_spans 注释）
+        spans = _bracket_spans(t)
+        if spans:
+            matches = [m for m in matches
+                       if not any(a < m.start() < b for a, b in spans)]
+            if not matches:
+                continue
+        # 一行两个完整章号，两种可能：
+        #   ① 「第52章 第53章」——合并章节，两个都数（_is_merged_chapter 认得出）
+        #   ② 后面那个根本不是章号，是标题里的词：「第43章·第二回合」里的「第二回」，
+        #      「第5章·第2回合」里的「第2回」。两段之间只隔分隔符（· ： 空格）时按第①种
+        #      之外处理：只认第一个章号，不再整行丢弃（原来丢整行会误报缺号）
+        #   ③ 「第三章讲的是第五章的事」——中间是实词，判为正文，整行跳过
         if len(matches) > 1 and not _is_merged_chapter(t, matches):
-            continue
+            first_level = _CH_UNIT_LEVEL.get(matches[0].group(2), 2)
+            # 标题里混进别的层级单位：「第43章：…第一部完整档案」（部）、
+            # 「第五十二章·师师之AV第二幕」（幕）。层级和章不同，不是第二个章号。
+            if any(_CH_UNIT_LEVEL.get(x.group(2), 2) != first_level
+                   for x in matches[1:]):
+                matches = matches[:1]
+            else:
+                # 同层级才可能是「第三章讲的是第五章的事」：中间有实词就是正文
+                between = t[matches[0].end():matches[1].start()]
+                if not _CH_TITLE_SEP_RE.match(between):
+                    continue
+                matches = matches[:1]
         for m in matches:
             num = cn_num_to_int(m.group(1))
             if num and num > 0:
