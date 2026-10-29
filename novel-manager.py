@@ -1850,18 +1850,17 @@ _CH_REST_LIMIT = 30
 _CH_HEAD_CHARS = set('第上下前后中终序楔引序正番尾')
 
 
-def detect_chapter_layout_issues(content, max_items=20, max_lines=3000, rest_limit=None):
-    """找出「章节标题和正文写在同一行」的疑似排版问题。
+def _extract_chapter_candidates(content):
+    """第一步：把全书的「章节候选行」挑出来。
 
-    只看前 max_lines 行：章节判定集中在开头，全文扫太慢（全量体检会跑几千本）。
-    split('\n', max_lines) 限制切分次数，避免大文件被完整 splitlines 一遍。
-    rest_limit 默认 _CH_REST_LIMIT（30 字），由前端高级设置传入，范围在 _clamp_layout_opts 里夹紧。
+    判据与分章器完全一致（行首命中三级章节正则之一），所以这里得到的
+    就是目录里会出现的那些行；正文中顺带写到的「第三章」只要不在行首
+    就不会进候选，和分章口径保持一致。
 
-    返回 [{'line', 'head', 'rest_len', 'text', 'reason'}]，最多 max_items 条。
+    返回 [(行号, 整行文本, 标题词, 标题词后剩余字数)]。
     """
-    limit = rest_limit if isinstance(rest_limit, int) and rest_limit > 0 else _CH_REST_LIMIT
-    problems = []
-    for lineno, raw in enumerate(content.split('\n', max_lines)[:max_lines], 1):
+    out = []
+    for lineno, raw in enumerate(content.split('\n'), 1):
         t = raw.strip()
         if not t or len(t) > 200:
             continue
@@ -1869,7 +1868,6 @@ def detect_chapter_layout_issues(content, max_items=20, max_lines=3000, rest_lim
             continue
         if not (LEVEL1_PATTERN.match(t) or LEVEL2_PATTERN.match(t) or LEVEL3_PATTERN.match(t)):
             continue
-
         head = ''
         rest_len = 0
         for lv in (1, 2, 3):
@@ -1878,7 +1876,35 @@ def detect_chapter_layout_issues(content, max_items=20, max_lines=3000, rest_lim
                 head = m.group(0).strip()
                 rest_len = len(t[m.end():].strip(_CH_HEAD_SEP))
                 break
+        out.append((lineno, t, head, rest_len))
+    return out
 
+
+def detect_chapter_layout_issues(content, max_items=20, rest_limit=None, stats=None):
+    """找出「章节标题和正文写在同一行」的疑似排版问题。
+
+    两步走，不再有「每本只扫前 N 行」的上限：
+      1. _extract_chapter_candidates 把全书的章节候选行提出来；
+      2. 逐条判断候选是否合规（标题词后还剩多少字、有没有句号）。
+
+    为什么敢扫全文：这一步只是逐行匹配三个行首正则，13MB / 5.5 万行的书
+    实测约 20ms；而缺号检测（detect_chapter_missing）本来就要扫全文
+    （20 万行上限），两者同一量级，全量体检不会因此慢一个档次。
+    早期设行数上限是怕慢，代价是书尾的排版问题一律漏报，不划算。
+
+    rest_limit 默认 _CH_REST_LIMIT（30 字），由前端高级设置传入，
+    范围在 _clamp_layout_opts 里夹紧。
+
+    返回 [{'line', 'head', 'rest_len', 'text', 'reason'}]，最多 max_items 条。
+    stats 传入 dict 时回填 {'chapter_count': 识别到的章节候选数}，供前端展示
+    「全书识别 N 个章节」，解释为什么没报问题。
+    """
+    limit = rest_limit if isinstance(rest_limit, int) and rest_limit > 0 else _CH_REST_LIMIT
+    candidates = _extract_chapter_candidates(content)
+    if isinstance(stats, dict):
+        stats['chapter_count'] = len(candidates)
+    problems = []
+    for lineno, t, head, rest_len in candidates:
         if head in _BARE_CH_TITLES:
             # 裸词（番外/后记/尾声/引子/前言…）后面带文字本身就是常见标题写法，
             # 「番外小剧场（5）LOL同人剧NBOL」「后记 二〇一五年冬」都不是排版问题。
@@ -7088,7 +7114,6 @@ def _clamp_layout_opts(opts):
 
     return {
         'rest_limit': as_int('rest_limit', _CH_REST_LIMIT, 10, 200),
-        'max_lines': as_int('max_lines', 3000, 200, 50000),
     }
 
 
@@ -7103,14 +7128,14 @@ def normalize_chapter_checks(raw):
     return picked or list(CHAPTER_CHECK_KEYS)
 
 
-def check_chapter_layout(file_path, rest_limit=None, max_lines=None, checks=None):
+def check_chapter_layout(file_path, rest_limit=None, checks=None):
     """章节检测：单本书的排版问题 + 序号缺号/重号。
 
     checks 决定跑哪几项：'layout'（标题正文同行）、'missing'（缺号/重号）。
     为空表示全跑，兼容老调用。
     返回结构刻意做窄：只带定位所需信息，不跑编码/乱码检测。
     """
-    opts = _clamp_layout_opts({'rest_limit': rest_limit, 'max_lines': max_lines})
+    opts = _clamp_layout_opts({'rest_limit': rest_limit})
     want_layout = _want_check(checks, 'layout')
     want_missing = _want_check(checks, 'missing')
     result = {
@@ -7119,6 +7144,7 @@ def check_chapter_layout(file_path, rest_limit=None, max_lines=None, checks=None
         'file_size': 0,
         'total_lines': 0,
         'scanned_lines': 0,
+        'chapter_count': None,
         'problems': [],
         'missing': None,
         'checks': [k for k in CHAPTER_CHECK_KEYS
@@ -7157,10 +7183,13 @@ def check_chapter_layout(file_path, rest_limit=None, max_lines=None, checks=None
 
         result['total_lines'] = content.count('\n') + content.count('\r') + 1
         if want_layout:
+            # 排版检测扫全书（先提取章节候选再判合规），不再有行数上限
+            layout_stats = {}
             result['problems'] = detect_chapter_layout_issues(
-                content, rest_limit=opts['rest_limit'], max_lines=opts['max_lines']
+                content, rest_limit=opts['rest_limit'], stats=layout_stats
             )
-            result['scanned_lines'] = min(result['total_lines'], opts['max_lines'])
+            result['scanned_lines'] = result['total_lines']
+            result['chapter_count'] = layout_stats.get('chapter_count', 0)
         if want_missing:
             # 缺号要扫全文：章节号断在书尾的情况最多，只扫开头会漏
             result['missing'] = detect_chapter_missing(content)
@@ -7935,8 +7964,7 @@ def api_txt_chapter_check():
 
     opts = _clamp_layout_opts(data.get('chapter_layout'))
     checks = normalize_chapter_checks(data.get('checks'))
-    result = check_chapter_layout(file_path, rest_limit=opts['rest_limit'],
-                                  max_lines=opts['max_lines'], checks=checks)
+    result = check_chapter_layout(file_path, rest_limit=opts['rest_limit'], checks=checks)
     result['title'] = _novel_title_for_path(file_path)
     result['problem_count'] = len(result['problems'])
     result['missing_count'] = (result.get('missing') or {}).get('gap_count', 0)
@@ -7944,7 +7972,7 @@ def api_txt_chapter_check():
     return jsonify({'success': True, 'result': result})
 
 
-def run_chapter_scan_all_task(task_id, rest_limit=None, max_lines=None, checks=None):
+def run_chapter_scan_all_task(task_id, rest_limit=None, checks=None):
     """后台执行全量章节检测（排版 + 缺号）。"""
     lock = _CrossProcessLock(CHAPTER_SCAN_LOCK_FILE)
     lock.acquire()
@@ -7970,8 +7998,7 @@ def run_chapter_scan_all_task(task_id, rest_limit=None, max_lines=None, checks=N
 
         for novel in novels:
             file_path = novel.get('file_path')
-            row = check_chapter_layout(file_path, rest_limit=rest_limit,
-                                       max_lines=max_lines, checks=checks)
+            row = check_chapter_layout(file_path, rest_limit=rest_limit, checks=checks)
             checked += 1
 
             row['problem_count'] = len(row['problems'])
@@ -8029,7 +8056,7 @@ def api_txt_chapter_scan_all():
     task_id = create_background_task('chapter_scan_all', message='准备检测章节...')
     threading.Thread(
         target=run_chapter_scan_all_task,
-        args=(task_id, opts['rest_limit'], opts['max_lines'], checks),
+        args=(task_id, opts['rest_limit'], checks),
         daemon=True
     ).start()
     return jsonify({'success': True, 'task_id': task_id})

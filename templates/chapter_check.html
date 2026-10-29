@@ -800,12 +800,9 @@
                 <span class="check-items-hint">标题词后超过</span>
                 <input type="number" id="layoutRestLimit" class="layout-num" value="30" min="10" max="200"
                        title="标题词后面剩多少字才算「标题和正文写在同一行」">
-                <span class="check-items-hint">字判为问题，每本只扫前</span>
-                <input type="number" id="layoutMaxLines" class="layout-num" value="3000" min="200" max="50000"
-                       title="每本书扫描的行数上限（章节都在开头，不必全文扫）">
-                <span class="check-items-hint">行</span>
+                <span class="check-items-hint">字判为问题</span>
             </span>
-            <span class="check-items-hint">真章节标题极少超过 30 字，调小会误报、调大会漏报</span>
+            <span class="check-items-hint">真章节标题极少超过 30 字，调小会误报、调大会漏报；已按全书章节逐条检查</span>
         </div>
 
         <!-- 控制栏 -->
@@ -877,12 +874,9 @@
 
         function chapterLayoutOpts() {
             const restEl = document.getElementById('layoutRestLimit');
-            const linesEl = document.getElementById('layoutMaxLines');
             const rest = restEl ? parseInt(restEl.value, 10) : NaN;
-            const lines = linesEl ? parseInt(linesEl.value, 10) : NaN;
             return {
-                rest_limit: isNaN(rest) ? 30 : rest,
-                max_lines: isNaN(lines) ? 3000 : lines
+                rest_limit: isNaN(rest) ? 30 : rest
             };
         }
 
@@ -896,12 +890,12 @@
             return picks;
         }
 
-        // 没勾排版时参数栏置灰（缺号检测走全文，用不到这两个参数）
+        // 没勾排版时参数栏置灰（缺号检测走全文，用不到这个参数）
         function syncCheckUI() {
             const bar = document.getElementById('layoutOptsBar');
             const on = chapterChecks().indexOf('layout') >= 0;
             if (bar) bar.classList.toggle('is-off', !on);
-            ['layoutRestLimit', 'layoutMaxLines'].forEach(function (id) {
+            ['layoutRestLimit'].forEach(function (id) {
                 const el = document.getElementById(id);
                 if (el) el.disabled = !on;
             });
@@ -928,9 +922,7 @@
             } catch (e) { }
             if (saved && typeof saved === 'object') {
                 const restEl = document.getElementById('layoutRestLimit');
-                const linesEl = document.getElementById('layoutMaxLines');
                 if (restEl && saved.rest_limit) restEl.value = saved.rest_limit;
-                if (linesEl && saved.max_lines) linesEl.value = saved.max_lines;
                 if (Array.isArray(saved.checks)) {
                     const layoutEl = document.getElementById('chkLayout');
                     const missingEl = document.getElementById('chkMissing');
@@ -938,7 +930,7 @@
                     if (missingEl) missingEl.checked = saved.checks.indexOf('missing') >= 0;
                 }
             }
-            ['layoutRestLimit', 'layoutMaxLines', 'chkLayout', 'chkMissing'].forEach(function (id) {
+            ['layoutRestLimit', 'chkLayout', 'chkMissing'].forEach(function (id) {
                 const el = document.getElementById(id);
                 if (!el) return;
                 el.addEventListener('change', function () {
@@ -1272,8 +1264,8 @@
                                     <div class="info-value">${(item.total_lines || 0).toLocaleString()}</div>
                                 </div>
                                 <div class="info-item">
-                                    <div class="info-label">扫描行数</div>
-                                    <div class="info-value">${(item.scanned_lines || 0).toLocaleString()}</div>
+                                    <div class="info-label">识别章节</div>
+                                    <div class="info-value">${item.chapter_count != null ? item.chapter_count.toLocaleString() : '—'}</div>
                                 </div>
                             </div>
 
