@@ -194,9 +194,15 @@
         const loadingOverlay = document.getElementById('loadingOverlay');
         if (loadingOverlay) loadingOverlay.style.display = 'flex';
         
-        // 如果 filePath 包含 % 说明已经编码，否则进行编码
-        let encodedPath = filePath;
-        if (!filePath.includes('%')) {
+        // 各页面传进来的可能是已编码的 %XX，也可能是原始中文路径。
+        // 以前用「字符串里有没有 %」判断，文件名带 % 时（如 100%纯爱.txt）会误判；
+        // 现在改成「能不能解出不一样的东西」：解得开且变了 = 已编码，否则自己编。
+        let encodedPath;
+        try {
+            const decoded = decodeURIComponent(filePath);
+            encodedPath = (decoded !== filePath) ? filePath : encodeURIComponent(filePath);
+        } catch (e) {
+            // 含裸 % 解不开，按原始路径处理
             encodedPath = encodeURIComponent(filePath);
         }
         

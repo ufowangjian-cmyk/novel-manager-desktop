@@ -945,7 +945,7 @@
         function updateTotals() {
             let layoutCount = 0, missCount = 0;
             allResults.forEach(function (r) {
-                layoutCount += (r.problems || []).length;
+                layoutCount += (r.layout_total != null ? r.layout_total : (r.problems || []).length);
                 missCount += (r.missing_count !== undefined && r.missing_count !== null)
                     ? r.missing_count
                     : ((r.missing || {}).gap_count || 0);
@@ -1189,7 +1189,7 @@
             }
 
             container.innerHTML = allResults.map(item => {
-                const layoutCount = (item.problems || []).length;
+                const layoutCount = (item.layout_total != null) ? item.layout_total : (item.problems || []).length;
                 const missCount = (item.missing_count !== undefined && item.missing_count !== null)
                     ? item.missing_count
                     : ((item.missing || {}).gap_count || 0);
@@ -1234,6 +1234,11 @@
                                     </div>
                                 </li>`;
                             }).join('') + '</ul>';
+                            if (item.problems.length < layoutCount) {
+                                inner += `<p style="color:#dd6b20;margin:8px 0 0;">
+                                    ⚠️ 只列出了前 ${item.problems.length} 处，全书还有 ${layoutCount - item.problems.length} 处未显示
+                                </p>`;
+                            }
                         }
                     }
                     if (checks.indexOf('missing') >= 0) {
@@ -1415,7 +1420,7 @@
             const item = allResults.find(r => r.file_path === filePath);
             const parts = [];
             if (item) {
-                const layoutCount = (item.problems || []).length;
+                const layoutCount = (item.layout_total != null) ? item.layout_total : (item.problems || []).length;
                 const missCount = (item.missing || {}).gap_count || 0;
                 if (layoutCount) parts.push(`排版 ${layoutCount} 处`);
                 if (missCount) parts.push(`缺号 ${missCount} 章`);

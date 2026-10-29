@@ -49,7 +49,7 @@ def cprint(text, color='GREEN', bold=False, end='\n'):
             kernel32.GetConsoleMode(handle, ctypes.byref(mode))
             kernel32.SetConsoleMode(handle, mode.value | 0x0004)
             use_color = True
-        except:
+        except Exception:
             use_color = False
     else:
         use_color = hasattr(sys.stdout, 'isatty') and sys.stdout.isatty()
@@ -385,11 +385,11 @@ if sys.platform != 'win32':
         import locale
         locale.setlocale(locale.LC_ALL, 'zh_CN.UTF-8')
         print("✅ 已设置中文排序规则")
-    except:
+    except Exception:
         try:
             locale.setlocale(locale.LC_ALL, 'C.UTF-8')
             print("✅ 已设置 C.UTF-8 排序规则")
-        except:
+        except Exception:
             print("⚠️ 无法设置 locale，将使用默认排序规则")
 
 # ===================== 从配置文件读取设置 =====================
@@ -397,6 +397,10 @@ NOVEL_DIR = CONFIG.get('novel_dir', os.path.join(os.path.expanduser('~'), 'Docum
 EMEDITOR_PATH = CONFIG.get('editor_path', '')
 PER_PAGE = CONFIG.get('per_page', 100)
 WORDS_PER_PAGE = CONFIG.get('words_per_page', 8000)
+# 「整本当一章」的书按行分页时，高亮要往前多圈这么多行：
+# 页首落在跨行引号段落中间时，左引号在上一页，只高亮本页会让整段丢高亮。
+# 500 行 ≈ 1.5 万字，覆盖绝大多数跨行段落，代价约多 1ms 高亮。
+VIRTUAL_HIGHLIGHT_LOOKBACK = 500
 
 
 def load_reading_records():
@@ -982,7 +986,7 @@ def is_file_readable(file_path):
         with open(file_path, 'rb') as f:
             f.read(1)
         return True
-    except:
+    except Exception:
         return False
 
 
@@ -1155,7 +1159,7 @@ def get_data_hash(data):
         return None
     try:
         return f"{len(data)}_{os.path.getmtime(NOVEL_DIR) if os.path.exists(NOVEL_DIR) else 0}"
-    except:
+    except Exception:
         return f"{len(data)}_{time.time()}"
 
 
@@ -1695,10 +1699,10 @@ def read_file_header(file_path, max_size=16384):
         
         try:
             content = raw_data.decode('utf-8')
-        except:
+        except Exception:
             try:
                 content = raw_data.decode('gbk')
-            except:
+            except Exception:
                 content = raw_data.decode('utf-8', errors='ignore')
         
         if content.startswith('\ufeff'):
@@ -1904,6 +1908,7 @@ def detect_chapter_layout_issues(content, max_items=20, rest_limit=None, stats=N
     if isinstance(stats, dict):
         stats['chapter_count'] = len(candidates)
     problems = []
+    total_found = 0
     for lineno, t, head, rest_len in candidates:
         if head in _BARE_CH_TITLES:
             # 裸词（番外/后记/尾声/引子/前言…）后面带文字本身就是常见标题写法，
@@ -1924,15 +1929,20 @@ def detect_chapter_layout_issues(content, max_items=20, rest_limit=None, stats=N
 
         if rest_len >= limit:
             reason.append('标题词后 %d 字' % rest_len)
-        problems.append({
-            'line': lineno,
-            'head': head,
-            'rest_len': rest_len,
-            'text': t,
-            'reason': '、'.join(reason),
-        })
-        if len(problems) >= max_items:
-            break
+        # 超过 max_items 只停止收集、不停止遍历：总数要准，界面上才知道
+        # 「还有 N 处没列出来」（以前直接 break，看起来像全书只有 20 处）
+        total_found += 1
+        if len(problems) < max_items:
+            problems.append({
+                'line': lineno,
+                'head': head,
+                'rest_len': rest_len,
+                'text': t,
+                'reason': '、'.join(reason),
+            })
+
+    if isinstance(stats, dict):
+        stats['layout_total'] = total_found
     return problems
 
 
@@ -3070,9 +3080,9 @@ def detect_encoding(file_path):
                 if encoding and encoding.lower() in ['gb2312', 'gbk', 'big5']:
                     return 'gbk'
                 return encoding if encoding else 'utf-8'
-            except:
+            except Exception:
                 return 'utf-8'
-    except:
+    except Exception:
         return 'utf-8'
 
 
@@ -3087,7 +3097,7 @@ def read_file_with_encoding(file_path):
             try:
                 with open(file_path, 'r', encoding=enc) as f:
                     return f.read()
-            except:
+            except Exception:
                 continue
         with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
             return f.read()
@@ -4298,7 +4308,7 @@ def novel_detail(file_path):
                 if ext in image_extensions:
                     has_images = True
                     break
-        except:
+        except Exception:
             has_images = False
     
     if os.path.exists(actual_path):
@@ -4624,8 +4634,21 @@ def read_chapter(file_path, line_number):
 
                 start_line = start_offset + (page - 1) * lines_per_page + 1
                 end_line = min(start_offset + page * lines_per_page, total_lines)
-                raw_lines = read_line_range(file_path, start_line, end_line, index=line_index)
-                current_lines = [line.lstrip(' \t\u3000') if line.strip() else '' for line in raw_lines]
+
+                # 页首可能落在跨行引号/括号段落中间（左引号在上一页），
+                # 页尾也可能把段落切断（右引号在下一页）—— 所以前后各扩一圈再裁回本页。
+                # 高亮器每行输出各自闭合的 span、行数不变，任意切片都是合法 HTML。
+                lookback = min(VIRTUAL_HIGHLIGHT_LOOKBACK,
+                               max(0, start_line - chapter_start_line))
+                ahead = min(VIRTUAL_HIGHLIGHT_LOOKBACK, max(0, total_lines - end_line))
+                raw_lines = read_line_range(file_path, start_line - lookback,
+                                            end_line + ahead, index=line_index)
+                ctx_lines = [line.lstrip(' \t\u3000') if line.strip() else ''
+                             for line in raw_lines]
+                highlighted = highlight_crossline_brackets('\n'.join(ctx_lines)).split('\n')
+                page_len = end_line - start_line + 1
+                current_lines = highlighted[lookback:lookback + page_len]
+                lines_highlighted = True
                 prev_page = page - 1 if page > 1 else None
                 next_page = page + 1 if page < total_pages else None
             else:
@@ -7147,6 +7170,7 @@ def check_chapter_layout(file_path, rest_limit=None, checks=None):
         'total_lines': 0,
         'scanned_lines': 0,
         'chapter_count': None,
+        'layout_total': None,
         'problems': [],
         'missing': None,
         'checks': [k for k in CHAPTER_CHECK_KEYS
@@ -7192,6 +7216,8 @@ def check_chapter_layout(file_path, rest_limit=None, checks=None):
             )
             result['scanned_lines'] = result['total_lines']
             result['chapter_count'] = layout_stats.get('chapter_count', 0)
+            # 全书实际命中数（problems 只保留前 max_items 条，两者不同时要提示前端）
+            result['layout_total'] = layout_stats.get('layout_total', len(result['problems']))
         if want_missing:
             # 缺号要扫全文：章节号断在书尾的情况最多，只扫开头会漏
             result['missing'] = detect_chapter_missing(content)
@@ -8109,7 +8135,7 @@ def is_running():
         res = s.connect_ex(('127.0.0.1', 49999))
         s.close()
         return res == 0
-    except:
+    except Exception:
         return False
 
 
@@ -8130,7 +8156,7 @@ def single_instance():
             single_instance_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             single_instance_socket.bind(('127.0.0.1', 49999))
             single_instance_socket.listen(1)
-        except:
+        except Exception:
             pass
     
     threading.Thread(target=lock, daemon=True).start()
@@ -8140,7 +8166,7 @@ def create_icon():
     icon_path = os.path.join(os.path.dirname(__file__), "static", "images/novel-icon.png")
     try:
         return Image.open(icon_path)
-    except:
+    except Exception:
         img = Image.new("RGB", (64, 64), (20, 30, 40))
         draw = ImageDraw.Draw(img)
         draw.ellipse((16, 16, 48, 48), fill=(66, 133, 244))
