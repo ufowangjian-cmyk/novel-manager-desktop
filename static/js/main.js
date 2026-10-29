@@ -47,6 +47,9 @@ function startScan(fullScan = false) {
     if (scanBtn) scanBtn.disabled = true;
     if (scanFullBtn) scanFullBtn.disabled = true;
     if (progressContainer) progressContainer.style.display = 'block';
+    // 清掉上一次残留的百分比，避免新扫描刚弹出时先闪一下满格
+    const fillEl = document.getElementById('progressFill');
+    if (fillEl) fillEl.style.width = '0%';
     syncScanButtons();
     
     const url = fullScan ? '/api/start_scan?full=true' : '/api/start_scan';
@@ -173,6 +176,11 @@ function checkProgress() {
                 } else if (typeof showNotification === 'function') {
                     showNotification(data.message || '扫描出错', 'error');
                 }
+
+                // 进度条挂在「扫描管理」抽屉里，容器默认 display:none。
+                // 以前扫完是整页 reload，靠重新渲染复位；改成局部刷新书架后
+                // 没人替它复位，就会一直卡在抽屉里。这里自己收，留出时间看结果。
+                hideProgress(data.status === 'completed' ? 1000 : 3000);
             }
         });
 }
@@ -203,6 +211,20 @@ function updateProgressUI(data) {
         if (progressMessage) progressMessage.textContent = '扫描出错：' + data.message;
         if (progressTime) progressTime.textContent = '';
     }
+}
+
+// 收起进度条（扫描结束/出错后调用）
+// delay 用来让「100% / 扫描完成！」多停留一会儿再收
+function hideProgress(delay = 1000) {
+    setTimeout(() => {
+        // 这期间用户又点了扫描：别把刚弹出来的新进度条藏掉
+        if (scanning) return;
+        const progressContainer = document.getElementById('progressContainer');
+        if (progressContainer) progressContainer.style.display = 'none';
+        const progressFill = document.getElementById('progressFill');
+        if (progressFill) progressFill.style.width = '0%';
+        displayedProgress = 0;
+    }, delay);
 }
 
 // 格式化时间
