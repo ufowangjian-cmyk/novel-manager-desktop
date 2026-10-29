@@ -189,8 +189,11 @@
                     e.preventDefault();
                     const filePath = this.getAttribute('data-file-path');
                     if (filePath) {
-                        // filePath 已经过 urlencode，需要解码
-                        openFolder(decodeURIComponent(filePath));
+                        // file_path 现在是未编码的原始路径；老缓存里可能是 %XX 形态，
+                        // 解码一次兼容两种（文件名带 % 时 decodeURIComponent 会抛错，兜底用原值）
+                        let target = filePath;
+                        try { target = decodeURIComponent(filePath); } catch (e) { target = filePath; }
+                        openFolder(target);
                     }
                 });
             }
@@ -219,8 +222,8 @@
             }
 
             // ===== 4. 初始化配图路径（reader-core.js）=====
-            if (typeof initLocalImagesAsync === 'function' && '{{ file_path }}') {
-                await initLocalImagesAsync('{{ file_path }}');
+            if (typeof initLocalImagesAsync === 'function' && {{ file_path | tojson }}) {
+                await initLocalImagesAsync({{ file_path | tojson }});
             }
 
             // ===== 5. 处理简介内容 =====

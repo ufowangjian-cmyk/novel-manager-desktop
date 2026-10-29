@@ -4415,7 +4415,9 @@ def novel_detail(file_path):
     search_tag = request.args.get('tag', '')
     search_site = request.args.get('site', '')
     
-    url_file_path = urllib.parse.quote(filename)
+    # 路径交给模板里的 url_for 编码一次就够了（下面 file_path=filename）。
+    # 以前这里 quote 一次、url_for 又编一次，链接会变成 %25E7（长度翻倍），
+    # 靠 read_chapter 里的 unquote 恰好抵消才没出事 —— 属于历史债，别再加回来。
 
     # 相似书籍：扩展阅读用，无结果时模板整块不渲染
     similar_novels = build_similar_urls(
@@ -4433,7 +4435,7 @@ def novel_detail(file_path):
         site=base_info['site'],
         word_count=base_info['word_count'],
         publish_date=publish_date,
-        file_path=url_file_path,
+        file_path=filename,
         link=link,
         intro=final_intro,          # 🔥 改用 final_intro
         preview=final_preview,      # 🔥 新增
