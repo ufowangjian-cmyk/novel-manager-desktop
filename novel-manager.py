@@ -4119,11 +4119,15 @@ def index():
     
     if search_text:
         search_lower = search_text.lower()
+        # 简介也参与搜索，但只在搜索词 ≥2 字时：单字（比如「母」）在几十万字简介里
+        # 会命中一大片，既慢又没有指向性。
+        search_intro = len(search_text) >= 2
         filtered_data = [n for n in filtered_data if 
                         search_lower in str(n.get('title', '')).lower() or
                         search_lower in str(n.get('author', '')).lower() or
                         search_lower in str(n.get('tags', '')).lower() or
-                        search_lower in str(n.get('site', '')).lower()]
+                        search_lower in str(n.get('site', '')).lower() or
+                        (search_intro and search_lower in str(n.get('intro', '')).lower())]
     
     if search_author:
         filtered_data = [n for n in filtered_data if n.get('author', '未知作者') == search_author]
