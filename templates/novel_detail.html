@@ -291,6 +291,17 @@
             console.log('📄 详情页初始化完成');
         });
 
+        // 简介里的图片加载完成后摘掉骨架屏（.inline-image:not(.loaded) 的绿白渐变）。
+        // 阅读页由 reader-ui.js 在 #readingContent 上委托处理，详情页没引那个脚本，
+        // 所以在这里补一份 document 级捕获 —— 两边加的是同一个类，重复加也无害。
+        document.addEventListener('load', function (e) {
+            var img = e.target;
+            if (img && img.tagName === 'IMG' && img.classList
+                && img.classList.contains('inline-image')) {
+                img.classList.add('loaded');
+            }
+        }, true);
+
     </script>
 </body>
 
