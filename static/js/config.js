@@ -46,6 +46,116 @@ function onThemeChange() {
 }
 
 // ============================================
+// 书名高亮词：换行 / 逗号 / 顿号 / 分号 都能分隔
+// ============================================
+function parseHighlightWords(raw) {
+    if (!raw) return [];
+    return raw.split(/[\n\r,，、;；]+/).map(function (s) { return s.trim(); }).filter(Boolean);
+}
+
+// ===== 书名高亮词：胶囊式编辑器 =====
+// 真正的数据存在隐藏域 #title_highlight_words（JSON 数组），界面上编辑的是 #hlw-editor 里的胶囊。
+var HLW = (function () {
+    var words = [];
+    var SPLIT = /[\n\r,，、;；]+/;
+
+    function hidden() { return document.getElementById('title_highlight_words'); }
+    function box() { return document.getElementById('hlw-editor'); }
+    function field() { return document.getElementById('hlw-input'); }
+
+    function sync() {
+        var h = hidden();
+        if (h) h.value = JSON.stringify(words);
+    }
+
+    function makeChip(w) {
+        var s = document.createElement('span');
+        s.className = 'hlw-chip';
+        s.textContent = w;
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'hlw-x';
+        b.setAttribute('aria-label', '删除 ' + w);
+        b.textContent = '×';
+        b.addEventListener('click', function (e) {
+            e.stopPropagation();
+            remove(w);
+        });
+        s.appendChild(b);
+        return s;
+    }
+
+    function render() {
+        var el = box();
+        if (!el) return;
+        Array.prototype.forEach.call(el.querySelectorAll('.hlw-chip'), function (n) { n.remove(); });
+        var inp = field();
+        words.forEach(function (w) { el.insertBefore(makeChip(w), inp); });
+        sync();
+    }
+
+    function add(raw) {
+        String(raw || '').split(SPLIT).forEach(function (p) {
+            var w = p.trim();
+            if (w && words.indexOf(w) === -1) words.push(w);
+        });
+        render();
+    }
+
+    function remove(w) {
+        words = words.filter(function (x) { return x !== w; });
+        render();
+    }
+
+    function init() {
+        var el = box();
+        if (!el || el.dataset.bound === '1') return;
+        el.dataset.bound = '1';
+        var inp = field();
+
+        inp.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ',' || e.key === '，') {
+                e.preventDefault();
+                add(inp.value);
+                inp.value = '';
+            } else if (e.key === 'Backspace' && !inp.value && words.length) {
+                // 输入框空着时退格删掉最后一个词（和常见标签输入框一致）
+                words.pop();
+                render();
+            }
+        });
+        inp.addEventListener('blur', function () {
+            if (inp.value.trim()) { add(inp.value); inp.value = ''; }
+        });
+        // 点在空白处也能聚焦到输入框——整块看着像输入框，行为也要像
+        el.addEventListener('click', function (e) {
+            if (e.target === el) inp.focus();
+        });
+
+        var initWords = [];
+        try {
+            initWords = JSON.parse((hidden() && hidden().value) || '[]');
+        } catch (err) {
+            initWords = [];
+        }
+        words = Array.isArray(initWords) ? initWords.slice() : [];
+        render();
+    }
+
+    return {
+        init: init,
+        get: function () { return words.slice(); },
+        set: function (list) { words = Array.isArray(list) ? list.slice() : []; render(); }
+    };
+})();
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', HLW.init);
+} else {
+    HLW.init();
+}
+
+// ============================================
 // 保存配置
 // ============================================
 async function saveAllConfig() {
@@ -70,6 +180,7 @@ async function saveAllConfig() {
         words_per_page: parseInt(document.getElementById('words_per_page').value),
         max_tags_display: parseInt(document.getElementById('max_tags_display').value),
         date_format: document.getElementById('date_format').value,
+        title_highlight_words: (typeof HLW !== 'undefined') ? HLW.get() : [],
         default_sort_by: document.getElementById('default_sort_by')?.value ?? 'title',
         default_sort_order: document.getElementById('default_sort_order')?.value ?? 'asc',
         auto_scan_on_start: document.getElementById('auto_scan_on_start').checked,

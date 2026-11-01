@@ -237,8 +237,11 @@ function formatTime(seconds) {
 
 // 处理书名：括号换行 + 特殊词高亮（合并版）
 function formatNovelTitlesAndHighlight() {
-    // 需要高亮的特殊词（在这里添加新词）
-    var specialWords = [
+    // 需要高亮的特殊词：优先用配置页维护的词表（后端注入 window.titleHighlightWords），
+    // 取不到时才用下面这份内置默认，保证未注入场景行为不变。
+    // 注意 Array.isArray 判定：配置页把词表清空时后端会注入 []，此时应当「一个都不高亮」，
+    // 不能因为长度为 0 就退回默认表。
+    var DEFAULT_SPECIAL_WORDS = [
         '同人续写', '同人续', '同人', 
         '续写', '续写版', '增容',  '增容版',
         '番外篇',  '番外', '特别篇',  '独立篇', 
@@ -249,6 +252,9 @@ function formatNovelTitlesAndHighlight() {
         '改写版', '改写', 
         '修订版', '无绿版',  '非绿版', '精修版'
     ];
+    var specialWords = Array.isArray(window.titleHighlightWords)
+        ? window.titleHighlightWords
+        : DEFAULT_SPECIAL_WORDS;
     
     // 处理书名
     document.querySelectorAll('.novel-title').forEach(function(el) {
@@ -280,7 +286,10 @@ function formatNovelTitlesAndHighlight() {
         // 第二步：高亮特殊词
         for (var j = 0; j < specialWords.length; j++) {
             var word = specialWords[j];
-            var regex = new RegExp('(' + word + ')', 'g');
+            // 词表现在可由配置页填写，转义正则元字符，避免输入 ( ) . 之类把 RegExp 搞崩
+            var safeWord = String(word).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            if (!safeWord) continue;
+            var regex = new RegExp('(' + safeWord + ')', 'g');
             result = result.replace(regex, '<span class="faint-highlight">$1</span>');
         }
         

@@ -476,6 +476,91 @@ body.light-mode .empty-records-small {
     box-shadow: var(--shadow-input-focus);
 }
 
+/* 书名高亮词：胶囊式编辑器（形状与配色对齐主页标签徽章 .tag-badge） */
+.form-group .hlw-editor {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 52px;
+    padding: 9px 12px;
+    background: var(--border-input);
+    border: 1px solid var(--border-tertiary);
+    border-radius: 10px;
+    cursor: text;
+    transition: all 0.3s;
+}
+.form-group .hlw-editor:focus-within {
+    border-color: var(--border-input-focus);
+    box-shadow: var(--shadow-input-focus);
+}
+/* 亮/暗两套主题下的容器配色：与同页 .form-group input 保持一致。
+   原来只有上面那条基础规则（background: var(--border-input) 即 rgba(0,0,0,.4)，
+   是按暗色页面设计的），浅色模式下整个输入区会变成一块深灰绿，
+   里面的胶囊却是浅绿，非常突兀 —— 见 2026-11-01 的截图反馈。 */
+body.light-mode .form-group .hlw-editor {
+    background: var(--light-border-input);
+    border-color: var(--light-border-tertiary);
+    color: var(--light-text-primary);
+}
+
+body.dark-mode .form-group .hlw-editor {
+    background: var(--dark-border-input);
+    border-color: var(--dark-border-tertiary);
+    color: var(--text-light);
+}
+
+.form-group .hlw-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 5px 3px 11px;
+    border-radius: 20px;
+    font-size: 12.5px;
+    line-height: 1.75;
+    white-space: nowrap;
+    /* 半透明绿 + 继承文字色：深浅两套主题下都不用另写规则 */
+    background: rgba(114, 139, 71, 0.18);
+    border: 1px solid rgba(114, 139, 71, 0.38);
+    color: inherit;
+}
+.form-group .hlw-x {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 15px;
+    height: 15px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: rgba(128, 128, 128, 0.28);
+    color: inherit;
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: all 0.2s;
+}
+.form-group .hlw-x:hover {
+    background: rgba(128, 128, 128, 0.45);
+    opacity: 1;
+}
+.form-group .hlw-input {
+    flex: 1 1 140px;
+    width: auto;
+    min-width: 140px;
+    padding: 4px 2px;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    font-size: 13px;
+    color: inherit;
+    outline: none;
+}
+
 /* 字体 + 加粗/斜体 行内控件（对齐 Docker 版高亮标点设置） */
 .set-font-ctrl {
     display: flex;

@@ -196,6 +196,20 @@ DEFAULT_CONFIG = {
         "square_bracket_1_bold": False,"square_bracket_1_italic": False,  # 方括号（由配置驱动）
         "hollow_bracket_bold": False,  "hollow_bracket_italic": False,    # 空心括号（由配置驱动）
         "book_bold": False,            "book_italic": False,              # 书名号（由配置驱动；默认 normal，可强制 bold）
+        # —— 主页书名淡色高亮词（配置页「显示配置」可改）——
+        # 命中这些词的书名片段会被包成 .faint-highlight（斜体 + 灰色点线）。
+        # 顺序有意义：长词放前面，避免「番外篇」先被「番外」切碎。清空 = 完全不高亮。
+        "title_highlight_words": [
+            "同人续写", "同人续", "同人",
+            "续写", "续写版", "增容", "增容版",
+            "番外篇", "番外", "特别篇", "独立篇",
+            "外传", "前传", "后传",
+            "修改", "加料版", "修改版",
+            "改编版", "改编", "新编", "新编版",
+            "扩编", "扩编版", "扩写", "扩写版", "狼增版",
+            "改写版", "改写",
+            "修订版", "无绿版", "非绿版", "精修版",
+        ],
     }
 
 
@@ -4237,6 +4251,8 @@ def index():
         sort_order=sort_order,
         cache_stats=cache_stats,
         scan_stats=scan_stats,
+        # 主页书名高亮词（配置页可改），注入给 main.js
+        title_highlight_words=CONFIG.get('title_highlight_words', DEFAULT_CONFIG['title_highlight_words']),
         # 每次刷新页面随机推荐一本；「换一本」按钮再走 /api/random_novel
         random_novel=pick_random_novel()
     )
@@ -5301,6 +5317,22 @@ def save_config_api():
             if not (low <= value <= high):
                 return jsonify({'success': False, 'message': message})
             new_config[key] = value
+
+        # 书名高亮词：必须是字符串数组，前端已按换行/逗号切好，这里再去空去重、限个数
+        if 'title_highlight_words' in new_config:
+            words = new_config['title_highlight_words']
+            if not isinstance(words, list):
+                return jsonify({'success': False, 'message': '书名高亮词必须是数组'})
+            cleaned, seen = [], set()
+            for w in words:
+                w = str(w).strip()
+                if not w or w in seen:
+                    continue
+                seen.add(w)
+                cleaned.append(w)
+            if len(cleaned) > 200:
+                return jsonify({'success': False, 'message': '书名高亮词最多 200 个'})
+            new_config['title_highlight_words'] = cleaned
 
         current_config = load_config()
         for key in new_config:

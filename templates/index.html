@@ -716,6 +716,11 @@
     </aside>
 
     <script src="{{ url_for('static', filename='js/common.js') }}"></script>
+    <script>
+        // 书名高亮词由「配置页 → 显示配置」维护，注入给 main.js 使用。
+        // 没注入到时 main.js 会退回内置默认表，行为与改这一版之前一致。
+        window.titleHighlightWords = {{ title_highlight_words | tojson }};
+    </script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 
     <script>

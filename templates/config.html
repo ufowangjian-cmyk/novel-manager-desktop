@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>配置管理 - 摸鱼书架</title>
     <link rel="icon" href="{{ url_for('static', filename='images/novel-icon.png') }}" type="image/png">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/config.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/config.css') }}?v={{ css_version }}">
 </head>
 <body>
     <div class="loading-overlay" id="loadingOverlay">
@@ -98,6 +98,20 @@
                             <option value="YYYY年MM月DD日" {% if config.date_format == 'YYYY年MM月DD日' %}selected{% endif %}>2024年01月01日</option>
                         </select>
                         <div class="form-hint hint-as-title">选择日期显示格式</div>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label title="主页书名里命中这些词的片段会淡色高亮（斜体 + 灰色点线）">✨ 书名高亮词</label>
+                        <div class="hlw-editor" id="hlw-editor">
+                            <input type="text" class="hlw-input" id="hlw-input"
+                                   placeholder="输入一个词，回车或逗号添加" autocomplete="off">
+                        </div>
+                        <input type="hidden" id="title_highlight_words" name="title_highlight_words"
+                               value='{{ config.title_highlight_words | tojson | forceescape }}'>
+                        <div class="form-hint">
+                            💡 主页书名里命中这些词的片段会淡色高亮（斜体 + 灰色点线）。回车或逗号添加，点 × 删除；
+                            长词建议放前面，<span class="example">全部删空 = 不高亮任何词</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -534,8 +548,8 @@
     </div>
 
 
-    <script src="{{ url_for('static', filename='js/common.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/config.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/common.js') }}?v={{ css_version }}"></script>
+    <script src="{{ url_for('static', filename='js/config.js') }}?v={{ css_version }}"></script>
     <script>
         // 配置页初始化（在 common.js 加载后执行）
         (function() {
