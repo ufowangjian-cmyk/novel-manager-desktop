@@ -477,11 +477,15 @@
                                     <a href="{{ url_for('novel_detail', file_path=novel['file_path'], page=pagination.page, search=search_text, author=search_author, tag=search_tag, site=search_site) }}"
                                         class="novel-title">
                                         {{ novel.title }}
-                                        {% if novel.stale %}<span class="stale-badge" title="文件已更新">⚠️</span>{% endif %}
-                                        {% if novel.missing %}<span class="missing-badge" title="文件已丢失">❌</span>{% endif
-                                        %}
                                     </a>
                                 </strong>
+                                {# 徽章必须放在 <a> 外面：main.js:295 会 el.innerHTML = result 重写 <a> 内部，
+                                   放里面的 span 会被冲掉（title 提示与 class 全丢）。见 2026-11-02 记录 #}
+                                {% if novel.stale %}<span class="stale-badge" title="文件已更新">⚠️</span>{% endif %}
+                                {% if novel.missing %}<span class="missing-badge" title="文件已丢失">❌</span>{% endif %}
+                                {% if novel.has_images %}<span class="media-badge" title="含配图">🖼️</span>{% endif %}
+                                {% if '视频' in (novel.tags or '').split(',') %}<span class="media-badge" title="含视频">🎬</span>{% endif %}
+                                {% if '音频' in (novel.tags or '').split(',') %}<span class="media-badge" title="含音频">🎵</span>{% endif %}
                             </td>
                             <td>
                                 <a href="?author={{ novel.author }}{% if search_text %}&search={{ search_text }}{% endif %}{% if search_tag %}&tag={{ search_tag }}{% endif %}{% if search_site %}&site={{ search_site }}{% endif %}"

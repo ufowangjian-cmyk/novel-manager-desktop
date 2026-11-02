@@ -1155,6 +1155,31 @@ td:nth-child(2) {
     font-weight: normal;
 }
 
+/* 书名后的徽章：媒体标注 / 文件已更新 / 文件已丢失。
+   必须写在 <a class="novel-title"> 外面 —— main.js 的标题处理会
+   el.innerHTML = result 重写 <a> 内部（main.js:295），放里面的 span 会被冲掉。
+   桌面版这里是 emoji（不是 Docker 版的 SVG 图标），三处风格保持一致。 */
+.media-badge,
+.stale-badge,
+.missing-badge {
+    font-size: 0.85em;
+    margin-left: 4px;
+    cursor: help;
+    vertical-align: middle;
+    line-height: 1;
+}
+
+/* 媒体 emoji 比状态徽章大一号：0.85em 下 🖼️ 缩成小方块就分不清了 */
+.media-badge {
+    font-size: 1.15em;
+    opacity: 0.9;
+    vertical-align: -2px;
+}
+
+body.dark-mode .media-badge {
+    opacity: 1;
+}
+
 /* 空表格 */
 .empty-table {
     text-align: center;
