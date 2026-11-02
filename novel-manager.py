@@ -7142,6 +7142,30 @@ def _count_fullwidth(content):
     }
 
 
+def _count_fullwidth_alnum(content):
+    """统计全角字母/数字（对齐桌面脚本「检查全角字符.py」的口径）。
+
+    只数 ０-９ 和 Ａ-Ｚａ-ｚ —— 这些才是真正该转半角的。
+    全角标点与符号（～ ＊ ％ ＃ 等）在中文排版里很常见也基本无害，**不计入**：
+    实测库里 120 本随机抽样，含全角符号的有 72%，但含全角字母/数字的是 0 本，
+    把符号算进来只会让大片书变成"有问题"。
+    """
+    letters = FULLWIDTH_LETTER_RE.findall(content)
+    digits = FULLWIDTH_DIGIT_RE.findall(content)
+    examples = []
+    for ch in letters + digits:
+        if ch not in examples:
+            examples.append(ch)
+        if len(examples) >= 12:
+            break
+    return {
+        'letters': len(letters),
+        'digits': len(digits),
+        'total': len(letters) + len(digits),
+        'examples': examples,
+    }
+
+
 def _convert_fullwidth_text(text):
     """全角转半角：处理字母/数字/空格/非常用标点，保留中文常用标点。"""
     preserve = set('，。！？；：\u201c\u201d\u2018\u2019（）《》【】、…—')
@@ -7271,8 +7295,10 @@ def check_txt_health(file_path, checks=None):
     """检测 TXT 文件的编码、换行符和真正的乱码问题。
 
     只报告会影响阅读的问题：编码错误、乱码、异常控制字符、混合换行符。
-    已移除纯装饰性检测（超长行/空行统计、行尾空白、末尾换行、Unicode 行分隔符）
-    以及误报率高的全角字符告警。
+    已移除纯装饰性检测（超长行/空行统计、行尾空白、末尾换行、Unicode 行分隔符）。
+
+    全角字母/数字是独立检测项（checks 里的 'fullwidth'）：只数 ０-９ 与 Ａ-Ｚａ-ｚ，
+    不含全角标点符号。早先那版把符号也算进来，误报太多才被整个删掉；现在拆成可选项。
     """
     result = {
         'file_path': file_path,
@@ -7465,6 +7491,23 @@ def check_txt_health(file_path, checks=None):
                     'description': '检测到锟斤拷、烫烫烫等常见编码转换乱码',
                     'suggestion': '尝试用正确编码重新打开；如无法恢复，可能需要原始文件'
                 })
+
+        # 全角字母/数字（口径对齐桌面脚本「检查全角字符.py」）。
+        # 只统计 ０-９ 与 Ａ-Ｚａ-ｚ，全角标点/符号不算 —— 那些在中文排版里普遍存在。
+        if _want_check(checks, 'fullwidth'):
+            fw = _count_fullwidth_alnum(content)
+            result['fullwidth'] = fw
+            if fw['total']:
+                detail = []
+                if fw['letters']:
+                    detail.append('字母 %d' % fw['letters'])
+                if fw['digits']:
+                    detail.append('数字 %d' % fw['digits'])
+                result['issues'].append(_issue(
+                    'fullwidth', 'info',
+                    '含 %d 个全角字母/数字（%s）：%s'
+                    % (fw['total'], '、'.join(detail), ''.join(fw['examples'][:8]))
+                ))
 
         # 评分：只对影响阅读的问题扣分，装饰性问题不参与计分
         score = 100
@@ -7707,6 +7750,7 @@ def run_txt_health_scan_all_task(task_id, checks=None):
                     'file_size': result['file_size'],
                     'issues': result['issues'],
                     'suspicious_chars': result['suspicious_chars'],
+                    'fullwidth': result['fullwidth'],
                     'is_readable': result['is_readable'],
                     'error': result['error']
                 })

@@ -659,7 +659,7 @@
         <!-- 头部 - 统一风格 -->
         <div class="health-header">
             <h1>📝 TXT 文件体检</h1>
-            <div class="health-header-desc">检测编码 / BOM / 换行符 / 乱码与可疑字符，可一键自动修复</div>
+            <div class="health-header-desc">检测编码 / BOM / 换行符 / 全角字符 / 乱码与可疑字符，可一键自动修复</div>
             <div class="health-header-actions">
                 <a href="/" class="btn-back">🏠 返回主页</a>
                 <div class="health-stats">
@@ -675,6 +675,7 @@
             <span class="check-items-label">🔧 检测项目</span>
             <label class="check-item"><input type="checkbox" class="health-check-item" value="encoding" checked> 编码 / BOM</label>
             <label class="check-item"><input type="checkbox" class="health-check-item" value="line_endings" checked> 换行符</label>
+            <label class="check-item"><input type="checkbox" class="health-check-item" value="fullwidth" checked> 全角字母/数字<span class="check-items-hint">（０-９ Ａ-Ｚａ-ｚ）</span></label>
             <label class="check-item"><input type="checkbox" class="health-check-item" value="suspicious" checked> 乱码与可疑字符<span class="check-items-hint">（最慢）</span></label>
             <span class="check-items-hint">只勾需要的项目能快很多</span>
         </div>
@@ -724,7 +725,7 @@
                 <h3>暂无检测结果</h3>
                 <p>点击「开始扫描」开始检测 TXT 文件健康状态</p>
                 <p style="font-size:0.85em;color:#a0aec0;margin-top:8px;">
-                    将检测：编码格式、BOM头、混合换行符、乱码字符、零宽与异常控制字符
+                    将检测：编码格式、BOM头、混合换行符、全角字母数字、乱码字符、零宽与异常控制字符
                 </p>
                 <p style="font-size:0.85em;color:#a0aec0;">
                     章节排版问题请用「章节检测」页
