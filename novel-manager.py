@@ -3404,7 +3404,8 @@ def scan_novel_files_background(full_scan=False):
 
         all_files = {}
         for filename in os.listdir(NOVEL_DIR):
-            if not filename.endswith(('.txt', '.TXT')):
+            # 只认 .txt / .TXT 会漏掉 .Txt、.tXt 这类（2026-11-02 Docker 版就漏了一本 .Txt）
+            if not filename.lower().endswith('.txt'):
                 continue
             if any(pattern in filename for pattern in exclude_patterns):
                 logger.info(f"跳过排除项: {filename}")
