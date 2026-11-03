@@ -89,6 +89,14 @@
                 <a href="{{ url_for('read_chapter', file_path=file_path, line_number=chapter.line_number, list_page=back_page, search=search_text, author=search_author, tag=search_tag, site=search_site) }}"
                     class="chapter-item chapter-level{{ chapter.level }}">
                     <span class="chapter-title">{{ chapter.text }}</span>
+                    {# 本章正文里有媒体标记就挂 emoji 徽章（与阅读页 reader-core.js 的判定一致） #}
+                    {% if chapter.media %}
+                    <span class="chapter-media">
+                        {% if 'i' in chapter.media %}<span class="chapter-media-badge" title="本章含配图">🖼️</span>{% endif %}
+                        {% if 'v' in chapter.media %}<span class="chapter-media-badge" title="本章含视频">🎬</span>{% endif %}
+                        {% if 'a' in chapter.media %}<span class="chapter-media-badge" title="本章含音频">🎵</span>{% endif %}
+                    </span>
+                    {% endif %}
                     <span class="chapter-line">第{{ chapter.line_number }}行</span>
                 </a>
                 {% endif %}

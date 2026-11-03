@@ -3138,6 +3138,48 @@ def _is_meaningful_body_line(line):
     return True
 
 
+# 章节级媒体标记：判定与阅读页 reader-core.js 的 localImage/Video/AudioPattern 对齐
+# （都是 [类型:名称 ...]，类型支持中英文别名），保证「章节标了徽章」和「翻到这章真能看到媒体」一致。
+_CHAPTER_MEDIA_PATTERNS = (
+    ('i', re.compile(r'\[\s*(?:img|图|image)\s*[:：]\s*[^\s\]]+', re.IGNORECASE)),
+    ('v', re.compile(r'\[\s*(?:video|vid|视频)\s*[:：]\s*[^\s\]]+', re.IGNORECASE)),
+    ('a', re.compile(r'\[\s*(?:audio|aud|音乐|音频)\s*[:：]\s*[^\s\]]+', re.IGNORECASE)),
+)
+
+
+def chapter_media_flags(body_lines):
+    """统计一章正文里出现哪些媒体：返回 'i'（配图）/ 'v'（视频）/ 'a'（音频）的组合串。"""
+    found = set()
+    for line in body_lines:
+        if '[' not in line:
+            continue
+        for tag, pattern in _CHAPTER_MEDIA_PATTERNS:
+            if tag not in found and pattern.search(line):
+                found.add(tag)
+        if len(found) == len(_CHAPTER_MEDIA_PATTERNS):
+            break
+    return ''.join(tag for tag, _ in _CHAPTER_MEDIA_PATTERNS if tag in found)
+
+
+def annotate_chapter_media(all_chapters, lines):
+    """就地给每个章节补 media 字段（i/v/a 组合串），供详情页章节名后的 emoji 徽章使用。"""
+    total = len(lines)
+    for idx, chapter in enumerate(all_chapters):
+        try:
+            start = int(chapter.get('line_number') or 1)
+        except (TypeError, ValueError):
+            start = 1
+        if idx + 1 < len(all_chapters):
+            try:
+                end = int(all_chapters[idx + 1].get('line_number') or start) - 1
+            except (TypeError, ValueError):
+                end = total
+        else:
+            end = total
+        chapter['media'] = chapter_media_flags(lines[start:max(start, end)])
+    return all_chapters
+
+
 def mark_empty_chapters(all_chapters, lines):
     """给每个章节打上 is_empty 标记，返回被标记为空的章节数
 
@@ -3316,6 +3358,7 @@ def parse_novel_details(file_path, prefetched=None):
     
     all_chapters = sorted(all_chapters, key=lambda x: x['line_number'])
     mark_empty_chapters(all_chapters, lines)
+    annotate_chapter_media(all_chapters, lines)
 
     result = {
         'intro': intro if intro and intro != '无简介' else '无简介',

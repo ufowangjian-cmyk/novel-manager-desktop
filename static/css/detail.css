@@ -274,6 +274,26 @@
     white-space: nowrap;
 }
 
+/* ===== 章节名后的媒体徽章 =====
+   本章正文里出现 [img:] / [video:] / [audio:] 标记时显示（由 parse_novel_details
+   的 annotate_chapter_media 统计）。桌面版用 emoji，与首页书名后的媒体标注同一套符号。
+   flex-shrink:0 保证标题挤压时徽章不被压扁。 */
+.chapter-media {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+.chapter-media-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 1.2em;
+    line-height: 1;
+    vertical-align: -1px;
+}
+
 .no-chapters {
     text-align: center;
     padding: 40px;
