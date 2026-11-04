@@ -658,6 +658,41 @@ body.light-mode .btn-secondary:hover {
     border-color: rgba(0, 0, 0, 0.3);
 }
 
+/* 「返回首页」琥珀橙实心（与 config.css / detail.css 同一套色） */
+.btn.btn-back-home,
+body.light-mode .btn.btn-back-home {
+    background: #d97706;
+    color: #fff;
+    border-color: #b45309;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+}
+
+body.dark-mode .btn.btn-back-home {
+    background: #d97706;
+    color: #fff;
+    border-color: #f59e0b;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.30);
+}
+
+.btn.btn-back-home:hover,
+body.light-mode .btn.btn-back-home:hover {
+    background: #b45309;
+    color: #fff;
+    border-color: #92400e;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+}
+
+body.dark-mode .btn.btn-back-home:hover {
+    background: #b45309;
+    color: #fff;
+    border-color: #f59e0b;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.38);
+}
+
 body.dark-mode .empty-hint {
   color: var(--dark-text-quaternary);
 }

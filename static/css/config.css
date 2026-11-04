@@ -279,6 +279,43 @@ body.light-mode .btn-secondary:hover {
     border-color: rgba(0, 0, 0, 0.25);
 }
 
+/* 「返回首页」琥珀橙实心：与 Docker 版 .btn-nav.btn-back-home 同一套色，
+   详情页/配置页/标签页三处统一。基础 .btn-secondary 是玻璃灰，
+   这里把底色、描边、文字和 backdrop 全部覆盖，深浅两个主题都写死防止被反压。 */
+.btn.btn-back-home,
+body.light-mode .btn.btn-back-home {
+    background: #d97706;
+    color: #fff;
+    border-color: #b45309;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+}
+
+body.dark-mode .btn.btn-back-home {
+    background: #d97706;
+    color: #fff;
+    border-color: #f59e0b;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.30);
+}
+
+.btn.btn-back-home:hover,
+body.light-mode .btn.btn-back-home:hover {
+    background: #b45309;
+    color: #fff;
+    border-color: #92400e;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+}
+
+body.dark-mode .btn.btn-back-home:hover {
+    background: #b45309;
+    color: #fff;
+    border-color: #f59e0b;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.38);
+}
+
 
 /* 用户记录管理样式 */
 .user-records-container {

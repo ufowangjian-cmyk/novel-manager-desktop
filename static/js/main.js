@@ -831,7 +831,8 @@ const RandomNovel = (function () {
     // 与服务端 templates/_random_card.html 保持一致，改一边要同步另一边
     function buildRandomCardHTML(n) {
         const meta = [];
-        meta.push(`<span class="random-meta-item">✍ ${escapeHtml(n.author || '未知作者')}</span>`);
+        // 作者可能很长（含马甲），包一层 .random-meta-text 让 CSS 省略；title 保留全名
+        meta.push(`<span class="random-meta-item" title="${escapeHtml(n.author || '未知作者')}">✍ <span class="random-meta-text">${escapeHtml(n.author || '未知作者')}</span></span>`);
         if (n.site && n.site !== '未知网站') {
             meta.push(`<span class="random-meta-item">🌐 ${escapeHtml(n.site)}</span>`);
         }

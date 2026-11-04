@@ -90,22 +90,26 @@
     border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
+/* 返回列表：琥珀橙实心，与 Docker 版 .btn-nav.btn-back-home 同一套色
+   （#d97706 / hover #b45309），头部绿底上一眼能看到 */
 .back-btn {
     display: inline-block;
-    background: rgba(255, 255, 255, 0.2);
+    background: #d97706;
     color: var(--color-white);
     padding: 10px 25px;
     border-radius: 30px;
     text-decoration: none;
     transition: all 0.3s;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 1px solid #b45309;
     font-weight: 500;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
 }
 
 .back-btn:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: #b45309;
+    border-color: #92400e;
     transform: translateY(-2px);
-    box-shadow: 0 10px 20px -5px var(--shadow-darker);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
 }
 
 /* 详情卡片 - 移除固定高度，让内容自然撑开 */
@@ -502,14 +506,19 @@ body.dark-mode .action-btn.secondary:hover {
     box-shadow: 0 8px 15px -5px var(--color-green-deeper);
 }
 
+/* 深色主题保持同一套橙色，只把描边换成更亮的 #f59e0b（和 Docker 版一致）。
+   文字必须写死白色：原先用的 --color-text-light 是灰绿，压在橙底上发灰。 */
 body.dark-mode .back-btn {
-    background: rgba(0, 0, 0, 0.5);
-    border-color: var(--color-green-dark-bg);
-    color: var(--color-text-light);
+    background: #d97706;
+    border-color: #f59e0b;
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.30);
 }
 
 body.dark-mode .back-btn:hover {
-    background: rgba(0, 0, 0, 0.7);
+    background: #b45309;
+    border-color: #f59e0b;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.38);
 }
 
 /* 深色主题下的滚动条样式 */

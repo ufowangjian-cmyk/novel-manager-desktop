@@ -848,7 +848,23 @@ body.dark-mode .drawer-item:hover .drawer-item-desc {
     color: var(--tool-text-gray);
 }
 
+/* 作者 + 马甲可能很长（一本挂四五个马甲），不限制就会撑破卡片：
+   每项最多占满一行，文字超出走省略号。min-width: 0 是关键 ——
+   flex 子项默认 min-width: auto，会被内容顶开。 */
 .random-meta-item {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    max-width: 100%;
+    min-width: 0;
+}
+
+/* 省略号必须落在承载文字的这层：
+   flex 容器自身的 text-overflow 对匿名文本项不生效。 */
+.random-meta-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
 }
 
