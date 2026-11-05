@@ -6836,7 +6836,9 @@ def highlight_crossline_brackets(text):
         ('『', '』', 'highlight-quote-single'),
         ('[', ']', 'highlight-square-bracket-1'),
         ('［', '］', 'highlight-square-bracket-1'),
+        ('〔', '〕', 'highlight-square-bracket-1'),   # 龟甲括号，与［］同档
         ('〖', '〗', 'highlight-hollow-bracket'),
+        ('｛', '｝', 'highlight-bracket'),             # 全角花括号，与（）同档
     ]
 
     # 先转义，避免小说正文中的 <script>/<img onerror> 等被 |safe 输出后执行
@@ -7210,6 +7212,48 @@ def _count_fullwidth_alnum(content):
     }
 
 
+# 「括号未成对」检测：只查全角〔〕和｛｝。
+# 半角 { } 在小说正文里几乎不出现，加进来只会制造噪音；〔〕｛｝ 常被作者
+# 用来标编号、注释或分隔，跨行使用很普遍，所以按全文扫、不按行判断。
+UNPAIRED_BRACKET_PAIRS = [('〔', '〕'), ('｛', '｝')]
+
+
+def _count_unpaired_brackets(content):
+    """统计全角〔〕｛｝的配对情况（全文扫描，允许跨行）。
+
+    按栈配对：闭括号多于开括号时记「多余闭合」，扫完栈里还剩下的记「未闭合」。
+    行号只留前 5 个做样例 —— 一处漏掉的开括号会让后面所有配对的都错位，
+    全列出来反而看不出重点。
+    """
+    stats = {}
+    lines = content.splitlines()
+    for left, right in UNPAIRED_BRACKET_PAIRS:
+        stack = []
+        opens = closes = 0
+        extra_close_lines = []
+        for ln, line in enumerate(lines, 1):
+            for ch in line:
+                if ch == left:
+                    stack.append(ln)
+                    opens += 1
+                elif ch == right:
+                    closes += 1
+                    if stack:
+                        stack.pop()
+                    else:
+                        extra_close_lines.append(ln)
+        stats[left + right] = {
+            'open': opens,
+            'close': closes,
+            'unclosed_count': len(stack),
+            'unclosed_lines': stack[:5],
+            'extra_close_count': len(extra_close_lines),
+            'extra_close_lines': extra_close_lines[:5],
+            'balanced': not stack and not extra_close_lines,
+        }
+    return stats
+
+
 def _convert_fullwidth_text(text):
     """全角转半角：处理字母/数字/空格/非常用标点，保留中文常用标点。"""
     preserve = set('，。！？；：\u201c\u201d\u2018\u2019（）《》【】、…—')
@@ -7357,6 +7401,7 @@ def check_txt_health(file_path, checks=None):
         'empty_lines': 0,
         'suspicious_chars': [],
         'fullwidth': {},
+        'brackets': {},
         'structure': {},
         'trailing_whitespace': {'count': 0, 'total_lines': 0},
         'file_size': 0,
@@ -7551,6 +7596,28 @@ def check_txt_health(file_path, checks=None):
                     'fullwidth', 'info',
                     '含 %d 个全角字母/数字（%s）：%s'
                     % (fw['total'], '、'.join(detail), ''.join(fw['examples'][:8]))
+                ))
+
+        # 括号未成对：只查全角〔〕｛｝。正文里这两种常跨行，按全文栈配对；
+        # 只报告不扣分 —— 〔一〕〔二〕这类编号写法本身没错，扣分会把正常书压下去。
+        if _want_check(checks, 'brackets'):
+            br = _count_unpaired_brackets(content)
+            result['brackets'] = br
+            for pair, st in br.items():
+                if st['balanced']:
+                    continue
+                parts = []
+                if st['unclosed_count']:
+                    parts.append('未闭合 %d 处（行 %s）' % (
+                        st['unclosed_count'],
+                        '、'.join(map(str, st['unclosed_lines']))))
+                if st['extra_close_count']:
+                    parts.append('多余闭合 %d 处（行 %s）' % (
+                        st['extra_close_count'],
+                        '、'.join(map(str, st['extra_close_lines']))))
+                result['issues'].append(_issue(
+                    'brackets', 'warning',
+                    '%s 未成对：%s' % (pair, '；'.join(parts))
                 ))
 
         # 评分：只对影响阅读的问题扣分，装饰性问题不参与计分
