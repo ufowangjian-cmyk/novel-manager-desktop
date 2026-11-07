@@ -150,6 +150,13 @@
                             <div class="form-hint">选择阅读页面的颜色主题</div>
                         </div>
 
+                        <div class="form-group">
+                            <label title="阅读页连续几张配图开始使用缩略图画廊">🖼️ 配图画廊起始张数</label>
+                            <input type="number" id="gallery_min_images" name="gallery_min_images"
+                                   value="{{ config.gallery_min_images }}" min="0" max="99" step="1">
+                            <div class="form-hint">连续 N 张及以上配图自动排成缩略图网格；默认 3，填 0 = 关闭（全部保持竖向大图）</div>
+                        </div>
+
                     {# ===== 自定义高亮标点符号字体（对齐 Docker 版：标题 + 7 类高亮各自可配字体，空=跟随正文）===== #}
                     {% set hl_font_opts %}
                             <option value="">跟随正文（默认）</option>

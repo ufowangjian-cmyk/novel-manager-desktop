@@ -2430,3 +2430,137 @@ body.dark-mode .pretty-link:hover {
     padding: 12px;
   }
 }
+
+/* ============================================
+   9.3 连续配图画廊（reader-core.js 的 groupConsecutiveImages 生成）
+   ============================================
+   前提：分组时已移除 figure / img 的内联 style（w= / align= 参数生成），
+   所以这里不需要 !important —— 点「竖向展开」把内联样式放回去，
+   内联优先级高于本段选择器，就能精确还原原始的大图尺寸与对齐。 */
+.image-gallery {
+  margin: 0 0 var(--reader-paragraph-spacing, 0.8rem);
+  padding: 8px 10px 10px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 12px;
+  text-indent: 0;
+}
+
+.image-gallery-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  text-indent: 0;
+}
+
+.image-gallery-label {
+  font-size: 0.85rem;
+  color: var(--color-text-tertiary);
+}
+
+.image-gallery-toggle {
+  font-family: inherit;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  padding: 3px 12px;
+  border: 1px solid var(--color-border-primary);
+  border-radius: 999px;
+  background: var(--color-bg-primary);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  text-indent: 0;
+  transition: var(--transition-base);
+}
+
+.image-gallery-toggle:hover {
+  background: var(--color-btn-hover);
+  border-color: var(--color-btn-hover);
+  color: var(--color-btn-text-hover);
+}
+
+.image-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 3px;
+}
+
+.image-gallery .local-image-figure {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0;
+  text-indent: 0;
+}
+
+.image-gallery .local-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;           /* 方形方格：紧凑网格，不留黑边 */
+  max-width: 100%;
+  object-fit: cover;             /* 等比裁切铺满方格 */
+  object-position: center;
+  background: var(--color-bg-primary);
+  border-radius: 3px;
+  box-shadow: none;
+  cursor: zoom-in;
+}
+
+.image-gallery .local-image:hover {
+  box-shadow: 0 4px 12px var(--color-speech-highlight);
+}
+
+.image-gallery .local-image-caption {
+  display: none;                /* 网格里放不下图注，灯箱标题仍取 img.alt */
+}
+
+.image-gallery .local-image-error {
+  aspect-ratio: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  font-size: 0.75rem;
+  text-indent: 0;
+}
+
+/* 「竖向展开」：恢复原来的大图排版，图注也回来 */
+.image-gallery.is-stacked .image-gallery-grid {
+  display: block;
+}
+
+.image-gallery.is-stacked .local-image-figure {
+  width: fit-content;
+  width: -moz-fit-content;
+  width: -webkit-fit-content;
+  margin: 0 auto 0.8rem;
+}
+
+.image-gallery.is-stacked .local-image {
+  width: auto;
+  height: auto;
+  aspect-ratio: auto;            /* 竖向大图不能被方形裁切 */
+  object-fit: contain;
+  background: transparent;
+  box-shadow: 0 4px 12px var(--color-speech-highlight);
+}
+
+.image-gallery.is-stacked .local-image-caption {
+  display: block;
+}
+
+.image-gallery.is-stacked .local-image-error {
+  height: auto;
+  aspect-ratio: auto;
+}
+
+@media (max-width: 600px) {
+  .image-gallery-grid {
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 3px;
+  }
+}

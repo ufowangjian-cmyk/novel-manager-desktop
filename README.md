@@ -217,6 +217,7 @@ python novel-manager.py
 | `max_file_size_mb` | `100` | 超过此大小的文件跳过 |
 | `per_page` | `100` | 列表每页条数 |
 | `words_per_page` | `8000` | 阅读页每页字数 |
+| `gallery_min_images` | `3` | 阅读页连续几张配图启用缩略图画廊，`0` 为关闭 |
 | `font_size` | `16` | 阅读页字号 |
 | `line_height` | `1.8` | 阅读页行高 |
 | `theme` | `auto` | `auto` / `light` / `dark` |

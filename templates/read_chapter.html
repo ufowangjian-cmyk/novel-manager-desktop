@@ -21,6 +21,8 @@
         window.readerCfgFontSize = {{ user_prefs.font_size|tojson }};
         window.readerCfgLineHeight = {{ user_prefs.line_height|tojson }};
         window.readerCfgIndent = {{ user_prefs.indent_paragraph|tojson }};
+        // 连续配图画廊阈值：配置页 gallery_min_images（0 = 关闭），缺省 3
+        window.readerCfgGalleryMin = {{ user_prefs.get('gallery_min_images', 3)|tojson }};
         (function () {
             try {
                 var savedSize = localStorage.getItem('reader_font_size');
@@ -634,6 +636,13 @@
                 });
 
                 console.log(`✅ 转换完成，${convertedCount} 行有变化`);
+
+                // ===== 5.5 连续配图合并为画廊（reader-core.js）=====
+                // 必须在第 7 步 initViewerJS() 之前：Viewer 按 DOM 顺序收集图片，
+                // 分组只搬节点、不改顺序，灯箱里的上一张/下一张仍然正确。
+                if (typeof groupConsecutiveImages === 'function') {
+                    groupConsecutiveImages(readingContent, window.readerCfgGalleryMin);
+                }
             }
 
             // ===== 6. 章节标题美化（放在转换之后）=====

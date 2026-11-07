@@ -159,6 +159,8 @@ DEFAULT_CONFIG = {
         "scan_subdirectories": False,
         "per_page": 100,
         "words_per_page": 8000,
+        # 阅读页连续几张本地配图开始改用缩略图画廊（0 = 关闭，全部保持竖向大图）
+        "gallery_min_images": 3,
         "max_tags_display": 3,
         "date_format": "YYYY-MM-DD",
         "auto_scan_on_start": True,
@@ -4907,6 +4909,8 @@ def read_chapter(file_path, line_number):
             'book_bold': CONFIG.get('book_bold', False),
             'book_italic': CONFIG.get('book_italic', False),
             'indent_paragraph': CONFIG.get('indent_paragraph', True),
+            # 连续配图画廊阈值（0 = 关闭），由配置页 gallery_min_images 驱动
+            'gallery_min_images': CONFIG.get('gallery_min_images', 3),
         },
         current_page_words=sum(len(line) for line in current_lines),
         back_page=back_page,
@@ -5350,6 +5354,7 @@ def save_config_api():
             ('app_port', 1024, 65535, '端口号必须在 1024-65535 之间'),
             ('per_page', 20, 500, '每页数量必须在 20-500 之间'),
             ('words_per_page', 1000, 50000, '每页字数必须在 1000-50000 之间'),
+            ('gallery_min_images', 0, 99, '配图画廊阈值必须在 0-99 之间（0 = 关闭）'),
         ]
         for key, low, high, message in checks:
             if key not in new_config:
@@ -5383,7 +5388,7 @@ def save_config_api():
             if key not in ('tag_implications', 'tag_aliases'):
                 current_config[key] = new_config[key]
 
-        for key in ('app_port', 'per_page', 'words_per_page', 'max_file_size_mb',
+        for key in ('app_port', 'per_page', 'words_per_page', 'gallery_min_images', 'max_file_size_mb',
                     'max_tags_display', 'scan_interval_hours', 'backup_interval_days',
                     'max_backups', 'preload_recent_count'):
             if key in current_config:

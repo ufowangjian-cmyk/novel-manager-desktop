@@ -48,6 +48,8 @@
         fullscreen: true,
         // 键盘快捷键
         keyboard: true,
+        // 首次打开时图片占可用区域的比例：库默认 0.9 会四周各留 5% 固定黑边
+        initialCoverage: 1,    // 1 = 贴边铺满；竖图左右仍会保留等比黑边（非固定留白）
         // 背景遮罩
         backdrop: true,
         // 加载动画
@@ -63,9 +65,58 @@
         // 鼠标滚轮缩放
         zoomOnWheel: true,
         interval: 2000,    // 改为你想要的毫秒数（默认5000）
-        autoplay: true,    // 改为 true 自动播放
+        autoplay: true,    // 播放按钮的自动切图开关（Viewer v1.15.2 只在 play() 里读它）；关掉会只剩全屏
         loop: false,       // 是否循环
     };
+
+    // ===== 点大图左右侧翻页（点空白仍交回 Viewer 关闭）=====
+    // 只接管「点在大图上、且落在图片自身左右各 30%」的单击：
+    //   - 点任何黑色空白 / 图片中部 / 按钮 / 缩略图 -> 不干预，走 Viewer 原生
+    //     （点空白关闭、双击缩放、点圆钮翻页都保持原样）
+    //   - 点大图左右两侧 -> prev()/next()
+    // 用捕获阶段委托 + stopImmediatePropagation，阻止 Viewer 把「点图片」
+    // 当成 mix action 关掉灯箱；不插入覆盖层，所以不会挡住点空白关闭。
+    function enableImageEdgeFlip(viewer) {
+        const container = document.querySelector('.viewer-container');
+        if (!container || container.dataset.edgeFlipBound) return;
+        container.dataset.edgeFlipBound = '1';
+
+        let downX = 0, downY = 0, moved = false, timer = null;
+        container.addEventListener('pointerdown', function (e) {
+            downX = e.clientX; downY = e.clientY; moved = false;
+        });
+        container.addEventListener('pointermove', function (e) {
+            if (Math.abs(e.clientX - downX) > 10 || Math.abs(e.clientY - downY) > 10) moved = true;
+        });
+
+        container.addEventListener('click', function (e) {
+            const canvas = container.querySelector('.viewer-canvas');
+            const target = e.target;
+            // 只认大图本身（canvas 的直接子 img）；缩略图、按钮、空白都不算
+            if (!canvas || !target || target.parentElement !== canvas || target.tagName !== 'IMG') return;
+            const rect = target.getBoundingClientRect();
+            if (!rect.width) return;
+            const r = (e.clientX - rect.left) / rect.width;
+            if (r > 0.30 && r < 0.70) return;      // 图片中部：保留双击缩放等原生行为
+
+            e.stopImmediatePropagation();
+            e.preventDefault();
+            if (moved) return;                     // 拖过图就不算点击
+            if (timer) {                          // 双击：第二次点击取消翻页
+                clearTimeout(timer);
+                timer = null;
+                return;
+            }
+            const side = r <= 0.30 ? 'prev' : 'next';
+            timer = setTimeout(function () {
+                timer = null;
+                const v = viewer || viewerInstance;
+                if (!v) return;
+                if (side === 'prev') v.prev(); else v.next();
+            }, 260);
+        }, true);
+    }
+    window.enableImageEdgeFlip = enableImageEdgeFlip;
 
     // ===== 核心初始化函数 =====
     function initViewerJS(containerSelector, options) {
@@ -145,6 +196,7 @@
                 console.log('📖 图片查看器已打开');
                 document.body.classList.add('viewer-open');
                 updateToolbarState();
+                enableImageEdgeFlip();
             },
             // 隐藏时回调
             hidden: function() {

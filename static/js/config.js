@@ -178,6 +178,7 @@ async function saveAllConfig() {
         scan_subdirectories: document.getElementById('scan_subdirectories').checked,
         per_page: parseInt(document.getElementById('per_page').value),
         words_per_page: parseInt(document.getElementById('words_per_page').value),
+        gallery_min_images: (() => { const n = parseInt(document.getElementById('gallery_min_images')?.value, 10); return Number.isFinite(n) ? n : 3; })(),
         max_tags_display: parseInt(document.getElementById('max_tags_display').value),
         date_format: document.getElementById('date_format').value,
         title_highlight_words: (typeof HLW !== 'undefined') ? HLW.get() : [],
@@ -326,6 +327,7 @@ function exportConfig() {
         scan_subdirectories: document.getElementById('scan_subdirectories').checked,
         per_page: parseInt(document.getElementById('per_page').value),
         words_per_page: parseInt(document.getElementById('words_per_page').value),
+        gallery_min_images: (() => { const n = parseInt(document.getElementById('gallery_min_images')?.value, 10); return Number.isFinite(n) ? n : 3; })(),
         max_tags_display: parseInt(document.getElementById('max_tags_display').value),
         date_format: document.getElementById('date_format').value,
         auto_scan_on_start: document.getElementById('auto_scan_on_start').checked,
@@ -373,6 +375,7 @@ function importConfig() {
                 document.getElementById('scan_subdirectories').checked = config.scan_subdirectories || false;
                 document.getElementById('per_page').value = config.per_page || 100;
                 document.getElementById('words_per_page').value = config.words_per_page || 8000;
+                document.getElementById('gallery_min_images').value = config.gallery_min_images ?? 3;
                 document.getElementById('max_tags_display').value = config.max_tags_display || 3;
                 document.getElementById('date_format').value = config.date_format || 'YYYY-MM-DD';
                 document.getElementById('auto_scan_on_start').checked = config.auto_scan_on_start !== false;
