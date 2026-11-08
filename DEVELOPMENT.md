@@ -112,6 +112,17 @@
 
 ---
 
+## 标签提取
+
+规则与 Docker 版同源（关键词 655 条、四路信号打分、否定上下文、派生标签），
+细则见 Docker 版 `DEVELOPMENT.md` 的「标签提取」一节。本版**已经补齐 `score_tags()`**
+（2026-11-08）：以前只有 `derive_tags` + `clean_tags`，标签顺序来自 `set` 迭代，
+每次重启都可能变；现在与 Docker 一样按权重稳定排序。
+
+改完提取规则同样要重扫才生效（缓存按 mtime + 文件哈希复用，旧书不会自动重算）。
+
+---
+
 ## 自测
 
 - 语法检查：`python -m py_compile novel-manager.py`；前端脚本 `node --check`

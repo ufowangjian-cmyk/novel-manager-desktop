@@ -3032,14 +3032,31 @@ def parse_file_content_fast(file_path):
                 break
     
     titles_text = ' '.join(chapter_titles)
-    intro_text = header[:30000].lower()
-    combined_text_lower = titles_text + ' ' + intro_text
-    
+    body_text_lower = header[:30000].lower()
+    combined_text_lower = titles_text + ' ' + body_text_lower
+
+    # 简介 / 预览：与 parse_novel_details 走同一套提取函数，避免两条路径给出不同结果
+    intro = extract_intro_clean(lines)
+    # 「简介」单独作为标签打分的信号源：以前和正文共用 header[:30000]，
+    # 等于正文命中双计分，权重分层名存实亡。取不到简介就留空、不参与打分。
+    intro_text = '' if intro in ('无简介', '') else intro.lower()
+
     tags_set = set()
+    # 记录每个标签的来源，供 score_tags 计算权重
+    tag_sources = {
+        'meta': set(),
+        'status': set(),
+        'derived': set(),
+        'filename': (os.path.basename(file_path) + ' ' + title).lower(),
+        'chapter': titles_text,
+        'intro': intro_text,
+        'body': body_text_lower,
+    }
 
     if tags_from_meta:
         for tag in tags_from_meta:
             tags_set.add(tag)
+            tag_sources['meta'].add(tag)
 
     if CONFIG.get('auto_tag_enabled', True):
         for original_keyword, keyword_lower in zip(TAG_KEYWORDS, TAG_KEYWORDS_LOWER):
@@ -3048,7 +3065,8 @@ def parse_file_content_fast(file_path):
             # 小说里写到「视频」二字太常见，否则会把大量纯文字小说误标成「视频」。
             if keyword_lower in MEDIA_TAG_NAMES:
                 continue
-            if keyword_lower and keyword_lower in combined_text_lower:
+            if (keyword_lower and keyword_lower in combined_text_lower
+                    and not _tag_negated_only(combined_text_lower, keyword_lower)):
                 tags_set.add(normalize_tag(original_keyword))
     
     # ===== 在 parse_file_content_fast 中 =====
@@ -3056,6 +3074,7 @@ def parse_file_content_fast(file_path):
     filename = os.path.basename(file_path)
     if '完' in filename or '完结' in filename:
         tags_set.add('完结')
+        tag_sources['status'].add('完结')
 
     # ===== 检测配图文件夹中的媒体文件（复用 get_image_folder_for_novel，支持 _images 和 _配图）=====
     media_folder = get_image_folder_for_novel(filename)
@@ -3066,19 +3085,27 @@ def parse_file_content_fast(file_path):
 
         if media_types['image']:
             tags_set.add('配图')
+            tag_sources['status'].add('配图')
         if media_types['video']:
             tags_set.add('视频')
+            tag_sources['status'].add('视频')
         if media_types['audio']:
             tags_set.add('音频')
+            tag_sources['status'].add('音频')
         
     tags = list(tags_set)
     
     if tags:
-        tags = derive_tags(tags)
+        if CONFIG.get('enable_derived_tags', True):
+            direct_hits = set(tags)
+            derived = derive_tags(tags)
+            # 记录哪些是推断出来的（不在直接命中集合里），权重会打折
+            tag_sources['derived'] = {t for t in derived if t not in direct_hits}
+            tags = derived
         tags = clean_tags(tags)
-    
-    # 简介 / 预览：与 parse_novel_details 走同一套提取函数，避免两条路径给出不同结果
-    intro = extract_intro_clean(lines)
+        # 按权重排序：最相关的排前面，首页/卡片只展示前 3 个（max_tags_display）。
+        # 同时解决 set 顺序受哈希随机化影响、每次重启顺序都可能变的问题（2026-11-08）。
+        tags = score_tags(tags, tag_sources)
 
     # 预览无条件提取：即使有简介也留一份正文开头，
     # 前端在卡片上展示时更丰富，且两边缓存字段才能对齐。
@@ -3145,6 +3172,90 @@ def derive_tags(original_tags_list):
                 queue.append(implied_tag)
 
     return list(result)
+
+
+# ================== 否定上下文（打标签时用） ==================
+# 「不是NTR」「没有出轨」会让关键词命中，但语义是反的，打标签就是错的。
+# 只认"紧挨着关键词"的否定：前置串去掉空白后结尾是「不是/没有/并非…」
+# 或单字 没/非/未/无/别。单字「不」刻意不收：「不同性格」里的「同性」会被误杀。
+_TAG_NEG_PHRASES = ('不是', '没有', '并非', '不算', '不含', '不涉', '绝不是',
+                    '杜绝', '拒绝', '无任何', '没有任何')
+_TAG_NEG_CHARS = '没非未无别'
+
+
+def _tag_negated_only(text, keyword):
+    """关键词的每一处出现都紧跟在否定词后面 → True（不该打这个标签）。"""
+    start = 0
+    while True:
+        pos = text.find(keyword, start)
+        if pos < 0:
+            return True
+        prefix = text[max(0, pos - 8):pos].rstrip(' \t\u3000\r\n')
+        if prefix.endswith(_TAG_NEG_PHRASES) or (prefix and prefix[-1] in _TAG_NEG_CHARS):
+            start = pos + len(keyword)
+            continue
+        return False
+
+
+# ================== 标签权重排序（与 Docker 版同一套） ==================
+# 标签是「命中即打」的二元信号，一本书平均 40+ 个，首页只展示前 3 个，
+# 不排序等于随机展示；而且 set 的顺序受哈希随机化影响，每次重启都可能变。
+#   * 显式声明（「标签：」行）—— 作者亲自标的，最可信
+#   * 文件名/书名 —— 对内容最强的概括
+#   * 章节标题 —— 作者精选的概括
+#   * 简介区 —— 内容摘要
+#   * 正文头部 —— 可能只是偶然提及
+TAG_WEIGHT_FILENAME = 6
+TAG_WEIGHT_CHAPTER = 4
+TAG_WEIGHT_INTRO = 2
+TAG_WEIGHT_BODY = 1
+TAG_DERIVED_FACTOR = 0.5
+
+
+def score_tags(tags, sources):
+    """给标签排序：置顶层（状态 / 显式声明）在前，其余按信号权重降序。"""
+    if not tags:
+        return []
+
+    meta_tags = sources.get('meta') or set()
+    status_tags = sources.get('status') or set()
+    derived_tags = sources.get('derived') or set()
+    filename_text = sources.get('filename') or ''
+    chapter_text = sources.get('chapter') or ''
+    intro_text = sources.get('intro') or ''
+    body_text = sources.get('body') or ''
+
+    pinned = []
+    scored = []
+
+    for tag in tags:
+        if not tag:
+            continue
+        if tag in status_tags:
+            pinned.append((0, tag))
+            continue
+        if tag in meta_tags:
+            pinned.append((1, tag))
+            continue
+
+        tag_lower = tag.lower()
+        score = 0.0
+        score += min(filename_text.count(tag_lower), 3) * TAG_WEIGHT_FILENAME
+        score += min(chapter_text.count(tag_lower), 5) * TAG_WEIGHT_CHAPTER
+        score += min(intro_text.count(tag_lower), 5) * TAG_WEIGHT_INTRO
+        score += min(body_text.count(tag_lower), 5) * TAG_WEIGHT_BODY
+
+        if tag in derived_tags and score > 0:
+            score *= TAG_DERIVED_FACTOR
+        if score <= 0:
+            score = 0.1
+
+        scored.append((score, tag))
+
+    pinned.sort(key=lambda x: (x[0], x[1]))
+    scored.sort(key=lambda x: (-x[0], x[1]))
+    return [tag for _, tag in pinned] + [tag for _, tag in scored]
+
 
 # ================== 检测文件编码（统一版本） ==================
 def detect_encoding(file_path):
