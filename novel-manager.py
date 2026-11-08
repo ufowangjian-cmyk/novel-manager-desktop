@@ -4038,33 +4038,75 @@ COVER_URL_RE = re.compile(r'(?:封面图?|配图)\s*[：:]\s*(https?://\S+)')
 COVER_PLACEHOLDER = '/static/images/cover-placeholder.webp'
 
 
+# 「每日推荐」封面挑选：与 Docker 版一致，真封面名 > 首图编号 > 其它，稳定可预测
+_COVER_NAME_HINTS = ('cover', '封面', 'front', 'poster', 'folder')
+_COVER_INDEX_HINTS = ('001', '01')
+
+
+def _pick_cover_image(folder, max_depth=2, limit=60):
+    """在配图目录里挑一张当封面，返回 (所在子目录, 文件名)；没有返回 None。
+
+    配图常按章节分子目录，所以浅层递归 2 层；最多收集 60 个候选，
+    避免上千张图的大目录拖慢首页。排序固定，不会每次刷新换一张。
+    """
+    candidates = []
+    base_depth = folder.rstrip(os.sep).count(os.sep)
+    try:
+        for root, dirs, files in os.walk(folder):
+            if root.rstrip(os.sep).count(os.sep) - base_depth >= max_depth:
+                dirs[:] = []
+            dirs[:] = [d for d in dirs if not d.startswith('.')]
+            for name in files:
+                if name.startswith('.') or name.lower() in ('thumbs.db', 'desktop.ini'):
+                    continue
+                # 与 /api/local_image 的扩展名白名单保持一致，避免选出接口不认的图
+                if os.path.splitext(name)[1].lower() in IMAGE_MEDIA_EXTENSIONS:
+                    candidates.append((root, name))
+            if len(candidates) >= limit:
+                break
+    except OSError:
+        return None
+
+    if not candidates:
+        return None
+
+    def rank(item):
+        root, name = item
+        low = name.lower()
+        if any(h in low for h in _COVER_NAME_HINTS):
+            hinted = 0          # 真封面名，绝对优先
+        elif any(h in low for h in _COVER_INDEX_HINTS):
+            hinted = 1          # 01 / 001 这类首图编号
+        else:
+            hinted = 2
+        return (hinted, len(root), low)
+
+    return min(candidates, key=rank)
+
+
 def resolve_cover_url(novel):
     """决定「每日推荐」卡片用什么封面，没有可用封面时返回空字符串。
 
-    优先级（书库里都没有独立封面文件，只能从这两类资源里找）：
-      1. 正文里的封面外链 —— 约 85 本带这种行；外链可能失效，前端 onerror 会退回占位
-      2. 配图目录 *_images 的第一张图 —— 约 671 本有，走已有的 /api/local_image 提供
+    优先级（与 Docker 版一致，书库里没有独立封面文件）：
+      1. 配图目录 *_images 的本地图 —— 真封面名(cover/封面…)优先，
+         其次首图编号(01/001)，最后按路径/文件名稳定排序取第一张
+      2. 正文里的封面外链 —— 外链可能失效，前端 onerror 会退回占位
 
-    返回空字符串表示「没有封面」，此时由前端渲染占位样式：
-    static/images/cover-placeholder.webp 底图 + 书名首字（与 Docker 版一致）。
-    这里不再返回占位图路径 —— 否则前端就分不清哪张是真封面、哪张是兜底，
-    也就没法只在真正缺封面时才叠首字。
+    返回空字符串表示「没有封面」，由前端渲染 cover-placeholder.webp 底图 + 书名首字。
     """
     from urllib.parse import quote
+
+    folder = novel.get('image_folder') or ''
+    if folder and os.path.isdir(folder):
+        picked = _pick_cover_image(folder)
+        if picked:
+            sub_folder, name = picked
+            return f"/api/local_image?folder={quote(sub_folder)}&name={quote(name)}"
 
     text = (novel.get('intro') or '') + '\n' + (novel.get('preview') or '')
     match = COVER_URL_RE.search(text)
     if match:
         return match.group(1)
-
-    folder = novel.get('image_folder') or ''
-    if folder and os.path.isdir(folder):
-        try:
-            for name in sorted(os.listdir(folder)):
-                if os.path.splitext(name)[1].lower() in IMAGE_MEDIA_EXTENSIONS:
-                    return f"/api/local_image?folder={quote(folder)}&name={quote(name)}"
-        except OSError:
-            pass
 
     return ''
 
