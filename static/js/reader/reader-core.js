@@ -926,22 +926,31 @@
     //  4. 分页边界：只处理当前页内的连续段，不跨页合并。
     const GALLERY_MIN_IMAGES = 3;
 
-    function isGalleryImageLine(node) {
-        if (!node || !node.classList || !node.classList.contains('content-line')) return false;
+    // 判断这一行是不是「整行只有一个媒体」，返回 'image' / 'video' / null。
+    // 音频不参与：方形网格裁不出波形，而且音频条本身就很矮，塞进去更难看。
+    function galleryMediaKind(node) {
+        if (!node || !node.classList || !node.classList.contains('content-line')) return null;
 
         let figure = null;
+        let kind = null;
         for (const child of node.children) {
-            if (child.classList && child.classList.contains('local-image-figure')) {
-                if (figure) return false;          // 一行两张图，不动
-                figure = child;
-            }
+            if (!child.classList) continue;
+            const isImg = child.classList.contains('local-image-figure');
+            const isVid = child.classList.contains('local-video-figure');
+            if (!isImg && !isVid) continue;
+            if (figure) return null;               // 一行两个媒体，不动
+            figure = child;
+            kind = isVid ? 'video' : 'image';
         }
-        if (!figure || !figure.querySelector('img.local-image')) return false;
+        if (!figure) return null;
+        if (kind === 'image' && !figure.querySelector('img.local-image')) return null;
+        if (kind === 'video' && !figure.querySelector('video')) return null;
 
-        // 行内除了图注不该有别的文字，避免把「正文 + 配图」吞进画廊
-        const caption = figure.querySelector('.local-image-caption');
+        // 行内除了图注/视频说明不该有别的文字，避免把「正文 + 配图」吞进画廊
+        const caption = figure.querySelector('.local-image-caption, .local-video-caption');
         const rest = (node.textContent || '').replace(caption ? caption.textContent : '', '').trim();
-        return rest === '';
+        if (rest !== '') return null;
+        return kind;
     }
 
     function groupConsecutiveImages(container, minImages) {
@@ -966,7 +975,7 @@
         }
 
         Array.from(container.children).forEach(node => {
-            if (isGalleryImageLine(node)) {
+            if (galleryMediaKind(node)) {
                 innerGaps.push(...tailGaps);       // 这些空行确认在段内
                 tailGaps = [];
                 images.push(node);
@@ -982,6 +991,8 @@
 
         groups.forEach(group => {
             const total = group.images.length;
+            const videoCount = group.images.filter(line => galleryMediaKind(line) === 'video').length;
+            const imageCount = total - videoCount;
             const gallery = document.createElement('div');
             gallery.className = 'image-gallery';
             gallery.setAttribute('data-count', String(total));
@@ -991,7 +1002,9 @@
             bar.className = 'image-gallery-bar';
             const label = document.createElement('span');
             label.className = 'image-gallery-label';
-            label.textContent = `🖼️ 连续 ${total} 张配图`;
+            label.textContent = videoCount
+                ? `🎬 ${imageCount ? imageCount + ' 张配图 + ' : ''}${videoCount} 个视频`
+                : `🖼️ 连续 ${total} 张配图`;
             const toggle = document.createElement('button');
             toggle.type = 'button';
             toggle.className = 'image-gallery-toggle';
@@ -1004,11 +1017,15 @@
             const grid = document.createElement('div');
             grid.className = 'image-gallery-grid';
 
-            // 记住 w= / align= 生成的内联样式，切回竖向时还原
+            // 记住 w= / align= 生成的内联样式，切回竖向时还原。
+            // 视频额外收掉控件：方块格子里塞播放器太挤，点一下展开成正常尺寸再播。
             group.images.forEach(line => {
-                const figure = line.querySelector('.local-image-figure');
-                const img = figure.querySelector('img.local-image');
-                [figure, img].forEach(el => {
+                const kind = galleryMediaKind(line);
+                const figure = line.querySelector('.local-image-figure, .local-video-figure');
+                const inner = kind === 'video'
+                    ? figure.querySelector('video')
+                    : figure.querySelector('img.local-image');
+                [figure, inner].forEach(el => {
                     if (!el) return;
                     const inline = el.getAttribute('style');
                     if (inline) {
@@ -1016,17 +1033,22 @@
                         el.removeAttribute('style');
                     }
                 });
+                if (kind === 'video' && inner) {
+                    inner.dataset.galleryControls = '1';
+                    inner.removeAttribute('controls');
+                    inner.setAttribute('preload', 'none');
+                }
                 grid.appendChild(figure);          // 搬节点，不是重建
             });
             gallery.appendChild(grid);
 
-            toggle.addEventListener('click', function () {
-                const stacked = gallery.classList.toggle('is-stacked');
+            function applyStacked(stacked) {
+                gallery.classList.toggle('is-stacked', stacked);
                 toggle.textContent = stacked ? '收起为画廊' : '竖向展开';
                 toggle.setAttribute('aria-pressed', stacked ? 'true' : 'false');
-                grid.querySelectorAll('.local-image-figure').forEach(figure => {
-                    const img = figure.querySelector('img.local-image');
-                    [figure, img].forEach(el => {
+                grid.querySelectorAll('.local-image-figure, .local-video-figure').forEach(figure => {
+                    const inner = figure.querySelector('img.local-image, video');
+                    [figure, inner].forEach(el => {
                         if (!el) return;
                         if (stacked && el.dataset.galleryInlineStyle) {
                             el.setAttribute('style', el.dataset.galleryInlineStyle);
@@ -1034,7 +1056,35 @@
                             el.removeAttribute('style');
                         }
                     });
+                    const video = figure.querySelector('video');
+                    if (video && video.dataset.galleryControls) {
+                        if (stacked) {
+                            video.setAttribute('controls', '');
+                            video.setAttribute('preload', 'metadata');
+                        } else {
+                            video.removeAttribute('controls');
+                            video.setAttribute('preload', 'none');
+                        }
+                    }
                 });
+            }
+
+            toggle.addEventListener('click', function () {
+                applyStacked(!gallery.classList.contains('is-stacked'));
+            });
+
+            // 点视频格：先展开这一组，再滚进视线并播放（网格里没有控件可点）
+            grid.addEventListener('click', function (e) {
+                const figure = e.target.closest ? e.target.closest('.local-video-figure') : null;
+                if (!figure || !grid.contains(figure)) return;
+                e.preventDefault();
+                e.stopPropagation();
+                if (!gallery.classList.contains('is-stacked')) applyStacked(true);
+                const video = figure.querySelector('video');
+                if (!video) return;
+                try { video.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (_) {}
+                const played = video.play();
+                if (played && played.catch) played.catch(function () {});
             });
 
             group.images[0].replaceWith(gallery);
