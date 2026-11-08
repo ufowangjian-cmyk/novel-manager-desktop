@@ -2652,7 +2652,7 @@ def compute_work_id(file_path, _use_cache=True, text=None):
     return work_id
 
 
-def extract_preview_clean(lines, max_lines=12, max_chars=600):
+def extract_preview_clean(lines, max_lines=6, max_chars=300):
     """取正文开头作为预览。"""
     # 1. 跳过开头的元数据行；顺带收集封面/配图行，正文为空时兜底显示
     start = 0
