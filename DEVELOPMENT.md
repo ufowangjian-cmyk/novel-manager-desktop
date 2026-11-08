@@ -95,7 +95,9 @@
 **列表状态必须一路透传**：页码、筛选（`search` `author` `tag` `site`）、排序（`sort` `order`）
 从首页卡片一路带到详情页和阅读页。返回按钮统一调 Jinja 全局函数 `list_back_url()`
 （本版与 Docker 版同名同行为），别在模板里手拼 `/?page=xx&search=yy` —— 会漏参数，
-中文和 `&` 不做编码还会被截断。
+中文和 `&` 不做编码还会被截断。随机推荐卡片这种「入口本身没状态」的地方用
+`detail_url_with_state()` / `read_url_with_state()` 生成链接，「换一本」时前端会把
+当前 `location.search` 一起发给接口。
 
 本版的差异只在体验层和接入方式上：
 

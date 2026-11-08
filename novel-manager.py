@@ -285,6 +285,28 @@ def list_back_url():
 
 app.jinja_env.globals['list_back_url'] = list_back_url
 
+
+def detail_url_with_state(file_path):
+    """去详情页的链接，带上当前列表状态（页码/筛选/排序）。
+
+    随机推荐卡片这类「入口本身没有列表状态」的地方用它，
+    点进去之后「返回列表」才能回到当前这一页。
+    """
+    return url_for('novel_detail', file_path=file_path, **current_list_state())
+
+
+def read_url_with_state(file_path, line_number=1):
+    """去阅读页的链接，同样带列表状态（页码改叫 list_page）。"""
+    state = current_list_state()
+    page = state.pop('page', None)
+    if page:
+        state['list_page'] = page
+    return url_for('read_chapter', file_path=file_path, line_number=line_number, **state)
+
+
+app.jinja_env.globals['detail_url_with_state'] = detail_url_with_state
+app.jinja_env.globals['read_url_with_state'] = read_url_with_state
+
 app.secret_key = os.environ.get('NOVEL_MANAGER_SECRET_KEY') or secrets.token_hex(32)
 
 
@@ -4241,9 +4263,11 @@ def api_random_novel():
     if not novel:
         return jsonify({'success': False, 'message': '书库为空，请先扫描目录'})
 
-    novel['detail_url'] = url_for('novel_detail', file_path=(novel.get('file_path') or '').lstrip('/'))
-    novel['read_url'] = url_for('read_chapter',
-                                file_path=(novel.get('file_path') or '').lstrip('/'), line_number=1)
+    novel_path = (novel.get('file_path') or '').lstrip('/')
+    # 带上首页当前的列表状态（页码/筛选/排序）：否则从随机卡片点进书，
+    # 「返回列表」只能退回第 1 页。
+    novel['detail_url'] = detail_url_with_state(novel_path)
+    novel['read_url'] = read_url_with_state(novel_path)
     return jsonify({'success': True, 'novel': novel})
 
 

@@ -31,7 +31,7 @@
 
     <div class="random-card-main">
         <h4 class="random-title">
-            <a href="{{ url_for('novel_detail', file_path=(novel.file_path or '').lstrip('/')) }}">{{ novel.title }}</a>
+            <a href="{{ detail_url_with_state((novel.file_path or '').lstrip('/')) }}">{{ novel.title }}</a>
         </h4>
 
         <div class="random-meta">
@@ -72,9 +72,9 @@
     </div>
 
     <div class="random-card-actions">
-        <a href="{{ url_for('novel_detail', file_path=(novel.file_path or '').lstrip('/')) }}"
+        <a href="{{ detail_url_with_state((novel.file_path or '').lstrip('/')) }}"
             class="random-btn">📄 查看详情</a>
-        <a href="{{ url_for('read_chapter', file_path=(novel.file_path or '').lstrip('/'), line_number=1) }}"
+        <a href="{{ read_url_with_state((novel.file_path or '').lstrip('/')) }}"
             class="random-btn random-btn-primary">📖 开始阅读</a>
         {# 打开文件 / 打开文件夹：复用详情页的做法（openFile + /api/media/open_folder）。
            文件夹只在本书有配图目录时出现，与详情页的 has_images 判定一致。 #}
