@@ -4730,7 +4730,7 @@ def novel_detail(file_path):
             exclude_path=actual_path
         ),
         page=back_page, search=search_text, author=search_author,
-        tag=search_tag, site=search_site
+        tag=search_tag, site=search_site, sort=sort_by, order=sort_order
     )
 
     return render_template('novel_detail.html',
