@@ -237,6 +237,54 @@ def load_config():
 CONFIG = load_config()
 
 app = Flask(__name__, template_folder='templates')
+
+# ==================== 「返回列表」的统一出口 ====================
+# 模板里手拼 "/?page=xx&search=yy" 会漏掉排序、也不做 URL 编码：按「字数倒序」翻到
+# 第 3 页再进书，返回时会用默认排序重排，第 3 页内容全变，看着像回不去。
+_LIST_STATE_KEYS = ('search', 'author', 'tag', 'site', 'sort', 'order')
+
+
+def current_list_state():
+    """当前页面上「书库列表的状态」：页码 + 筛选 + 排序。
+
+    详情页把页码放 page=，阅读页放 list_page=，两处都认。
+    """
+    args = request.args
+    state = {}
+    page = args.get('list_page') or args.get('page')
+    if page:
+        state['page'] = page
+    for key in _LIST_STATE_KEYS:
+        value = (args.get(key) or '').strip()
+        if value:
+            state[key] = value
+    return state
+
+
+def list_back_url():
+    """「返回列表」按钮统一用这个，别再在模板里手拼 query 串。
+
+    当前 URL 里没有页码时（从收藏夹、跳转链接进来的情况），退一步看 referrer：
+    来路是本站首页就把它的 query 借过来，仍能回到刚才那一页。
+    """
+    state = current_list_state()
+    if 'page' not in state:
+        referrer = request.referrer or ''
+        if referrer:
+            import urllib.parse as _up
+            parsed = _up.urlparse(referrer)
+            if parsed.netloc == request.host and parsed.path in ('', '/'):
+                for key, values in _up.parse_qs(parsed.query).items():
+                    if key == 'page' or key in _LIST_STATE_KEYS:
+                        value = (values[0] if values else '').strip()
+                        if value:
+                            state[key] = value
+    state.setdefault('page', 1)
+    return url_for('index', **state)
+
+
+app.jinja_env.globals['list_back_url'] = list_back_url
+
 app.secret_key = os.environ.get('NOVEL_MANAGER_SECRET_KEY') or secrets.token_hex(32)
 
 
@@ -4532,6 +4580,9 @@ def novel_detail(file_path):
     search_author = request.args.get('author', '')
     search_tag = request.args.get('tag', '')
     search_site = request.args.get('site', '')
+    # 排序跟着走：否则从「字数倒序第 3 页」进来，返回列表会被默认排序重排
+    sort_by = request.args.get('sort', '')
+    sort_order = request.args.get('order', '')
     
     # 路径交给模板里的 url_for 编码一次就够了（下面 file_path=filename）。
     # 以前这里 quote 一次、url_for 又编一次，链接会变成 %25E7（长度翻倍），
@@ -4553,6 +4604,8 @@ def novel_detail(file_path):
         site=base_info['site'],
         word_count=base_info['word_count'],
         publish_date=publish_date,
+        sort_by=sort_by,
+        sort_order=sort_order,
         file_path=filename,
         link=link,
         intro=final_intro,          # 🔥 改用 final_intro
@@ -4597,6 +4650,9 @@ def read_chapter(file_path, line_number):
     search_author = request.args.get('author', '')
     search_tag = request.args.get('tag', '')
     search_site = request.args.get('site', '')
+    # 排序跟着走，翻章不能丢，否则最后点「返回列表」会被默认排序重排
+    sort_by = request.args.get('sort', '')
+    sort_order = request.args.get('order', '')
 
     file_size = os.path.getsize(file_path)
     try:
@@ -4902,6 +4958,8 @@ def read_chapter(file_path, line_number):
     return render_template('read_chapter.html',
         title=base_info['title'],
         author=base_info['author'],
+        sort_by=sort_by,
+        sort_order=sort_order,
         file_path=filename_for_template,
         content_lines=current_lines,
         start_line=start_line,

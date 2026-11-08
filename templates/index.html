@@ -156,10 +156,10 @@
                     <div class="filter-section collapsed" id="authorSection">
                         <div class="filter-title" data-section="author">👤 热门作者</div>
                         <div class="filter-tags">
-                            <a href="?{% if search_text %}&search={{ search_text }}{% endif %}"
+                            <a href="?{% if search_text %}&search={{ search_text|urlencode }}{% endif %}"
                                 class="filter-tag {% if not search_author %}active{% endif %}">全部</a>
                             {% for author in authors[:100] %}
-                            <a href="?author={{ author }}{% if search_text %}&search={{ search_text }}{% endif %}{% if search_tag %}&tag={{ search_tag }}{% endif %}{% if search_site %}&site={{ search_site }}{% endif %}"
+                            <a href="?author={{ author }}{% if search_text %}&search={{ search_text|urlencode }}{% endif %}{% if search_tag %}&tag={{ search_tag|urlencode }}{% endif %}{% if search_site %}&site={{ search_site|urlencode }}{% endif %}"
                                 class="filter-tag {% if author == search_author %}active{% endif %}">
                                 {{ author }}
                             </a>
@@ -174,10 +174,10 @@
                     <div class="filter-section collapsed" id="tagSection">
                         <div class="filter-title" data-section="tag">🏷️ 热门标签</div>
                         <div class="filter-tags">
-                            <a href="?{% if search_text %}&search={{ search_text }}{% endif %}"
+                            <a href="?{% if search_text %}&search={{ search_text|urlencode }}{% endif %}"
                                 class="filter-tag {% if not search_tag %}active{% endif %}">全部</a>
                             {% for tag in tags[:50] %}
-                            <a href="?tag={{ tag }}{% if search_text %}&search={{ search_text }}{% endif %}{% if search_author %}&author={{ search_author }}{% endif %}{% if search_site %}&site={{ search_site }}{% endif %}"
+                            <a href="?tag={{ tag }}{% if search_text %}&search={{ search_text|urlencode }}{% endif %}{% if search_author %}&author={{ search_author|urlencode }}{% endif %}{% if search_site %}&site={{ search_site|urlencode }}{% endif %}"
                                 class="filter-tag {% if tag == search_tag %}active{% endif %}">
                                 {{ tag }}
                             </a>
@@ -192,10 +192,10 @@
                     <div class="filter-section collapsed" id="siteSection">
                         <div class="filter-title" data-section="site">🌐 发表网站</div>
                         <div class="filter-tags">
-                            <a href="?{% if search_text %}&search={{ search_text }}{% endif %}"
+                            <a href="?{% if search_text %}&search={{ search_text|urlencode }}{% endif %}"
                                 class="filter-tag {% if not search_site %}active{% endif %}">全部</a>
                             {% for site in sites[:20] %}
-                            <a href="?site={{ site }}{% if search_text %}&search={{ search_text }}{% endif %}{% if search_author %}&author={{ search_author }}{% endif %}{% if search_tag %}&tag={{ search_tag }}{% endif %}"
+                            <a href="?site={{ site }}{% if search_text %}&search={{ search_text|urlencode }}{% endif %}{% if search_author %}&author={{ search_author|urlencode }}{% endif %}{% if search_tag %}&tag={{ search_tag|urlencode }}{% endif %}"
                                 class="filter-tag {% if site == search_site %}active{% endif %}">
                                 {{ site }}
                             </a>
@@ -415,7 +415,7 @@
                     <thead>
                         <tr>
                             <th>
-                                <a href="?{% for key, value in request.args.items() if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endfor %}sort=title&order={% if sort_by == 'title' and sort_order == 'asc' %}desc{% else %}asc{% endif %}"
+                                <a href="?{% for key, value in request.args.items() if key != 'sort' and key != 'order' %}{{ key }}={{ value|urlencode }}&{% endfor %}sort=title&order={% if sort_by == 'title' and sort_order == 'asc' %}desc{% else %}asc{% endif %}"
                                     class="sortable-th {% if sort_by == 'title' %}active{% endif %}">
                                     书名
                                     {% if sort_by == 'title' %}
@@ -425,7 +425,7 @@
                                 </a>
                             </th>
                             <th>
-                                <a href="?{% for key, value in request.args.items() if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endfor %}sort=author&order={% if sort_by == 'author' and sort_order == 'asc' %}desc{% else %}asc{% endif %}"
+                                <a href="?{% for key, value in request.args.items() if key != 'sort' and key != 'order' %}{{ key }}={{ value|urlencode }}&{% endfor %}sort=author&order={% if sort_by == 'author' and sort_order == 'asc' %}desc{% else %}asc{% endif %}"
                                     class="sortable-th {% if sort_by == 'author' %}active{% endif %}">
                                     作者
                                     {% if sort_by == 'author' %}
@@ -436,7 +436,7 @@
                             </th>
                             <th>标签</th>
                             <th>
-                                <a href="?{% for key, value in request.args.items() if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endfor %}sort=word_count&order={% if sort_by == 'word_count' and sort_order == 'asc' %}desc{% else %}asc{% endif %}"
+                                <a href="?{% for key, value in request.args.items() if key != 'sort' and key != 'order' %}{{ key }}={{ value|urlencode }}&{% endfor %}sort=word_count&order={% if sort_by == 'word_count' and sort_order == 'asc' %}desc{% else %}asc{% endif %}"
                                     class="sortable-th {% if sort_by == 'word_count' %}active{% endif %}">
                                     字数
                                     {% if sort_by == 'word_count' %}
@@ -447,7 +447,7 @@
                             </th>
                             <th>连载进度</th>
                             <th>
-                                <a href="?{% for key, value in request.args.items() if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endfor %}sort=site&order={% if sort_by == 'site' and sort_order == 'asc' %}desc{% else %}asc{% endif %}"
+                                <a href="?{% for key, value in request.args.items() if key != 'sort' and key != 'order' %}{{ key }}={{ value|urlencode }}&{% endfor %}sort=site&order={% if sort_by == 'site' and sort_order == 'asc' %}desc{% else %}asc{% endif %}"
                                     class="sortable-th {% if sort_by == 'site' %}active{% endif %}">
                                     发表网站
                                     {% if sort_by == 'site' %}
@@ -457,7 +457,7 @@
                                 </a>
                             </th>
                             <th>
-                                <a href="?{% for key, value in request.args.items() if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endfor %}sort=date&order={% if sort_by == 'date' and sort_order == 'asc' %}desc{% else %}asc{% endif %}"
+                                <a href="?{% for key, value in request.args.items() if key != 'sort' and key != 'order' %}{{ key }}={{ value|urlencode }}&{% endfor %}sort=date&order={% if sort_by == 'date' and sort_order == 'asc' %}desc{% else %}asc{% endif %}"
                                     class="sortable-th {% if sort_by == 'date' %}active{% endif %}">
                                     发表日期
                                     {% if sort_by == 'date' %}
@@ -474,7 +474,7 @@
                         <tr>
                             <td>
                                 <strong>
-                                    <a href="{{ url_for('novel_detail', file_path=novel['file_path'], page=pagination.page, search=search_text, author=search_author, tag=search_tag, site=search_site) }}"
+                                    <a href="{{ url_for('novel_detail', file_path=novel['file_path'], page=pagination.page, search=search_text, author=search_author, tag=search_tag, site=search_site, sort=sort_by, order=sort_order) }}"
                                         class="novel-title">
                                         {{ novel.title }}
                                     </a>
@@ -488,7 +488,7 @@
                                 {% if '音频' in (novel.tags or '').split(',') %}<span class="media-badge" title="含音频">🎵</span>{% endif %}
                             </td>
                             <td>
-                                <a href="?author={{ novel.author }}{% if search_text %}&search={{ search_text }}{% endif %}{% if search_tag %}&tag={{ search_tag }}{% endif %}{% if search_site %}&site={{ search_site }}{% endif %}"
+                                <a href="?author={{ novel.author }}{% if search_text %}&search={{ search_text|urlencode }}{% endif %}{% if search_tag %}&tag={{ search_tag|urlencode }}{% endif %}{% if search_site %}&site={{ search_site|urlencode }}{% endif %}"
                                     class="author-link">
                                     {{ novel.author|replace(',', ' & ') }}
                                 </a>
@@ -499,7 +499,7 @@
                                 {% if tags_list|length > max_tags_display %}
                                 <span class="tags-wrapper" title="完整标签：{{ novel.tags }}">
                                     {% for tag in tags_list[:max_tags_display] %}
-                                    <a href="?tag={{ tag }}{% if search_text %}&search={{ search_text }}{% endif %}{% if search_author %}&author={{ search_author }}{% endif %}{% if search_site %}&site={{ search_site }}{% endif %}"
+                                    <a href="?tag={{ tag }}{% if search_text %}&search={{ search_text|urlencode }}{% endif %}{% if search_author %}&author={{ search_author|urlencode }}{% endif %}{% if search_site %}&site={{ search_site|urlencode }}{% endif %}"
                                         class="tag-badge">
                                         {{ tag }}
                                     </a>
@@ -508,7 +508,7 @@
                                 </span>
                                 {% else %}
                                 {% for tag in tags_list %}
-                                <a href="?tag={{ tag }}{% if search_text %}&search={{ search_text }}{% endif %}{% if search_author %}&author={{ search_author }}{% endif %}{% if search_site %}&site={{ search_site }}{% endif %}"
+                                <a href="?tag={{ tag }}{% if search_text %}&search={{ search_text|urlencode }}{% endif %}{% if search_author %}&author={{ search_author|urlencode }}{% endif %}{% if search_site %}&site={{ search_site|urlencode }}{% endif %}"
                                     class="tag-badge">
                                     {{ tag }}
                                 </a>
@@ -535,7 +535,7 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <a href="?site={{ novel.site }}{% if search_text %}&search={{ search_text }}{% endif %}{% if search_author %}&author={{ search_author }}{% endif %}{% if search_tag %}&tag={{ search_tag }}{% endif %}"
+                                <a href="?site={{ novel.site }}{% if search_text %}&search={{ search_text|urlencode }}{% endif %}{% if search_author %}&author={{ search_author|urlencode }}{% endif %}{% if search_tag %}&tag={{ search_tag|urlencode }}{% endif %}"
                                     class="site-link">
                                     {% set display_site = novel.site %}
                                     {% if novel.site|lower in ['sis001', 'eyny', 's8', 'sexinsex'] %}
@@ -599,9 +599,9 @@
 
                     <div class="pagination-links">
                         {% if pagination.page > 1 %}
-                        <a href="?page=1{% if search_text %}&search={{ search_text }}{% endif %}{% if search_author %}&author={{ search_author }}{% endif %}{% if search_tag %}&tag={{ search_tag }}{% endif %}{% if search_site %}&site={{ search_site }}{% endif %}&sort={{ sort_by }}&order={{ sort_order }}"
+                        <a href="?page=1{% if search_text %}&search={{ search_text|urlencode }}{% endif %}{% if search_author %}&author={{ search_author|urlencode }}{% endif %}{% if search_tag %}&tag={{ search_tag|urlencode }}{% endif %}{% if search_site %}&site={{ search_site|urlencode }}{% endif %}&sort={{ sort_by }}&order={{ sort_order }}"
                             class="pagination-btn">首页</a>
-                        <a href="?page={{ pagination.page - 1 }}{% if search_text %}&search={{ search_text }}{% endif %}{% if search_author %}&author={{ search_author }}{% endif %}{% if search_tag %}&tag={{ search_tag }}{% endif %}{% if search_site %}&site={{ search_site }}{% endif %}&sort={{ sort_by }}&order={{ sort_order }}"
+                        <a href="?page={{ pagination.page - 1 }}{% if search_text %}&search={{ search_text|urlencode }}{% endif %}{% if search_author %}&author={{ search_author|urlencode }}{% endif %}{% if search_tag %}&tag={{ search_tag|urlencode }}{% endif %}{% if search_site %}&site={{ search_site|urlencode }}{% endif %}&sort={{ sort_by }}&order={{ sort_order }}"
                             class="pagination-btn">上一页</a>
                         {% endif %}
 
@@ -615,7 +615,7 @@
                             {% endif %}
 
                             {% for p in range(start_page, end_page + 1) %}
-                            <a href="?page={{ p }}{% if search_text %}&search={{ search_text }}{% endif %}{% if search_author %}&author={{ search_author }}{% endif %}{% if search_tag %}&tag={{ search_tag }}{% endif %}{% if search_site %}&site={{ search_site }}{% endif %}&sort={{ sort_by }}&order={{ sort_order }}"
+                            <a href="?page={{ p }}{% if search_text %}&search={{ search_text|urlencode }}{% endif %}{% if search_author %}&author={{ search_author|urlencode }}{% endif %}{% if search_tag %}&tag={{ search_tag|urlencode }}{% endif %}{% if search_site %}&site={{ search_site|urlencode }}{% endif %}&sort={{ sort_by }}&order={{ sort_order }}"
                                 class="pagination-btn {% if p == pagination.page %}active{% endif %}">
                                 {{ p }}
                             </a>
@@ -626,9 +626,9 @@
                         </div>
 
                         {% if pagination.page < pagination.pages %} <a
-                            href="?page={{ pagination.page + 1 }}{% if search_text %}&search={{ search_text }}{% endif %}{% if search_author %}&author={{ search_author }}{% endif %}{% if search_tag %}&tag={{ search_tag }}{% endif %}{% if search_site %}&site={{ search_site }}{% endif %}&sort={{ sort_by }}&order={{ sort_order }}"
+                            href="?page={{ pagination.page + 1 }}{% if search_text %}&search={{ search_text|urlencode }}{% endif %}{% if search_author %}&author={{ search_author|urlencode }}{% endif %}{% if search_tag %}&tag={{ search_tag|urlencode }}{% endif %}{% if search_site %}&site={{ search_site|urlencode }}{% endif %}&sort={{ sort_by }}&order={{ sort_order }}"
                             class="pagination-btn">下一页</a>
-                            <a href="?page={{ pagination.pages }}{% if search_text %}&search={{ search_text }}{% endif %}{% if search_author %}&author={{ search_author }}{% endif %}{% if search_tag %}&tag={{ search_tag }}{% endif %}{% if search_site %}&site={{ search_site }}{% endif %}&sort={{ sort_by }}&order={{ sort_order }}"
+                            <a href="?page={{ pagination.pages }}{% if search_text %}&search={{ search_text|urlencode }}{% endif %}{% if search_author %}&author={{ search_author|urlencode }}{% endif %}{% if search_tag %}&tag={{ search_tag|urlencode }}{% endif %}{% if search_site %}&site={{ search_site|urlencode }}{% endif %}&sort={{ sort_by }}&order={{ sort_order }}"
                                 class="pagination-btn">末页</a>
                             {% endif %}
                     </div>

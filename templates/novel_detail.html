@@ -45,9 +45,8 @@
                 </div>
                 {% endif %}
             </div>
-            <!-- 修改返回按钮，携带页码参数 -->
-            <a href="/?page={{ back_page }}{% if search_text %}&search={{ search_text }}{% endif %}{% if search_author %}&author={{ search_author }}{% endif %}{% if search_tag %}&tag={{ search_tag }}{% endif %}{% if search_site %}&site={{ search_site }}{% endif %}"
-                class="back-btn">🔙 返回列表</a>
+            {# 统一出口：页码/筛选/排序一起重建，别手拼 query 串 #}
+            <a href="{{ list_back_url() }}" class="back-btn">🔙 返回列表</a>
         </div>
 
         <!-- 简介部分：有简介显示简介，没简介显示预览 -->
@@ -86,7 +85,7 @@
                     <span class="chapter-line">第{{ chapter.line_number }}行 · 空白</span>
                 </span>
                 {% else %}
-                <a href="{{ url_for('read_chapter', file_path=file_path, line_number=chapter.line_number, list_page=back_page, search=search_text, author=search_author, tag=search_tag, site=search_site) }}"
+                <a href="{{ url_for('read_chapter', file_path=file_path, line_number=chapter.line_number, list_page=back_page, search=search_text, author=search_author, tag=search_tag, site=search_site, sort=sort_by, order=sort_order) }}"
                     class="chapter-item chapter-level{{ chapter.level }}">
                     <span class="chapter-title">{{ chapter.text }}</span>
                     {# 本章正文里有媒体标记就挂 emoji 徽章（与阅读页 reader-core.js 的判定一致） #}
@@ -110,7 +109,7 @@
             {% endif %}
 
             <div class="action-buttons">
-                <a href="{{ url_for('read_chapter', file_path=file_path, line_number=(all_chapters[0].line_number if all_chapters else 1), list_page=back_page, search=search_text, author=search_author, tag=search_tag, site=search_site) }}"
+                <a href="{{ url_for('read_chapter', file_path=file_path, line_number=(all_chapters[0].line_number if all_chapters else 1), list_page=back_page, search=search_text, author=search_author, tag=search_tag, site=search_site, sort=sort_by, order=sort_order) }}"
                     class="action-btn secondary">
                     📖 从头阅读
                 </a>
