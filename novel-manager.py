@@ -1915,10 +1915,16 @@ def is_chapter_line_strict(t):
         if stripped == word:
             return True
         if stripped.startswith(word):
-            # 去掉裸词前缀后，剩下的部分要么为空，要么是「第一章/篇」之类的短标签
+            # 「楔子：老婆的出轨使我发现自己的淫妻癖」——冒号本身就是「这是标题」的强信号，
+            # 冒号后的标题正文可以长一些（实测真标题 17 字）。
+            # 没有冒号的「正文 第一章」式短标签仍按 8 字收紧，
+            # 避免把「正文部分是…」这类正文句子吃成标题。
+            had_colon = bool(re.match(rf'^{re.escape(word)}\s*[：:]', stripped))
             rest = stripped[len(word):].strip(' \t：:·、-—')
             if not rest:
                 return True
+            if had_colon:
+                return len(rest) <= 30 and not _SENTENCE_PUNCT_RE.search(rest)
             return len(rest) <= 8
     return False
 
