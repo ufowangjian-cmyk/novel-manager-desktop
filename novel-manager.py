@@ -4509,7 +4509,23 @@ def index():
                     novel['publish_date'] = f"{year}/{month}/{day}"
                 elif date_format == 'YYYY年MM月DD日':
                     novel['publish_date'] = f"{year}年{month}月{day}日"
-    
+
+    # 作者列：主名和马甲各自都是可点的作者（点了各自筛出这个人的全部书）。
+    # 和 Docker 版一致：用 author_links 承载 [{name, is_alias}]，模板直接渲染成链接，
+    # 不再把「金鳞庸人（uwkuk8k,财狼少年）」整串塞进一列靠 JS 拆括号。
+    for novel in paginated_data:
+        raw_author = novel.get('author') or ''
+        main_author, aliases = split_author_aliases(raw_author)
+        main_author = main_author or raw_author or '未知作者'
+
+        links = [{'name': main_author, 'is_alias': False}]
+        links += [{'name': a, 'is_alias': True} for a in aliases]
+
+        novel['author_main'] = main_author
+        novel['author_aliases'] = aliases
+        novel['author_full'] = raw_author
+        novel['author_links'] = links
+
     return render_template('index.html',
         novels=paginated_data,
         authors=authors,
@@ -4739,9 +4755,17 @@ def novel_detail(file_path):
         tag=search_tag, site=search_site, sort=sort_by, order=sort_order
     )
 
+    # 作者：和首页一致，主名与马甲各自是链接，点了都筛出这个人的全部书
+    detail_main_author, detail_aliases = split_author_aliases(base_info['author'])
+    detail_main_author = detail_main_author or base_info['author'] or '未知作者'
+    detail_author_links = [{'name': detail_main_author, 'is_alias': False}]
+    detail_author_links += [{'name': a, 'is_alias': True} for a in detail_aliases]
+
     return render_template('novel_detail.html',
         title=base_info['title'],
         author=base_info['author'],
+        author_main=detail_main_author,
+        author_links=detail_author_links,
         site=base_info['site'],
         word_count=base_info['word_count'],
         publish_date=publish_date,

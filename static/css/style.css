@@ -1082,8 +1082,8 @@ tr:hover {
 
 /* 列宽设置 */
 th:nth-child(1) { width: 21%; }
-th:nth-child(2) { width: 11%; }
-th:nth-child(3) { width: 22%; }
+th:nth-child(2) { width: 13%; }   /* 11% 放不下「主名 + 两三个马甲」 */
+th:nth-child(3) { width: 20%; }
 th:nth-child(4) { width: 7%; }
 th:nth-child(5) { width: 13%; }
 th:nth-child(6) { width: 10%; }
@@ -1098,38 +1098,51 @@ td:nth-child(2) {
 }
 
 /* 作者链接 - 下划线只跟在文字下面 */
+/* 主名 + 马甲：用间距分词（与 Docker 版一致），不插「·」分隔符——
+   列为 11% 宽时，分隔符会掉到下一行行首，看着像屏幕上的脏点。 */
+.author-links {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 8px;
+}
+
 .author-link {
     color: #4B6D0F;
     text-decoration: none;
     border-bottom: 1px dashed #cbd5e0;
-    display: inline-block;  /* 关键：让下划线只跟随文字宽度 */
+    white-space: nowrap;   /* 一个作者名不拆行，换行交给外层 flex */
     max-width: 100%;
-    word-wrap: break-word;
-    word-break: break-word;
+    overflow: hidden;
+    text-overflow: ellipsis;
     line-height: 1.4;
 }
 
-/* 作者名行 - 超出省略 */
-.author-link .author-name {
-    display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 100%;
+/* 马甲：略淡 + 小一号字，看得出从属但不隐藏 */
+.author-alias-link {
+    font-size: 0.92em;
+    opacity: 0.8;
 }
 
-/* 括号内容行 - 斜体缩小变浅，超出省略 */
-.author-link .bracket-content {
-    color: #7a8a5e;
-    font-size: 0.85em;
-    font-style: italic;
-    font-weight: normal;
-    display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 100%;
-    margin-top: 2px;
+.author-alias-link:hover {
+    opacity: 1;
+}
+
+/* 详情页作者区：行内排版（前面还有图标），用相邻兄弟间距代替分隔符 */
+.meta-author-link {
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px dashed currentColor;
+    opacity: 0.92;
+}
+
+.meta-author-link:hover {
+    opacity: 1;
+    border-bottom-style: solid;
+}
+
+.meta-author-link + .meta-author-link {
+    margin-left: 8px;
 }
 
 /* 排序链接 */
@@ -2283,10 +2296,6 @@ body.dark-mode .novel-title .bracket-content {
 body.dark-mode .author-link {
     color: #7d9e6e;
     border-bottom-color: #3a4d3a;
-}
-
-body.dark-mode .author-link .bracket-content {
-    color: #6b7280;
 }
 
 /* 选项卡深色模式 */

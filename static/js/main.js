@@ -296,41 +296,10 @@ function formatNovelTitlesAndHighlight() {
         el.innerHTML = result;
         el.setAttribute('data-processed', 'true');
     });
-    
-    // 处理作者（换行：作者名一行，括号内容单独一行，每行超出省略）
-    document.querySelectorAll('.author-link').forEach(function(el) {
-        if (el.hasAttribute('data-processed')) return;
-        
-        var originalText = el.textContent.trim();
-        var hasBracket = /[（【[]/.test(originalText);
-        
-        if (hasBracket) {
-            // 找到第一个括号的位置
-            var firstBracketIndex = -1;
-            for (var i = 0; i < originalText.length; i++) {
-                if (originalText[i] === '（' || originalText[i] === '【' || originalText[i] === '[') {
-                    firstBracketIndex = i;
-                    break;
-                }
-            }
-            
-            if (firstBracketIndex > 0) {
-                var mainAuthor = originalText.substring(0, firstBracketIndex);
-                var bracketContent = originalText.substring(firstBracketIndex);
-                // 换行，作者名和括号内容分别用 span 包裹，方便控制省略
-                el.innerHTML = '<span class="author-name">' + mainAuthor + '</span><span class="bracket-content">' + bracketContent + '</span>';
-            } else if (firstBracketIndex === 0) {
-                // 只有括号的情况，整行作为括号内容
-                var bracketContent = originalText;
-                el.innerHTML = '<span class="bracket-content">' + bracketContent + '</span>';
-            } else {
-                // 没有括号，保持原样
-                el.innerHTML = '<span class="author-name">' + originalText + '</span>';
-            }
-            
-            el.setAttribute('data-processed', 'true');
-        }
-    });
+
+    // 作者列的「主名 / 括号马甲」拆分已移到后端（author_links），
+    // 这里不再改写 .author-link 的 innerHTML —— 否则会把每个作者链接
+    // 变成块级 span，flex 分词排版就散了。
 
 }
 

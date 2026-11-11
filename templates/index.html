@@ -488,10 +488,15 @@
                                 {% if '音频' in (novel.tags or '').split(',') %}<span class="media-badge" title="含音频">🎵</span>{% endif %}
                             </td>
                             <td>
-                                <a href="?author={{ novel.author }}{% if search_text %}&search={{ search_text|urlencode }}{% endif %}{% if search_tag %}&tag={{ search_tag|urlencode }}{% endif %}{% if search_site %}&site={{ search_site|urlencode }}{% endif %}"
-                                    class="author-link">
-                                    {{ novel.author|replace(',', ' & ') }}
-                                </a>
+                                {# 主名与马甲各自可点，点了都筛出这个人的全部书。
+                                   和 Docker 版一致：靠间距分词，不插「·」分隔符。 #}
+                                <div class="author-links">
+                                {% for link in novel.author_links %}
+                                <a href="?author={{ link.name|urlencode }}{% if search_text %}&search={{ search_text|urlencode }}{% endif %}{% if search_tag %}&tag={{ search_tag|urlencode }}{% endif %}{% if search_site %}&site={{ search_site|urlencode }}{% endif %}"
+                                    class="author-link{% if link.is_alias %} author-alias-link{% endif %}"
+                                    {% if link.is_alias %}title="马甲（与 {{ novel.author_main }} 是同一人）"{% endif %}>{{ link.name }}</a>
+                                {% endfor %}
+                                </div>
                             </td>
                             <td>
                                 {% if novel.tags != '无' %}
