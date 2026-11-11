@@ -1,6 +1,17 @@
 ﻿/* ============================================
    1. CSS 变量定义
    ============================================ */
+/* 原生控件（滚动条、下拉框、对话框背景）跟随站点主题：
+   不写这两条的话，暗色模式下 select / 滚动条仍然是亮的，很割裂。
+   只在 .dark-mode / .light-mode 上声明，避免它和 auto 主题打架。 */
+body.dark-mode {
+    color-scheme: dark;
+}
+
+body.light-mode {
+    color-scheme: light;
+}
+
 :root {
     /* 论坛绿色田园风配色 */
     --tool-green-bg: #F0F3EA;      /* 页面主背景 - 米绿 */
@@ -1503,26 +1514,8 @@ body.dark-mode .tab-hide-btn:hover {
     overflow-y: hidden;
     padding: 10px 5px 15px 5px;
     scrollbar-width: thin;
+    scrollbar-color: #888 #f1f1f1;
     white-space: nowrap;
-}
-
-/* 滚动条美化 */
-.recent-list-horizontal::-webkit-scrollbar {
-    height: 6px;
-}
-
-.recent-list-horizontal::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 3px;
-}
-
-.recent-list-horizontal::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 3px;
-}
-
-.recent-list-horizontal::-webkit-scrollbar-thumb:hover {
-    background: #555;
 }
 
 /* 阅读卡片 */
@@ -2377,12 +2370,8 @@ body.dark-mode .recent-delete-btn:hover {
     color: white;
 }
 
-body.dark-mode .recent-list-horizontal::-webkit-scrollbar-track {
-    background: #000000;
-}
-
-body.dark-mode .recent-list-horizontal::-webkit-scrollbar-thumb {
-    background: #333333;
+body.dark-mode .recent-list-horizontal {
+    scrollbar-color: #333333 #000000;
 }
 
 /* 其他深色模式 */
