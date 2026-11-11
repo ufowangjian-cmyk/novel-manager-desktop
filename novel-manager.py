@@ -13,10 +13,11 @@ import secrets
 import mimetypes
 import codecs
 import tempfile
+import zlib
 import chardet
 import subprocess
 from bisect import bisect_left
-from collections import OrderedDict, Counter
+from collections import OrderedDict, Counter, defaultdict
 from datetime import datetime
 from html import escape as html_escape
 from flask import Flask, render_template, render_template_string, request, redirect, url_for, jsonify, session, send_file, g
@@ -8562,6 +8563,259 @@ def txt_health_page():
 def chapter_check_page():
     """章节检测页面：排版（标题正文同行）+ 序号连续性（缺号/重号），检测项可勾选"""
     return render_template('chapter_check.html', novel_data=novel_data)
+
+
+# ===================== 重复书检测（段落指纹） =====================
+# 思路：不比「意思像不像」，只比「有没有整段一字不差」。
+#   切段 → 去掉全部标点空白 → 段落算 crc32 → 倒排索引 → 算双向覆盖率
+# 只统计完全相同的段落，所以不会把「同题材」误判成同一本；
+# 必须双向覆盖率都高才算改名，否则「小书被大书收录」也会被当成重复。
+DUP_SCAN_LOCK_FILE = os.path.join(tempfile.gettempdir(), 'novel_manager_dup_scan.lock')
+_DUP_META_LINE_RE = re.compile(r'^\s*(书名|作者|简介|标签|链接|封面|内容简介|文案|状态|自序)\s*[:：]')
+_DUP_HAN_RE = re.compile(r'[^\u4e00-\u9fff]')
+_DUP_CHAP_PREFIX_RE = re.compile(r'^第[0-9一二三四五六七八九十百千零两]+[章节回话][·\.、:：\-—]?')
+_DUP_MAX_BOOKS_PER_PARA = 30   # 一段出现在超过这么多本书里，说明是套话模板，丢弃
+
+
+def _dup_read_text(file_path):
+    """读文本；先按 UTF-8，失败再让 chardet 猜。"""
+    with open(file_path, 'rb') as f:
+        raw = f.read()
+    for enc in ('utf-8-sig', 'utf-8'):
+        try:
+            return raw.decode(enc)
+        except UnicodeDecodeError:
+            pass
+    guess = chardet.detect(raw[:200000]).get('encoding') or 'gbk'
+    try:
+        return raw.decode(guess, errors='replace')
+    except (LookupError, UnicodeDecodeError):
+        return raw.decode('utf-8', errors='replace')
+
+
+def _dup_para_hashes(file_path, min_len=12):
+    """返回该书的段落指纹集合。段落 = 去掉标点空白后的纯汉字串。"""
+    try:
+        text = _dup_read_text(file_path)
+    except Exception:
+        return None
+    lines = text.splitlines()
+    # 头部元数据区（书名/作者/链接…）不参与比对，否则同名书会假阳性
+    meta_hits = 0
+    start = 0
+    for i, line in enumerate(lines[:40]):
+        if _DUP_META_LINE_RE.match(line):
+            meta_hits += 1
+            start = i + 1
+    if meta_hits >= 2:
+        lines = lines[start:]
+
+    hashes = set()
+    for line in lines:
+        s = re.sub(r'[\s\u3000]+', '', line)
+        s = _DUP_CHAP_PREFIX_RE.sub('', s)
+        s = _DUP_HAN_RE.sub('', s)
+        if min_len <= len(s) <= 2000:
+            hashes.add(zlib.crc32(s.encode('utf-8')))
+    return hashes or None
+
+
+def _dup_classify(cover_a, cover_b, shared):
+    """把一对书归到四档里，前端按这个筛。"""
+    lo, hi = min(cover_a, cover_b), max(cover_a, cover_b)
+    if lo >= 0.70:
+        return 'rename'      # 双向都高：换书名/作者/标点，正文没动
+    if hi >= 0.75 and lo < 0.45:
+        return 'contain'     # 单向高：增补版、分卷、合集
+    if hi >= 0.65 or shared >= 200:
+        return 'rewrite'     # 一边覆盖够多、或共享段数够多：改写、扩写或续写
+    return 'weak'            # 共享很少：大概率只是同题材用词相近
+
+
+def run_dup_scan_task(task_id, min_paras=12):
+    """后台执行全量重复检测。"""
+    lock = _CrossProcessLock(DUP_SCAN_LOCK_FILE)
+    lock.acquire()
+    started = time.time()
+    try:
+        novels = [
+            n for n in list(novel_data)
+            if n.get('file_path') and os.path.exists(n.get('file_path'))
+        ]
+        total = len(novels)
+        update_background_task(task_id, total=total, current=0, message='正在提取段落指纹...')
+
+        items = []                       # [{title, path, n}]
+        para2books = defaultdict(list)   # 段落指纹 -> 书序号列表
+
+        for i, novel in enumerate(novels, 1):
+            path = novel.get('file_path')
+            hashes = _dup_para_hashes(path, min_len=min_paras)
+            if hashes:
+                idx = len(items)
+                items.append({
+                    'title': novel.get('title') or os.path.basename(path),
+                    'path': path,
+                    'n': len(hashes),
+                })
+                for h in hashes:
+                    para2books[h].append(idx)
+            if i % 50 == 0 or i == total:
+                update_background_task(task_id, current=i, message=f'提取段落指纹：{i}/{total}')
+
+        # 只留跨书出现的段落；出现太广的当套话丢掉
+        shared_paras = {
+            h: lst for h, lst in para2books.items()
+            if 2 <= len(lst) <= _DUP_MAX_BOOKS_PER_PARA
+        }
+
+        update_background_task(
+            task_id, current=total,
+            message=f'比对中：跨书共享段落 {len(shared_paras)} 条'
+        )
+
+        pair_counts = Counter()
+        for lst in shared_paras.values():
+            for a in range(len(lst)):
+                for b in range(a + 1, len(lst)):
+                    pair_counts[(lst[a], lst[b])] += 1
+
+        pairs = []
+        for (a, b), shared in pair_counts.items():
+            na, nb = items[a]['n'], items[b]['n']
+            cover_a = shared / na
+            cover_b = shared / nb
+            if max(cover_a, cover_b) < 0.15:
+                continue
+            pairs.append({
+                'a': a, 'b': b,
+                'shared': shared,
+                'cover_a': round(cover_a, 4),
+                'cover_b': round(cover_b, 4),
+                'kind': _dup_classify(cover_a, cover_b, shared),
+            })
+        pairs.sort(key=lambda p: -max(p['cover_a'], p['cover_b']))
+
+        # 并查集聚类：只合并双向都够高的，避免「小书被大书收录」也算成群
+        parent = list(range(len(items)))
+
+        def _find(x):
+            while parent[x] != x:
+                parent[x] = parent[parent[x]]
+                x = parent[x]
+            return x
+
+        for p in pairs:
+            if min(p['cover_a'], p['cover_b']) >= 0.45:
+                ra, rb = _find(p['a']), _find(p['b'])
+                if ra != rb:
+                    parent[rb] = ra
+
+        buckets = defaultdict(list)
+        for p in pairs:
+            if min(p['cover_a'], p['cover_b']) < 0.45:
+                continue
+            buckets[_find(p['a'])].append(p)
+
+        groups = []
+        for _root, gp in buckets.items():
+            members = set()
+            for p in gp:
+                members.add(p['a'])
+                members.add(p['b'])
+            if len(members) < 2:
+                continue
+            book_list = []
+            for idx in members:
+                best = max(
+                    (max(p['cover_a'], p['cover_b']) for p in gp if idx in (p['a'], p['b'])),
+                    default=0
+                )
+                book_list.append({
+                    'title': items[idx]['title'],
+                    'path': items[idx]['path'],
+                    'paras': items[idx]['n'],
+                    'best': round(best, 4),
+                })
+            book_list.sort(key=lambda x: -x['paras'])
+            groups.append({'books': book_list, 'top': book_list[0]['best']})
+        groups.sort(key=lambda g: (-len(g['books']), -g['top']))
+
+        stat = Counter(p['kind'] for p in pairs)
+        elapsed = round(time.time() - started, 1)
+        finish_background_task(task_id, result={
+            'success': True,
+            'total_books': total,
+            'scanned_books': len(items),
+            'shared_paras': len(shared_paras),
+            'elapsed': elapsed,
+            'pairs': [
+                {
+                    'kind': p['kind'],
+                    'shared': p['shared'],
+                    'cover_a': p['cover_a'],
+                    'cover_b': p['cover_b'],
+                    'a_title': items[p['a']]['title'],
+                    'a_path': items[p['a']]['path'],
+                    'a_paras': items[p['a']]['n'],
+                    'b_title': items[p['b']]['title'],
+                    'b_path': items[p['b']]['path'],
+                    'b_paras': items[p['b']]['n'],
+                }
+                for p in pairs
+            ],
+            'groups': groups,
+            'stat': {
+                'rename': stat.get('rename', 0),
+                'contain': stat.get('contain', 0),
+                'rewrite': stat.get('rewrite', 0),
+                'weak': stat.get('weak', 0),
+            },
+        })
+        logger.info(
+            f"重复检测完成 - 扫描 {len(items)} 本，检出 {len(pairs)} 对 / {len(groups)} 组，"
+            f"耗时 {elapsed}s"
+        )
+    except Exception as e:
+        traceback.print_exc()
+        finish_background_task(task_id, error=e)
+    finally:
+        lock.release()
+
+
+@app.route('/api/dup/scan_all', methods=['POST'])
+def api_dup_scan_all():
+    """启动重复检测。同一时间只允许一个任务，避免重复点击并发读同一批文件。"""
+    existing = find_running_task('dup_scan_all')
+    if existing:
+        return jsonify({
+            'success': False,
+            'duplicate': True,
+            'task_id': existing,
+            'message': '检测正在进行中，请勿重复点击',
+        })
+
+    data = request.get_json(silent=True) or {}
+    try:
+        min_paras = int(data.get('min_paras') or 12)
+    except (TypeError, ValueError):
+        min_paras = 12
+    min_paras = max(3, min(min_paras, 200))
+
+    task_id = create_background_task('dup_scan_all', message='准备检测重复书...')
+    threading.Thread(
+        target=run_dup_scan_task,
+        args=(task_id, min_paras),
+        daemon=True
+    ).start()
+    return jsonify({'success': True, 'task_id': task_id})
+
+
+@app.route('/dup_detect')
+def dup_detect_page():
+    """重复书检测页面：找出改书名/改作者后重新发布的书。"""
+    return render_template('dup_detect.html', novel_data=novel_data)
+
 
 # ===================== 托盘 =====================
 import threading

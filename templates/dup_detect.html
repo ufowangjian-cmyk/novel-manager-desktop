@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>重复书检测 - 摸鱼书架</title>
+    <link rel="icon" href="{{ url_for('static', filename='images/novel-icon.png') }}" type="image/png">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ css_version }}">
+    <script src="{{ url_for('static', filename='js/common.js') }}"></script>
+    <style>
+        /* ===== 容器与头部（与章节检测 / 文本体检 / 媒体检测同一版式） ===== */
+        .health-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .health-header {
+            background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+            flex-wrap: wrap;
+            position: relative;
+            overflow: hidden;
+        }
+        .health-header h1 {
+            font-size: 2em;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 0;
+        }
+        .health-header-desc {
+            font-size: 0.95em;
+            line-height: 1.5;
+            opacity: 0.78;
+        }
+        .health-header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .health-header-actions .btn-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 24px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .health-header-actions .btn-back:hover {
+            background: rgba(255, 255, 255, 0.35);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        .health-stats {
+            display: flex;
+            gap: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 20px;
+            border-radius: 10px;
+        }
+        .health-stats span { font-size: 0.95em; }
+        .health-stats .num { font-weight: bold; color: #ffd700; }
+
+        /* 轮播背景图由 common.js 自动注入到 .health-header 里，这里只负责层级：
+           背景层压到最底且不接收鼠标事件，头部内容浮在上面 */
+        .health-header .header-bg-container {
+            z-index: 0 !important;
+            pointer-events: none !important;
+        }
+        .health-header .header-bg-layer {
+            pointer-events: none !important;
+        }
+        .health-header > *:not(.header-bg-container) {
+            position: relative;
+            z-index: 1;
+        }
+        .health-header h1,
+        .health-header .health-header-actions,
+        .health-header .health-stats,
+        .health-header .btn-back {
+            position: relative;
+            z-index: 2;
+        }
+
+        /* ===== 控制栏 ===== */
+        .control-bar {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+        .control-bar .btn {
+            padding: 8px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: #728B47; color: white; }
+        .btn-primary:hover { background: #5a7a3a; }
+        .btn-danger { background: #e53e3e; color: white; }
+        .btn-danger:hover { background: #c53030; }
+        .btn-outline { background: transparent; color: #728B47; border: 1px solid #728B47; }
+        .btn-outline:hover { background: #728B47; color: white; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* ===== 参数 / 提示条（同章节检测的检测项栏） ===== */
+        .check-items-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 16px;
+            padding: 10px 14px;
+            margin-bottom: 10px;
+            background: rgba(102, 126, 234, 0.08);
+            border-radius: 10px;
+            font-size: 13px;
+        }
+        .check-items-label { font-weight: 600; color: #4a5568; }
+        .check-items-hint { color: #8a94a6; font-size: 12px; }
+        .check-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #4a5568;
+            user-select: none;
+        }
+        .layout-num {
+            width: 64px;
+            padding: 3px 6px;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #2d3748;
+            background: #fff;
+        }
+        /* 提示条里也可能放按钮（视图切换），尺寸按小号来 */
+        .check-items-bar .btn {
+            padding: 5px 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        /* ===== 统计卡片（本页特有：四档分类，点即筛选） ===== */
+        .stat-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border-left: 4px solid #728B47;
+        }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1); }
+        .stat-card.active { outline: 2px solid #728B47; outline-offset: -2px; }
+        .stat-card .k { font-size: 0.85em; color: #718096; margin-bottom: 6px; }
+        .stat-card .v { font-size: 1.7em; font-weight: bold; color: #2d3748; }
+        .stat-card.c-rename { border-left-color: #e53e3e; }
+        .stat-card.c-contain { border-left-color: #d68910; }
+        .stat-card.c-rewrite { border-left-color: #3182ce; }
+        .stat-card.c-weak { border-left-color: #a0aec0; }
+
+        /* ===== 判定说明 ===== */
+        .kind-note {
+            background: white;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border-left: 4px solid #728B47;
+            font-size: 0.9em;
+            line-height: 1.8;
+            color: #4a5568;
+        }
+        .kind-note b { color: #2d3748; }
+
+        /* ===== 结果区 ===== */
+        .results-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .group-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border-left: 4px solid #728B47;
+        }
+        .group-head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 18px;
+            background: #f7fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .group-idx { font-weight: 600; color: #4a5568; }
+        .group-meta { font-size: 0.85em; color: #8a94a6; }
+        .book-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 18px;
+            border-bottom: 1px solid #edf2f7;
+            font-size: 0.92em;
+        }
+        .book-row:last-child { border-bottom: none; }
+        .book-row:hover { background: #f7fafc; }
+        .book-seq {
+            flex: none;
+            width: 22px;
+            height: 22px;
+            line-height: 22px;
+            text-align: center;
+            background: #728B47;
+            color: white;
+            border-radius: 50%;
+            font-size: 0.78em;
+        }
+        .book-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #2d3748; }
+        .book-paras { flex: none; font-size: 0.82em; color: #8a94a6; }
+        .book-cover {
+            flex: none;
+            font-size: 0.8em;
+            font-weight: 600;
+            color: #4a7c1f;
+            background: #e8f0da;
+            padding: 2px 9px;
+            border-radius: 10px;
+        }
+        .keep-tag {
+            flex: none;
+            font-size: 0.78em;
+            color: white;
+            background: #48bb78;
+            padding: 2px 9px;
+            border-radius: 10px;
+        }
+        .open-btn {
+            flex: none;
+            background: transparent;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            padding: 3px 9px;
+            cursor: pointer;
+            font-size: 0.85em;
+            color: #4a5568;
+            transition: all 0.2s;
+        }
+        .open-btn:hover { background: #728B47; border-color: #728B47; color: white; }
+
+        /* 平铺：一对一行 */
+        .pair-row {
+            background: white;
+            border-radius: 12px;
+            padding: 14px 18px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border-left: 4px solid #728B47;
+            display: grid;
+            grid-template-columns: 1fr 120px 1fr;
+            gap: 16px;
+            align-items: center;
+        }
+        .pair-side { min-width: 0; }
+        .pair-side .t { font-size: 0.92em; color: #2d3748; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .pair-side .m { font-size: 0.78em; color: #8a94a6; margin-top: 3px; }
+        .pair-mid { text-align: center; }
+        .pair-mid .pct { font-size: 1.2em; font-weight: bold; color: #4a7c1f; }
+        .pair-mid .sh { font-size: 0.75em; color: #8a94a6; }
+
+        /* ===== 空状态 ===== */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #a0aec0;
+        }
+        .empty-state .icon { font-size: 4em; margin-bottom: 15px; }
+        .empty-state h3 { color: #4a5568; margin-bottom: 8px; }
+        .empty-state p { font-size: 0.92em; line-height: 1.9; }
+        .empty-state .sub { font-size: 0.85em; color: #a0aec0; margin-top: 8px; }
+
+        /* ===== 深色模式 ===== */
+        body.dark-mode .control-bar,
+        body.dark-mode .stat-card,
+        body.dark-mode .kind-note,
+        body.dark-mode .group-card,
+        body.dark-mode .pair-row { background: #2d3748; color: #e2e8f0; }
+        body.dark-mode .group-head { background: #252d3a; border-color: #3a4553; }
+        body.dark-mode .book-row { border-color: #3a4553; }
+        body.dark-mode .book-row:hover { background: #34404f; }
+        body.dark-mode .book-title,
+        body.dark-mode .group-idx,
+        body.dark-mode .pair-side .t,
+        body.dark-mode .kind-note b { color: #e2e8f0; }
+        body.dark-mode .stat-card .v { color: #e2e8f0; }
+        body.dark-mode .stat-card .k,
+        body.dark-mode .group-meta,
+        body.dark-mode .book-paras,
+        body.dark-mode .pair-side .m { color: #a0aec0; }
+        body.dark-mode .book-cover { background: #3a4a2a; color: #b7d18a; }
+        body.dark-mode .open-btn { color: #cbd5e1; border-color: #4a5568; }
+        body.dark-mode .open-btn:hover { background: #728B47; border-color: #728B47; color: white; }
+        body.dark-mode .check-items-bar { background: rgba(102, 126, 234, 0.14); }
+        body.dark-mode .check-items-label,
+        body.dark-mode .check-item { color: #cbd5e1; }
+        body.dark-mode .layout-num { background: #1a202c; color: #e2e8f0; border-color: #4a5568; }
+        body.dark-mode .empty-state h3 { color: #e2e8f0; }
+        body.dark-mode .progress-text { color: #e2e8f0; }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+    <div class="health-container">
+        <!-- 头部 -->
+        <div class="health-header">
+            <h1>🔁 重复书检测</h1>
+            <div class="health-header-desc">
+                按段落指纹比对正文，找出改了书名、作者、标点后重新发布的书。只统计完全相同的段落，不做语义猜测
+            </div>
+            <div class="health-header-actions">
+                <a href="/" class="btn-back">🏠 返回主页</a>
+                <div class="health-stats">
+                    <span>📁 小说总数: <span class="num" id="totalNovels">{{ novel_data|length }}</span></span>
+                    <span>🔗 检出书对: <span class="num" id="pairCount">—</span></span>
+                    <span>📚 涉及本数: <span class="num" id="bookCount">—</span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 检测参数 -->
+        <div class="check-items-bar">
+            <span class="check-items-label">⚙️ 检测参数</span>
+            <span class="check-item">
+                最短段落数
+                <input type="number" id="minParas" class="layout-num" value="12" min="3" max="200"
+                       title="低于这个段落数的书不参与比对">
+            </span>
+            <span class="check-items-hint">低于此长度的书不参与比对，用来排除几百字的小短篇（它们一眼看完，不需要查重）</span>
+        </div>
+
+        <!-- 控制栏 -->
+        <div class="control-bar">
+            <button class="btn btn-primary" id="scanBtn" onclick="scanAll()">🔍 开始检测</button>
+            <button class="btn btn-outline" onclick="toggleExplain()">📖 判定说明</button>
+            <span style="flex:1;"></span>
+            <button class="btn btn-danger" onclick="clearResult()">🗑️ 清空结果</button>
+        </div>
+
+        <!-- 进度条 -->
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text">
+                <span id="progressText">准备中...</span>
+                <span id="progressCount"></span>
+            </div>
+        </div>
+
+        <!-- 判定说明 -->
+        <div class="kind-note" id="kindNote" style="display:none">
+            <b>同一本改名</b>：双向覆盖率都 ≥70%，换了书名/作者/标点，正文没动 —— 基本可以直接判重。<br>
+            <b>版本包含</b>：一本的段落大比例出现在另一本里，通常是增补版、分卷或合集。<br>
+            <b>扩写/改写</b>：共享 200 段以上但覆盖率未到线，是改写或续写，可能值得都留着。<br>
+            <b>弱信号</b>：共享段落太少，大概率只是同题材用词相近 —— <b>不要据此删书</b>，需要人工核。
+        </div>
+
+        <!-- 四档统计 -->
+        <div class="stat-cards" id="statCards" style="display:none">
+            <div class="stat-card c-rename" data-kind="rename" onclick="pickKind('rename')">
+                <div class="k">同一本改名</div><div class="v" id="vRename">0</div>
+            </div>
+            <div class="stat-card c-contain" data-kind="contain" onclick="pickKind('contain')">
+                <div class="k">版本包含</div><div class="v" id="vContain">0</div>
+            </div>
+            <div class="stat-card c-rewrite" data-kind="rewrite" onclick="pickKind('rewrite')">
+                <div class="k">扩写 / 改写</div><div class="v" id="vRewrite">0</div>
+            </div>
+            <div class="stat-card c-weak" data-kind="weak" onclick="pickKind('weak')">
+                <div class="k">弱信号（需人工核）</div><div class="v" id="vWeak">0</div>
+            </div>
+        </div>
+
+        <!-- 视图切换 -->
+        <div class="check-items-bar" id="viewBar" style="display:none">
+            <button class="btn btn-outline" data-view="groups" onclick="pickKind('')" id="viewGroups">📚 按组看</button>
+            <span class="check-items-hint" id="viewHint">组长书按段落数排序，最长的那本标为「建议保留」；点 📂 直接用编辑器打开核对</span>
+        </div>
+
+        <!-- 结果 -->
+        <div class="results-container" id="resultArea">
+            <div class="empty-state">
+                <div class="icon">🔁</div>
+                <h3>暂无检测结果</h3>
+                <p>点击「开始检测」，按段落指纹比对全库正文</p>
+                <p class="sub">
+                    📐 只认「整段一字不差」，不做语义猜测，所以不会把同题材误判成同一本<br>
+                    🔗 双向覆盖率都高才判「改名」，避免小书被大书收录的情况
+                </p>
+            </div>
+        </div>
+    </div>
+
+<script>
+let RESULT = null;
+let CUR_KIND = '';
+let scanning = false;
+let scanSeq = 0;   // 防止上一次扫描的延时收起影响下一次
+const KIND_LABEL = { rename: '同一本改名', contain: '版本包含', rewrite: '扩写/改写', weak: '弱信号' };
+
+function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+    ));
+}
+function pct(v) { return Math.round((v || 0) * 100) + '%'; }
+
+function emptyState(title, desc, sub) {
+    return `<div class="empty-state">
+        <div class="icon">🔁</div>
+        <h3>${esc(title)}</h3>
+        <p>${esc(desc)}</p>
+        ${sub ? `<p class="sub">${esc(sub)}</p>` : ''}
+    </div>`;
+}
+
+async function pollTask(taskId) {
+    while (true) {
+        await new Promise(r => setTimeout(r, 700));
+        const pr = await fetch(`/api/task/${taskId}/progress`);
+        const p = await pr.json();
+        if (!p.success) throw new Error(p.message || '获取进度失败');
+
+        document.getElementById('progressFill').style.width = (p.progress || 0) + '%';
+        document.getElementById('progressText').textContent = p.message || '检测中...';
+        document.getElementById('progressCount').textContent = `${p.current || 0} / ${p.total || 0}`;
+
+        if (p.status !== 'completed' && p.status !== 'error') continue;
+
+        const rr = await fetch(`/api/task/${taskId}/result`);
+        const d = await rr.json();
+        if (!d.success) throw new Error(d.message || '检测失败');
+        return d;
+    }
+}
+
+async function scanAll() {
+    if (scanning) {
+        if (typeof showNotification === 'function') showNotification('检测正在进行中', 'warning');
+        return;
+    }
+    scanning = true;
+    const seq = ++scanSeq;
+    const btn = document.getElementById('scanBtn');
+    btn.disabled = true;
+    btn.textContent = '检测中...';
+
+    const box = document.getElementById('progressContainer');
+    box.style.display = 'block';
+    document.getElementById('progressFill').style.width = '0%';
+    document.getElementById('progressText').textContent = '正在提取段落指纹...';
+    document.getElementById('progressCount').textContent = '';
+
+    const minParas = parseInt(document.getElementById('minParas').value, 10) || 12;
+
+    try {
+        const sr = await fetch('/api/dup/scan_all', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ min_paras: minParas })
+        });
+        const sd = await sr.json();
+        if (sd.duplicate) {
+            if (typeof showNotification === 'function') showNotification(sd.message || '已有检测在跑', 'warning');
+        }
+        if (!sd.task_id) throw new Error(sd.message || '启动失败');
+
+        const data = await pollTask(sd.task_id);
+        RESULT = data;
+        renderStat(data);
+        CUR_KIND = '';
+        renderResult();
+        document.getElementById('progressFill').style.width = '100%';
+        document.getElementById('progressText').textContent =
+            `完成：扫描 ${data.scanned_books} 本，共享段落 ${data.shared_paras} 条，耗时 ${data.elapsed}s`;
+        if (typeof showNotification === 'function') {
+            showNotification(`检出 ${(data.pairs || []).length} 对疑似重复`, 'success');
+        }
+    } catch (e) {
+        document.getElementById('progressText').textContent = '出错了：' + e.message;
+        if (typeof showNotification === 'function') showNotification('检测失败：' + e.message, 'error');
+    } finally {
+        scanning = false;
+        btn.disabled = false;
+        btn.textContent = '🔍 开始检测';
+        // 与其他工具页一致：完成后停留 3 秒展示 100% 和「完成」文案，再收起进度条
+        setTimeout(() => {
+            if (seq === scanSeq) {
+                document.getElementById('progressContainer').style.display = 'none';
+            }
+        }, 3000);
+    }
+}
+
+function renderStat(d) {
+    const st = d.stat || {};
+    document.getElementById('vRename').textContent = st.rename || 0;
+    document.getElementById('vContain').textContent = st.contain || 0;
+    document.getElementById('vRewrite').textContent = st.rewrite || 0;
+    document.getElementById('vWeak').textContent = st.weak || 0;
+    document.getElementById('statCards').style.display = 'grid';
+    document.getElementById('viewBar').style.display = 'flex';
+
+    const pairs = d.pairs || [];
+    document.getElementById('pairCount').textContent = pairs.length;
+    const books = new Set();
+    pairs.forEach(p => { books.add(p.a_path); books.add(p.b_path); });
+    document.getElementById('bookCount').textContent = books.size;
+}
+
+function pickKind(kind) {
+    CUR_KIND = kind;
+    document.querySelectorAll('.stat-card').forEach(c => {
+        c.classList.toggle('active', c.dataset.kind === kind);
+    });
+    document.getElementById('viewGroups').classList.toggle('btn-primary', kind === '');
+    document.getElementById('viewGroups').classList.toggle('btn-outline', kind !== '');
+    document.getElementById('viewHint').textContent = kind
+        ? `正在只看「${KIND_LABEL[kind]}」，共 ${(RESULT.pairs || []).filter(p => p.kind === kind).length} 对；点 📂 用编辑器打开核对`
+        : '组长书按段落数排序，最长的那本标为「建议保留」；点 📂 直接用编辑器打开核对';
+    renderResult();
+}
+
+function openBookFile(path) {
+    // 统一走 common.js 的 openFile：用配置里的外部编辑器打开，与文本体检/章节检测一致
+    if (typeof openFile === 'function') {
+        openFile(path);
+    } else if (typeof showNotification === 'function') {
+        showNotification('打开功能不可用（common.js 未加载）', 'error');
+    }
+}
+
+function renderResult() {
+    const area = document.getElementById('resultArea');
+    if (!RESULT) {
+        area.innerHTML = emptyState('暂无检测结果', '点击「开始检测」，按段落指纹比对全库正文',
+            '📐 只认「整段一字不差」，不做语义猜测，所以不会把同题材误判成同一本');
+        return;
+    }
+
+    if (CUR_KIND) {
+        const list = (RESULT.pairs || []).filter(p => p.kind === CUR_KIND);
+        if (!list.length) {
+            area.innerHTML = emptyState('这一档没有结果', `「${KIND_LABEL[CUR_KIND]}」没有检出的书对`);
+            return;
+        }
+        area.innerHTML = list.map(p => `
+            <div class="pair-row">
+                <div class="pair-side">
+                    <div class="t" title="${esc(p.a_title)}">${esc(p.a_title)}</div>
+                    <div class="m">${p.a_paras} 段 · 覆盖 ${pct(p.cover_a)}
+                        <button class="open-btn" data-path="${esc(p.a_path)}" title="用编辑器打开">📂</button>
+                    </div>
+                </div>
+                <div class="pair-mid">
+                    <div class="pct">${pct(Math.max(p.cover_a, p.cover_b))}</div>
+                    <div class="sh">共享 ${p.shared} 段</div>
+                </div>
+                <div class="pair-side">
+                    <div class="t" title="${esc(p.b_title)}">${esc(p.b_title)}</div>
+                    <div class="m">${p.b_paras} 段 · 覆盖 ${pct(p.cover_b)}
+                        <button class="open-btn" data-path="${esc(p.b_path)}" title="用编辑器打开">📂</button>
+                    </div>
+                </div>
+            </div>`).join('');
+        return;
+    }
+
+    const groups = RESULT.groups || [];
+    if (!groups.length) {
+        area.innerHTML = emptyState('没有发现成组的重复书', '全库比对完成，未找到正文高度重合的书');
+        return;
+    }
+    area.innerHTML = groups.map((g, gi) => `
+        <div class="group-card">
+            <div class="group-head">
+                <span class="group-idx">第 ${gi + 1} 组</span>
+                <span class="group-meta">${g.books.length} 本 · 最高覆盖 ${pct(g.top)}</span>
+            </div>
+            ${g.books.map((b, bi) => `
+                <div class="book-row">
+                    <span class="book-seq">${bi + 1}</span>
+                    <span class="book-title" title="${esc(b.title)}">${esc(b.title)}</span>
+                    <span class="book-paras">${b.paras} 段</span>
+                    <span class="book-cover">${pct(b.best)}</span>
+                    ${bi === 0 ? '<span class="keep-tag">建议保留</span>' : ''}
+                    <button class="open-btn" data-path="${esc(b.path)}" title="用编辑器打开">📂</button>
+                </div>`).join('')}
+        </div>`).join('');
+}
+
+function toggleExplain() {
+    const el = document.getElementById('kindNote');
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function clearResult() {
+    RESULT = null;
+    CUR_KIND = '';
+    document.getElementById('resultArea').innerHTML =
+        emptyState('暂无检测结果', '点击「开始检测」，按段落指纹比对全库正文',
+            '📐 只认「整段一字不差」，不做语义猜测，所以不会把同题材误判成同一本');
+    document.getElementById('statCards').style.display = 'none';
+    document.getElementById('viewBar').style.display = 'none';
+    document.getElementById('progressContainer').style.display = 'none';
+    document.getElementById('pairCount').textContent = '—';
+    document.getElementById('bookCount').textContent = '—';
+    document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active'));
+}
+
+window.addEventListener('load', () => {
+    const ov = document.getElementById('loadingOverlay');
+    if (ov) ov.style.display = 'none';
+});
+
+// 头部背景轮播（与章节检测 / 媒体检测一致）：图片由 common.js 注入并淡入切换
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof initCarousel === 'function') {
+        initCarousel('.health-header', {
+            autoSlideshow: true,
+            intervalTime: 8000
+        });
+    }
+});
+
+// 打开按钮统一走事件委托，避免把 Windows 路径拼进 onclick 字符串
+document.addEventListener('click', e => {
+    const btn = e.target.closest('.open-btn');
+    if (btn && btn.dataset.path) openBookFile(btn.dataset.path);
+});
+</script>
+</body>
+</html>
