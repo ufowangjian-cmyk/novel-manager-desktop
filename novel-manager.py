@@ -7486,42 +7486,69 @@ def _count_fullwidth_alnum(content):
 # 「括号未成对」检测：只查全角〔〕和｛｝。
 # 半角 { } 在小说正文里几乎不出现，加进来只会制造噪音；〔〕｛｝ 常被作者
 # 用来标编号、注释或分隔，跨行使用很普遍，所以按全文扫、不按行判断。
-UNPAIRED_BRACKET_PAIRS = [('〔', '〕'), ('｛', '｝')]
+# 未成对检测支持的符号对。
+# 原设计只有〔〕｛｝（正文里常跨行的编号写法），但实测抽样 80 本：这两对 0 命中，
+# 而双引号 15% 的书数量不等、圆括号 5%、书名号 3% —— 所以补上实际在用的符号。
+# 只收全角：半角 () 常见于颜文字、英文和数学写法，计数差值不代表残缺，会大幅误报。
+UNPAIRED_BRACKET_PAIRS = [
+    ('“', '”'),   # “”
+    ('‘', '’'),   # ‘’
+    ('（', '）'),   # （）
+    ('《', '》'),   # 《》
+    ('【', '】'),   # 【】
+    ('〔', '〕'),   # 〔〕
+    ('｛', '｝'),   # ｛｝
+]
 
 
 def _count_unpaired_brackets(content):
-    """统计全角〔〕｛｝的配对情况（全文扫描，允许跨行）。
+    """统计 UNPAIRED_BRACKET_PAIRS 里各符号对的配对情况（全文扫描，允许跨行）。
 
-    按栈配对：闭括号多于开括号时记「多余闭合」，扫完栈里还剩下的记「未闭合」。
-    行号只留前 5 个做样例 —— 一处漏掉的开括号会让后面所有配对的都错位，
+    按栈配对：闭符号多于开符号时记「多余闭合」，扫完栈里还剩下的记「未闭合」。
+    行号只留前 5 个做样例 —— 一处漏掉的左符号会让后面所有配对的都错位，
     全列出来反而看不出重点。
+
+    **一次遍历统计全部符号**：以前是「每个符号对扫一遍全文」，加到 7 对就是 7 遍，
+    全量体检（几千本）会明显变慢；现在用两张查表 + 各自的栈，单遍搞定。
     """
     stats = {}
-    lines = content.splitlines()
+    stacks = {}
     for left, right in UNPAIRED_BRACKET_PAIRS:
-        stack = []
-        opens = closes = 0
-        extra_close_lines = []
-        for ln, line in enumerate(lines, 1):
-            for ch in line:
-                if ch == left:
-                    stack.append(ln)
-                    opens += 1
-                elif ch == right:
-                    closes += 1
-                    if stack:
-                        stack.pop()
-                    else:
-                        extra_close_lines.append(ln)
-        stats[left + right] = {
-            'open': opens,
-            'close': closes,
-            'unclosed_count': len(stack),
-            'unclosed_lines': stack[:5],
-            'extra_close_count': len(extra_close_lines),
-            'extra_close_lines': extra_close_lines[:5],
-            'balanced': not stack and not extra_close_lines,
+        key = left + right
+        stats[key] = {
+            'open': 0,
+            'close': 0,
+            'unclosed_count': 0,
+            'unclosed_lines': [],
+            'extra_close_count': 0,
+            'extra_close_lines': [],
+            'balanced': True,
         }
+        stacks[key] = []
+    left_map = dict((l, l + r) for l, r in UNPAIRED_BRACKET_PAIRS)
+    right_map = dict((r, l + r) for l, r in UNPAIRED_BRACKET_PAIRS)
+
+    for ln, line in enumerate(content.splitlines(), 1):
+        for ch in line:
+            key = left_map.get(ch)
+            if key:
+                stats[key]['open'] += 1
+                stacks[key].append(ln)
+                continue
+            key = right_map.get(ch)
+            if key:
+                stats[key]['close'] += 1
+                if stacks[key]:
+                    stacks[key].pop()
+                else:
+                    stats[key]['extra_close_count'] += 1
+                    if len(stats[key]['extra_close_lines']) < 5:
+                        stats[key]['extra_close_lines'].append(ln)
+
+    for key, st in stats.items():
+        st['unclosed_count'] = len(stacks[key])
+        st['unclosed_lines'] = stacks[key][:5]
+        st['balanced'] = not stacks[key] and not st['extra_close_count']
     return stats
 
 
@@ -7869,8 +7896,9 @@ def check_txt_health(file_path, checks=None):
                     % (fw['total'], '、'.join(detail), ''.join(fw['examples'][:8]))
                 ))
 
-        # 括号未成对：只查全角〔〕｛｝。正文里这两种常跨行，按全文栈配对；
-        # 只报告不扣分 —— 〔一〕〔二〕这类编号写法本身没错，扣分会把正常书压下去。
+        # 符号未成对：引号 / 圆括号 / 书名号 / 方头括号 / 〔〕｛｝。正文里这些常跨行，
+        # 按全文栈配对。只报告不扣分 —— 作者有意用单边引号、或者〔一〕〔二〕这类编号
+        # 写法本身没错，扣分会把正常书压下去。
         if _want_check(checks, 'brackets'):
             br = _count_unpaired_brackets(content)
             result['brackets'] = br
