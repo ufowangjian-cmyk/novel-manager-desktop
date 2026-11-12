@@ -1323,6 +1323,7 @@ body.dark-mode .empty-state-btn:hover {
     color: #728B47;
     border: 1px solid #BDC8A8;
     opacity: 0.72;
+    transition: background-color .15s, color .15s, border-color .15s, opacity .15s;
 }
 
 body.dark-mode .tags-wrapper .tag-badge {
@@ -1331,6 +1332,25 @@ body.dark-mode .tags-wrapper .tag-badge {
     border-color: rgba(255, 255, 255, 0.16);
     opacity: 1;
 }
+
+/* hover / 键盘聚焦时反色：实底 + 反白字，只在指针停到某个标签上时出现，
+   平时保持轻量。只作用于 <a>，末尾的「+N」计数是 <span>，不该给可点的暗示。 */
+.tags-wrapper a.tag-badge:hover,
+.tags-wrapper a.tag-badge:focus-visible {
+    background: #728B47;
+    color: white;
+    border-color: #728B47;
+    opacity: 1;
+}
+
+body.dark-mode .tags-wrapper a.tag-badge:hover,
+body.dark-mode .tags-wrapper a.tag-badge:focus-visible {
+    background: #9aa88f;
+    color: #22271c;
+    border-color: #9aa88f;
+    opacity: 1;
+}
+
 
 .progress-badge {
     background: #A2BC75;
