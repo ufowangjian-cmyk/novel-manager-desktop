@@ -390,8 +390,16 @@
             border-radius: 6px;
             font-size: 0.9em;
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             gap: 8px;
+        }
+        /* 消息可能是多行（符号未成对会列出几十个行号），
+           需要能折行且不撑破卡片：flex 子项必须 min-width:0。 */
+        .issue-text {
+            flex: 1;
+            min-width: 0;
+            white-space: pre-wrap;
+            word-break: break-word;
         }
         .issue-item.error {
             background: #fff5f5;
@@ -1063,8 +1071,8 @@
                     issuesHtml = '<ul class="issue-list">';
                     item.issues.forEach(issue => {
                         issuesHtml += `<li class="issue-item ${issue.level}">
-                            ${issue.level === 'error' ? '❌' : issue.level === 'warning' ? '⚠️' : 'ℹ️'}
-                            ${escapeHtml(issue.message)}
+                            <span>${issue.level === 'error' ? '❌' : issue.level === 'warning' ? '⚠️' : 'ℹ️'}</span>
+                            <span class="issue-text">${escapeHtml(issue.message)}</span>
                         </li>`;
                     });
                     issuesHtml += '</ul>';

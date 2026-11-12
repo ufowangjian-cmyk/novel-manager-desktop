@@ -7505,8 +7505,8 @@ def _count_unpaired_brackets(content):
     """统计 UNPAIRED_BRACKET_PAIRS 里各符号对的配对情况（全文扫描，允许跨行）。
 
     按栈配对：闭符号多于开符号时记「多余闭合」，扫完栈里还剩下的记「未闭合」。
-    行号只留前 5 个做样例 —— 一处漏掉的左符号会让后面所有配对的都错位，
-    全列出来反而看不出重点。
+    行号**全量保留**：栈里剩下的就是真正没配上的那些，每一处都得回原文手动补，
+    只给前 5 个等于让用户自己再找一遍（2026-11-12 改）。
 
     **一次遍历统计全部符号**：以前是「每个符号对扫一遍全文」，加到 7 对就是 7 遍，
     全量体检（几千本）会明显变慢；现在用两张查表 + 各自的栈，单遍搞定。
@@ -7542,14 +7542,21 @@ def _count_unpaired_brackets(content):
                     stacks[key].pop()
                 else:
                     stats[key]['extra_close_count'] += 1
-                    if len(stats[key]['extra_close_lines']) < 5:
-                        stats[key]['extra_close_lines'].append(ln)
+                    stats[key]['extra_close_lines'].append(ln)
 
     for key, st in stats.items():
         st['unclosed_count'] = len(stacks[key])
-        st['unclosed_lines'] = stacks[key][:5]
+        st['unclosed_lines'] = stacks[key]
         st['balanced'] = not stacks[key] and not st['extra_close_count']
     return stats
+
+def _format_line_numbers(lines, per_line=10):
+    """把行号排成每行 per_line 个，配前端的 white-space:pre-wrap 显示。
+
+    一本书漏几十个引号时，全挤在一行会有几百字、看不过来。
+    """
+    chunks = [lines[i:i + per_line] for i in range(0, len(lines), per_line)]
+    return '\n'.join('、'.join(map(str, c)) for c in chunks)
 
 
 def _convert_fullwidth_text(text):
@@ -7907,13 +7914,13 @@ def check_txt_health(file_path, checks=None):
                     continue
                 parts = []
                 if st['unclosed_count']:
-                    parts.append('未闭合 %d 处（行 %s）' % (
+                    parts.append('未闭合 %d 处（行：%s）' % (
                         st['unclosed_count'],
-                        '、'.join(map(str, st['unclosed_lines']))))
+                        _format_line_numbers(st['unclosed_lines'])))
                 if st['extra_close_count']:
-                    parts.append('多余闭合 %d 处（行 %s）' % (
+                    parts.append('多余闭合 %d 处（行：%s）' % (
                         st['extra_close_count'],
-                        '、'.join(map(str, st['extra_close_lines']))))
+                        _format_line_numbers(st['extra_close_lines'])))
                 result['issues'].append(_issue(
                     'brackets', 'warning',
                     '%s 未成对：%s' % (pair, '；'.join(parts))
