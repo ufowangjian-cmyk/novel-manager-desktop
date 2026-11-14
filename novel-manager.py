@@ -4122,7 +4122,46 @@ def open_file_ajax(file_path):
         editor_path = CONFIG.get('editor_path', '')
         if not editor_path:
             return jsonify({'success': False, 'error': '未配置外部编辑器路径，请在设置里填写 editor_path'})
-        subprocess.Popen([editor_path, final_path])
+
+        # 「打开并标出全部问题」：额外拼 EmEditor 的 /mf 只读高亮宏。
+        # 不传 highlight 时行为与原来完全一致，仍是 [编辑器, 路径]。
+        payload = request.get_json(silent=True) or {}
+        args = [editor_path, final_path]
+        if payload.get('highlight'):
+            if 'emeditor' not in os.path.basename(editor_path).lower():
+                return jsonify({'success': False, 'error': '标出问题需要 EmEditor，请在设置里把文本编辑器改成 EmEditor'})
+            macro_path = os.path.join(BASE_DIR, 'emeditor_highlight.jsee')
+            if not os.path.isfile(macro_path):
+                return jsonify({'success': False, 'error': f'高亮宏不存在: {macro_path}'})
+
+            # 以书架自己的栈配对结果为准，把行号内嵌进一份临时宏再交给 /mf。
+            # 不让宏另跑一套正则自猜，否则网页报括号问题、编辑器却定位到引号问题上。
+            # 全量扫描结果不带 brackets 明细，所以这里按单文件只重跑这一项。
+            try:
+                scan = check_txt_health(final_path, checks=['brackets'])
+                found = set()
+                for _pair, st in (scan.get('brackets') or {}).items():
+                    found.update(st.get('unclosed_lines') or [])
+                    found.update(st.get('extra_close_lines') or [])
+                lines = sorted(found)
+            except Exception as e:
+                print(f"⚠️ 体检重跑失败，退回纯高亮: {e}")
+                lines = []
+
+            with open(macro_path, 'r', encoding='utf-8') as f:
+                macro_src = f.read()
+            # 匹配整行而不是只匹配占位串：注释里也提到过占位串，只替换一次会改错地方。
+            # 模板被改过导致没命中时，LINES 仍是空数组，宏安全退化为纯高亮。
+            macro_src = macro_src.replace(
+                'var LINES = /*__NM_LINES__*/[];',
+                'var LINES = [' + ','.join(str(n) for n in lines) + '];', 1)
+            run_macro = os.path.join(tempfile.gettempdir(), 'nm_highlight_run.jsee')
+            with open(run_macro, 'w', encoding='utf-8') as f:
+                f.write(macro_src)
+            args += ['/mf', run_macro]
+            print(f"🎯 标出 {len(lines)} 个问题行: {final_path} /mf {run_macro}")
+
+        subprocess.Popen(args)
         return jsonify({'success': True, 'message': '文件已打开'})
         
     except Exception as e:

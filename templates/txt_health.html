@@ -177,6 +177,13 @@
         .btn-open:hover {
             background: #38a169;
         }
+        .btn-highlight {
+            background: #319795;
+            color: white;
+        }
+        .btn-highlight:hover {
+            background: #2c7a7b;
+        }
 
         /* 深色模式 */
         body.dark-mode .btn-open {
@@ -184,6 +191,12 @@
         }
         body.dark-mode .btn-open:hover {
             background: #1a4a2a;
+        }
+        body.dark-mode .btn-highlight {
+            background: #1f5d5c;
+        }
+        body.dark-mode .btn-highlight:hover {
+            background: #174a49;
         }
         .btn:disabled {
             opacity: 0.5;
@@ -1110,7 +1123,15 @@
                 const fixBtnHtml = hasFixableIssue(item)
                     ? `<button class="btn btn-primary" onclick="fixSingle('${escapedPath}')">🔧 修复此文件</button>`
                     : '';
-                
+
+                // 只在检出「符号未成对」时给一次性全量高亮的入口。
+                // 全量扫描结果不含 brackets 明细，所以用 issues 的 category 判断。
+                const hasBracketIssue = (item.issues || []).some(
+                    i => i.category === 'brackets' || i.type === 'brackets');
+                const highlightBtnHtml = hasBracketIssue
+                    ? `<button class="btn btn-highlight" title="用 EmEditor 打开，并一次性标出全文可疑符号" onclick="openTxtFile('${escapedPath}', true)">🎯 打开并标出全部问题</button>`
+                    : '';
+
                 return `
                     <div class="${cardClass}" data-file-path="${escapeHtml(item.file_path)}">
                         <div class="result-header" onclick="toggleCard(this)">
@@ -1160,6 +1181,7 @@
                                 <button class="btn btn-secondary" onclick="checkSingle('${escapedPath}')">
                                     🔍 重新检测
                                 </button>
+                                ${highlightBtnHtml}
                                 <button class="btn btn-open" onclick="openTxtFile('${escapedPath}')">
                                     📂 打开文件
                                 </button>
@@ -1297,11 +1319,11 @@
             }
         }
         
-        // 打开 TXT 文件（用默认编辑器打开）
-        function openTxtFile(filePath) {
+        // 打开 TXT 文件；highlight=true 时额外附带 EmEditor 的全量高亮宏
+        function openTxtFile(filePath, highlight) {
             // 复用 common.js 中的 openFile 函数
             if (typeof openFile === 'function') {
-                openFile(filePath);
+                openFile(filePath, {highlight: !!highlight});
             } else {
                 // 兜底：直接调用 API
                 const loadingOverlay = document.getElementById('loadingOverlay');
@@ -1312,7 +1334,12 @@
                     encodedPath = encodeURIComponent(filePath);
                 }
                 
-                fetch(`/open_file_ajax/${encodedPath}`, {method: 'POST'})
+                const fallbackInit = {method: 'POST'};
+                if (highlight) {
+                    fallbackInit.headers = {'Content-Type': 'application/json'};
+                    fallbackInit.body = JSON.stringify({highlight: true});
+                }
+                fetch(`/open_file_ajax/${encodedPath}`, fallbackInit)
                     .then(response => response.json())
                     .then(data => {
                         if (loadingOverlay) loadingOverlay.style.display = 'none';

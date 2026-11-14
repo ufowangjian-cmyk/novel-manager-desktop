@@ -1,0 +1,50 @@
+#title="摸鱼书架 · 标出全部问题符号"
+#tooltip="只读：按体检结果定位并标记问题行，不改动正文"
+
+// 由摸鱼书架 TXT 体检页的「打开并标出全部问题」按钮调用。
+// 后端会把下面 LINES 的占位数组替换成真实行号，另存为临时宏再交给 /mf。
+// 手动在 EmEditor 里运行本文件时 LINES 为空，只做引号绿色高亮（等于旧行为）。
+//
+// 严格只读：不 Replace、不保存、不弹菜单、不弹对话框，正文一个字都不会改。
+//
+// 两套判断的分工（2026-11-13 改）：
+//   LINES   —— 来自书架 check_txt_health 的栈配对结果，是「定位 + 书签」的唯一依据；
+//   PATTERN —— 引号异常正则，抄自「精校组排版脚本」第 415 行，只作附加高亮。
+// 以前让宏自己用 PATTERN 定位，网页报括号问题、编辑器却跳到引号问题上，故改成以 LINES 为准。
+// 书签用 SetBookmark（设置）而不是 Toggle，重复运行不会把已有书签消掉；
+// 改完后如需清掉，按 Ctrl+Shift+F2。
+//
+// 配色：本宏不设置任何颜色，下面两种「染色」都由 EmEditor 的显示主题决定。
+// 深底盖住文字时去 工具 → 当前配置属性 → 显示 → 指定部分（用列表上方的搜索框找）：
+//   bQuoteHighlight -> 「搜索字符串」相关项的背景颜色 / 文本颜色
+//   bBookmark       -> 「书签」相关项的背景颜色 / 文本颜色
+// 改主题是一劳永逸的；不想动主题就把对应开关设成 false。
+
+var bQuoteHighlight = true;  // 引号异常的查找高亮；正则会跨行匹配大段文字，嫌糊字就关掉
+var bBookmark       = true;  // 给问题行设书签（行号栏标记 + 整行染色，F2/Shift+F2 逐个跳）
+var LINES = /*__NM_LINES__*/[];
+
+var PATTERN = "“[^”]*“|”[^“]*”|^[^“]*”|“[^”]*$|‘[^’]*$|‘[^’]*‘|’[^‘]*’|^[^‘]*'";
+
+// 1) 引号异常的绿色标示：来自 EmEditor 自身的「高亮所有查找匹配项」，不是宏画的颜色
+if (bQuoteHighlight) {
+    document.selection.StartOfDocument(false);
+    document.selection.Find(PATTERN, eeFindNext | eeFindReplaceRegExp | eeFindReplaceQuiet);
+}
+
+// 2) 以书架结果为准：每个问题行设书签，最后把光标落在第一个问题行，
+//    免得被上面的 Find 带跑到别处。
+if (LINES.length > 0) {
+    var total = document.GetLines();
+    var first = 0;
+    for (var i = 0; i < LINES.length; i++) {
+        var n = LINES[i];
+        if (n < 1 || n > total) continue;
+        document.selection.SetActivePoint(eePosLogical, 1, n);
+        if (bBookmark) document.selection.SetBookmark();
+        if (first === 0) first = n;
+    }
+    if (first > 0) {
+        document.selection.SetActivePoint(eePosLogical, 1, first);
+    }
+}

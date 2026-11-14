@@ -190,7 +190,7 @@
     // 3. 打开文件（通用）
     // ============================================
 
-    function openFile(filePath) {
+    function openFile(filePath, options) {
         const loadingOverlay = document.getElementById('loadingOverlay');
         if (loadingOverlay) loadingOverlay.style.display = 'flex';
         
@@ -206,7 +206,14 @@
             encodedPath = encodeURIComponent(filePath);
         }
         
-        fetch(`/open_file_ajax/${encodedPath}`, {method: 'POST'})
+        // highlight=true 时后端会额外拼 EmEditor 的 /mf 高亮宏；
+        // 不传则保持原来的纯打开行为，其他页面的调用点不受影响。
+        const init = {method: 'POST'};
+        if (options && options.highlight) {
+            init.headers = {'Content-Type': 'application/json'};
+            init.body = JSON.stringify({highlight: true});
+        }
+        fetch(`/open_file_ajax/${encodedPath}`, init)
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
