@@ -96,6 +96,20 @@
                     </svg>
                 </button>
             </div>
+            {# 头部右下角快速搜索：只提交 search，保留当前排序（sort/order），
+               避免搜完把排序悄悄重置回默认 #}
+            <form method="GET" class="header-search" role="search" aria-label="快速搜索">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="m20 20-3.5-3.5" />
+                </svg>
+                <input type="search" name="search" id="headerSearchInput" value="{{ search_text }}"
+                    placeholder="书名 / 作者 / 标签" autocomplete="off" aria-label="搜索关键词">
+                {% if sort_by %}<input type="hidden" name="sort" value="{{ sort_by }}">{% endif %}
+                {% if sort_order %}<input type="hidden" name="order" value="{{ sort_order }}">{% endif %}
+                <button type="submit">搜索</button>
+            </form>
         </div>
 
         <!-- 选项卡内容容器，用于整体折叠（标签入口已移入右上角「工具箱」抽屉） -->
