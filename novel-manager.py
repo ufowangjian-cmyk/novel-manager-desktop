@@ -16,7 +16,7 @@ import tempfile
 import zlib
 import chardet
 import subprocess
-from bisect import bisect_left
+from bisect import bisect_left, bisect_right
 from collections import OrderedDict, Counter, defaultdict
 from datetime import datetime
 from html import escape as html_escape
@@ -2265,7 +2265,10 @@ def detect_chapter_missing(content):
     """检测章节序号是否缺号（章节缺失）、重号、序号回退。
 
     按单位分组独立编号：「第1卷」和「第1章」互不干扰。
-    组内遇到序号变小（如分上/下部从头编号）就切段，每段单独判连续性——
+    下级标题再按上级标题划硬边界：二级（章/篇）用一级（卷/部/册/集）分段，
+    三级（回/节）用一、二级分段。不同卷的「第N章」各自从 1 重新编号，
+    跨卷比序号会把「第一卷末章 → 第四卷首章」误判成回退、假缺号。
+    每段内部遇到序号变小（如分上/下部从头编号）才再切段，单独判连续性——
     不然「上部 1~30 章 + 下部 1~30 章」会被误报成 29 处重号。
 
     候选分两档（这是压误报的关键）：
@@ -2277,15 +2280,18 @@ def detect_chapter_missing(content):
       万一整本书的标题都带标点（强候选不足 2 个），退化成全部按强候选处理。
 
     返回：
-      groups: [{unit, level, count, segments, gaps, dups, starts, weak_count}]
-        gaps:   [{after, before, count, missing, line}]   缺号
+      groups: [{unit, level, count, segments, gaps, dups, starts, restarts, weak_count}]
+        gaps:   [{after, before, count, missing, line, after_line}]
+                缺号；line = 后一个标题所在行，after_line = 前一个标题所在行
         dups:   [{num, lines}]                            重号
         starts: [{num, line}]                             段首不是第 1 章
+        restarts: [{from_num, from_line, to_num, to_line}]  序号回退切段的两行
         weak_count: 有几处缺口被「带标点的标题」填平（提示用户少报了）
       gap_count / dup_count / restart_count / start_offset_count / weak_fill_count：汇总
       problem：是否真的有问题（有缺号或有重号）
     """
     buckets = {}
+    level_lines = {}      # {层级: [标题行号]}，上级标题给下级标题划硬边界
 
     def _push(unit, num, lineno, text, weak):
         bucket = buckets.setdefault(unit, {'unit': unit,
@@ -2341,6 +2347,12 @@ def detect_chapter_missing(content):
                 if not _CH_TITLE_SEP_RE.match(between):
                     continue
                 matches = matches[:1]
+        # 记下这行标题的层级：卷/部/册/集是一级，章/篇二级，回/节三级。
+        # 下级标题的序号只在「同一上级标题之下」才连续（见下面分段逻辑）。
+        first_level = _CH_UNIT_LEVEL.get(matches[0].group(2), 0)
+        if first_level:
+            level_lines.setdefault(first_level, []).append(lineno)
+
         for m in matches:
             num = cn_num_to_int(m.group(1))
             if num and num > 0:
@@ -2365,17 +2377,52 @@ def detect_chapter_missing(content):
             if it[3]:
                 weak_lines.setdefault(it[1], []).append(it[0])
 
-        # 切段：序号严格变小才开新段（分卷/上下部重新编号）；
-        # 序号相同不切段，留给下面当重号统计
-        segments, cur = [], []
-        for item in strong:
-            if cur and item[1] < cur[-1][1]:
+        # 按上级标题划硬边界：不同卷/部的「第N章」各自从 1 重新编号，
+        # 跨卷比序号只会得到一堆假回退和假缺号（2026-11-15 使用者指出）。
+        # 二级标题用一级标题分段，三级标题用一、二级标题分段；
+        # 没有上级标题时退回全书一个段（老行为）。
+        level = bucket['level']
+        bounds = []
+        if level >= 2:
+            for lv, ls in level_lines.items():
+                if lv < level:
+                    bounds.extend(ls)
+            bounds.sort()
+        if len(bounds) >= 2:
+            scoped = {}
+            for it in strong:
+                scoped.setdefault(bisect_right(bounds, it[0]) - 1, []).append(it)
+            scope_keys = sorted(scoped)
+            scopes = [scoped[k] for k in scope_keys]
+            # 只列真正含下级标题的那几段的边界，别把空卷的行号也报出来
+            scope_lines = [bounds[k] for k in scope_keys
+                           if 0 <= k < len(bounds)][:_CH_GAP_LIST_MAX]
+        else:
+            scopes = [strong]
+            scope_lines = []
+        scope_count = len(scopes)
+
+        # 每段内部再按「序号严格变小」切段，这才是真回退；
+        # 跨段（换卷）重新编号是正常写法，不计入 restarts。
+        segments, restarts = [], []
+        scope_restart_count = 0
+        for scope in scopes:
+            cur = []
+            for item in scope:
+                if cur and item[1] < cur[-1][1]:
+                    segments.append(cur)
+                    scope_restart_count += 1
+                    # 记下回退发生在哪两行：以前只累计次数，页面给不出具体位置
+                    if len(restarts) < _CH_GAP_LIST_MAX:
+                        restarts.append({
+                            'from_num': cur[-1][1], 'from_line': cur[-1][0],
+                            'to_num': item[1], 'to_line': item[0],
+                        })
+                    cur = []
+                cur.append(item)
+            if cur:
                 segments.append(cur)
-                cur = []
-            cur.append(item)
-        if cur:
-            segments.append(cur)
-        restart_count += max(0, len(segments) - 1)   # 每多切一段就是一次序号回退
+        restart_count += scope_restart_count
 
         gaps, dups, starts, variants = [], [], [], []
         weak_filled = 0
@@ -2418,6 +2465,7 @@ def detect_chapter_missing(content):
                         'count': len(missing),
                         'missing': missing[:_CH_GAP_RANGE_MAX],
                         'line': line,
+                        'after_line': prev_line,
                     })
                     gap_count += len(missing)
         weak_fill_count += weak_filled
@@ -2427,11 +2475,15 @@ def detect_chapter_missing(content):
             'level': bucket['level'],
             'count': len(strong),
             'segments': len(segments),
+            'scopes': scope_count,
+            'scope_lines': scope_lines,
+            'restart_count': scope_restart_count,
             'first': strong[0][1],
             'last': strong[-1][1],
             'gaps': gaps,
             'dups': dups,
             'starts': starts,
+            'restarts': restarts,
             'variants': variants,
             'weak_count': weak_filled,
             'ok': not gaps and not dups,
@@ -4160,6 +4212,16 @@ def open_file_ajax(file_path):
                 f.write(macro_src)
             args += ['/mf', run_macro]
             print(f"🎯 标出 {len(lines)} 个问题行: {final_path} /mf {run_macro}")
+        else:
+            # 章节检测页的行号按钮：纯跳行，不跑高亮宏
+            # （/mf 宏里会 SetActivePoint，和 /l 同时给会覆盖定位）
+            try:
+                jump_line = int(payload.get('line') or 0)
+            except (TypeError, ValueError):
+                jump_line = 0
+            if jump_line > 0 and 'emeditor' in os.path.basename(editor_path).lower():
+                args += ['/l', str(jump_line)]
+                print(f"📍 跳到第 {jump_line} 行: {final_path}")
 
         subprocess.Popen(args)
         return jsonify({'success': True, 'message': '文件已打开'})

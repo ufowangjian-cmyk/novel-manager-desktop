@@ -99,6 +99,24 @@ Windows 桌面单机的本地小说管理器。Flask + **单文件主程序** + 
 
 ---
 
+## 章节检测 → 行号跳行
+
+- **序号连续性必须按上级标题分段**（2026-11-15 使用者纠正的核心逻辑错误）：
+  `detect_chapter_missing()` 用 `level_lines` 收集各层级标题行，二级（章/篇）按一级
+  （卷/部/册/集）分段，三级按一、二级分段。不同卷的「第N章」各自从 1 重新编号，
+  跨卷比序号会把「第一卷末章 → 第四卷首章」误判成回退和假缺号。
+  跨段重新编号**不算回退**，只有同段内序号变小才记 `restarts`。
+  `groups[].scopes` / `scope_lines` / `restart_count` 是分段依据，前端按 `restart_count`
+  显示回退次数，**不要用 `segments - 1`**（`segments` 现在是所有段的段数总和）。
+  分段本身是正常排版结构、**不是问题**，别在结果列表里展示「分成 N 段」或边界行号，
+  也别用 `badge-warning` 标它（2026-11-15 使用者明确要求：没问题的东西不要列出来）。
+- `/open_file_ajax` 的 `highlight=true`（TXT 体检，跑 `/mf` 只读高亮宏）与 `line=N`（章节检测，拼 EmEditor `/l N`）**互斥**：宏里 `SetActivePoint` 会覆盖 `/l` 的定位。两个都不传时行为与原来完全一致；`line` 仅在 `editor_path` 指向 EmEditor 时生效。
+- `detect_chapter_missing()` 的 `groups[].restarts` 记序号回退切段的前后两行，`gaps[].after_line` 记缺号**前一章**所在行（`line` 是后一章）。前端 `chapter_check.html` 的 `lineLink()` 把这些行号统一渲染成可点按钮。
+- 章节检测每次全量重跑、无缓存，新增字段重新检测即可见；改 `*.py` 需重启。
+- 写请求有全局 CSRF 校验，`common.js` 顶部用 `window.fetch` 包装 merge `X-CSRF-Token`；在 `init.headers` 里设 `Content-Type` 不会把它冲掉。用 `test_client` 测 POST 时要自己塞 session token，否则 403。
+
+---
+
 ## 一句话总结
 
 改得动就改，改完说清「改了哪些文件、要不要重启」，然后**停下来等使用者验证**。

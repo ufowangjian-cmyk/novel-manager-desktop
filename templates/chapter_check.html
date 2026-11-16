@@ -508,7 +508,31 @@
             background: #ebf8ff;
             color: #2b6cb0;
         }
-        
+        /* 行号按钮：点一下用 EmEditor 跳到那行，省得手抄到 Ctrl+G */
+        .line-link {
+            display: inline-block;
+            padding: 1px 6px;
+            margin: 0 1px;
+            border: 1px solid currentColor;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.55);
+            color: inherit;
+            font: inherit;
+            font-weight: 500;
+            line-height: 1.4;
+            cursor: pointer;
+        }
+        .line-link:hover {
+            text-decoration: underline;
+            background: rgba(0, 0, 0, 0.06);
+        }
+        body.dark-mode .line-link {
+            background: rgba(255, 255, 255, 0.06);
+        }
+        body.dark-mode .line-link:hover {
+            background: rgba(255, 255, 255, 0.14);
+        }
+
         .file-info-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -1090,8 +1114,15 @@
             return (bytes / 1024 / 1024).toFixed(2) + ' MB';
         }
 
-        // 序号连续性区块：按单位（卷/章/节）分组展示缺号、重号、起点偏移
-        function renderMissingBlock(missing) {
+        // 行号按钮：点击用 EmEditor 的 /l 直接跳到那一行
+        function lineLink(escapedPath, line) {
+            const n = parseInt(line, 10);
+            if (!n || n < 1) return '';
+            return `<button type="button" class="line-link" title="用 EmEditor 打开并跳到第 ${n} 行" onclick="openTxtFile('${escapedPath}', ${n})">第 ${n} 行</button>`;
+        }
+
+        // 序号连续性区块：按单位（卷/章/节）分组展示缺号、重号、起点偏移、回退位置
+        function renderMissingBlock(missing, escapedPath) {
             const head = '<div class="block-title">🔢 序号连续性</div>';
             if (!missing) return '';
             const groups = missing.groups || [];
@@ -1113,36 +1144,47 @@
                     }
                     rows += `<li class="issue-item error" style="flex-wrap:wrap;">
                         <span>⚠️ 缺 <strong>${escapeHtml(list)}</strong>，共 ${gap.count} ${escapeHtml(g.unit)}</span>
-                        <span style="opacity:0.75;">第${gap.after}${escapeHtml(g.unit)} → 第${gap.before}${escapeHtml(g.unit)}，断在第 ${gap.line} 行</span>
+                        <span style="opacity:0.85;">第${gap.after}${escapeHtml(g.unit)} ${lineLink(escapedPath, gap.after_line)} → 第${gap.before}${escapeHtml(g.unit)} ${lineLink(escapedPath, gap.line)}</span>
                     </li>`;
                 });
 
                 (g.dups || []).forEach(function (d) {
                     rows += `<li class="issue-item warning" style="flex-wrap:wrap;">
                         <span>♻️ 重号 <strong>第${d.num}${escapeHtml(g.unit)}</strong> 出现 ${d.lines.length} 次</span>
-                        <span style="opacity:0.75;">第 ${d.lines.join('、')} 行${d.text ? '，标题「' + escapeHtml(d.text) + '」重复' : ''}</span>
+                        <span style="opacity:0.85;">${(d.lines || []).map(L => lineLink(escapedPath, L)).join('、')}${d.text ? '，标题「' + escapeHtml(d.text) + '」重复' : ''}</span>
                     </li>`;
                 });
 
                 (g.variants || []).forEach(function (v) {
                     rows += `<li class="issue-item info" style="flex-wrap:wrap;">
                         <span>ℹ️ 第${v.num}${escapeHtml(g.unit)} 出现两次但标题不同</span>
-                        <span style="opacity:0.75;">「${escapeHtml(v.texts[0])}」/「${escapeHtml(v.texts[1])}」· 第 ${v.lines.join('、')} 行，多半是同一章分小节（上/下、（1）（2）），不算重号</span>
+                        <span style="opacity:0.85;">「${escapeHtml(v.texts[0])}」/「${escapeHtml(v.texts[1])}」· ${(v.lines || []).map(L => lineLink(escapedPath, L)).join('、')}，多半是同一章分小节（上/下、（1）（2）），不算重号</span>
                     </li>`;
                 });
 
                 (g.starts || []).forEach(function (s) {
                     rows += `<li class="issue-item info" style="flex-wrap:wrap;">
                         <span>ℹ️ 序列从 <strong>第${s.num}${escapeHtml(g.unit)}</strong> 开始</span>
-                        <span style="opacity:0.75;">前面可能还有章节不在本文件（第 ${s.line} 行）</span>
+                        <span style="opacity:0.85;">前面可能还有章节不在本文件 ${lineLink(escapedPath, s.line)}</span>
                     </li>`;
                 });
 
-                if (g.segments > 1) {
+                // 分卷分段只作为检测依据，不列进结果：正常排版结构不是问题，
+                // 列出来只会让人误以为有待修项（2026-11-15 使用者指出）。
+                const restarts = g.restarts || [];
+                if (restarts.length) {
                     rows += `<li class="issue-item info" style="flex-wrap:wrap;">
-                        <span>ℹ️ 序号中途回退 ${g.segments - 1} 次</span>
-                        <span style="opacity:0.75;">多半是分卷/上下部重新编号，缺号按段单独判</span>
+                        <span>ℹ️ 同段内序号回退 ${g.restart_count || restarts.length} 次</span>
+                        <span style="opacity:0.85;">多半是上/下部重新编号；每处位置见下</span>
                     </li>`;
+                    restarts.forEach(function (r, i) {
+                        rows += `<li class="issue-item info" style="flex-wrap:wrap;padding-left:28px;">
+                            <span>↳ ${i + 1}. 第${r.from_num}${escapeHtml(g.unit)} → 第${r.to_num}${escapeHtml(g.unit)}</span>
+                            <span style="opacity:0.85;">${lineLink(escapedPath, r.from_line)} → ${lineLink(escapedPath, r.to_line)}（回退处）</span>
+                        </li>`;
+                    });
+                } else if (!g.restarts && g.segments > 1) {
+                    rows += '<li class="issue-item info">↳ 本次结果未带分段位置，重新检测一次即可</li>';
                 }
 
                 if (!rows) {
@@ -1158,7 +1200,6 @@
                         <strong>${tag}</strong>
                         <span>单位「${escapeHtml(g.unit)}」· 共 ${g.count} ${escapeHtml(g.unit)}</span>
                         <span>第 ${g.first} → 第 ${g.last}</span>
-                        ${g.segments > 1 ? `<span class="badge badge-warning">${g.segments} 段</span>` : ''}
                         ${g.weak_count ? `<span class="badge" style="background:#e6fffa;color:#2c7a7b;" title="这些章节号来自带句子标点的标题，或「第52～53章」这种一行覆盖多章的写法，已计入序号">补充识别 ${g.weak_count}</span>` : ''}
                         ${gapBadge}
                     </div>
@@ -1226,7 +1267,7 @@
                                 return `<li class="issue-item warning">
                                     <div class="chapter-line">
                                         <div class="chapter-line-head">
-                                            <strong>第 ${p.line} 行</strong>
+                                            <strong>${lineLink(escapedPath, p.line)}</strong>
                                             <span class="badge badge-warning">词后 ${p.rest_len} 字</span>
                                             <span style="opacity:0.8;">标题词「${escapeHtml(p.head || '')}」</span>
                                         </div>
@@ -1242,7 +1283,7 @@
                         }
                     }
                     if (checks.indexOf('missing') >= 0) {
-                        inner += renderMissingBlock(item.missing);
+                        inner += renderMissingBlock(item.missing, escapedPath);
                     }
                 }
 
@@ -1357,10 +1398,10 @@
             }
         }
 
-        // 用默认编辑器打开文件
-        function openTxtFile(filePath) {
+        // 用默认编辑器打开文件；传了 line 就让 EmEditor 直接跳到那一行
+        function openTxtFile(filePath, line) {
             if (typeof openFile === 'function') {
-                openFile(filePath);
+                openFile(filePath, line ? {line: line} : undefined);
                 return;
             }
             const loadingOverlay = document.getElementById('loadingOverlay');
@@ -1370,7 +1411,12 @@
             if (!filePath.includes('%')) {
                 encodedPath = encodeURIComponent(filePath);
             }
-            fetch(`/open_file_ajax/${encodedPath}`, {method: 'POST'})
+            const init = {method: 'POST'};
+            if (line) {
+                init.headers = {'Content-Type': 'application/json'};
+                init.body = JSON.stringify({line: line});
+            }
+            fetch(`/open_file_ajax/${encodedPath}`, init)
                 .then(response => response.json())
                 .then(data => {
                     if (loadingOverlay) loadingOverlay.style.display = 'none';

@@ -212,6 +212,10 @@
         if (options && options.highlight) {
             init.headers = {'Content-Type': 'application/json'};
             init.body = JSON.stringify({highlight: true});
+        } else if (options && options.line) {
+            // 章节检测页的行号按钮：让 EmEditor 用 /l 直接跳到那一行
+            init.headers = {'Content-Type': 'application/json'};
+            init.body = JSON.stringify({line: options.line});
         }
         fetch(`/open_file_ajax/${encodedPath}`, init)
             .then(response => {
