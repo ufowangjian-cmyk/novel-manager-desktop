@@ -14,19 +14,16 @@
 
     // ===== 配置选项 =====
     const DEFAULT_OPTIONS = {
-        // 工具栏布局 - 完整版
+        // 工具栏：只留胶囊里要的这几项，顺序即渲染顺序（2026-11-16 改成单条胶囊）。
+        // 播放 / 翻转 / 左旋 / 1:1 不再占位，键盘仍可用（空格 / O / Shift+O / 1），
+        // 点胶囊里的百分比等同于点 1:1。
         toolbar: {
-            zoomIn: 4,
-            zoomOut: 4,
-            oneToOne: 4,
-            reset: 4,
             prev: 4,
-            play: 4,
             next: 4,
-            rotateLeft: 4,
+            zoomOut: 4,
+            zoomIn: 4,
+            reset: 4,
             rotateRight: 4,
-            flipHorizontal: 4,
-            flipVertical: 4,
         },
         // 导航栏缩略图
         navbar: true,
@@ -191,13 +188,15 @@
             // 图片加载完成后回调
             viewed: function(event) {
                 console.log(`👁️ 查看图片 #${event.detail.index + 1}/${imageCount}`);
-                updateImageCounter(event.detail.index);
+                updatePageLabel(event.detail.index);
+                updateZoomPct();
             },
             // 显示时回调
             shown: function() {
                 console.log('📖 图片查看器已打开');
                 document.body.classList.add('viewer-open');
-                updateToolbarState();
+                layoutToolbar();
+                updateZoomPct();
                 enableImageEdgeFlip();
             },
             // 隐藏时回调
@@ -207,11 +206,12 @@
             },
             // 缩放回调
             zoomed: function(event) {
-                updateZoomInfo(event.detail.ratio);
+                updateZoomPct();
             },
             // 旋转回调
             rotated: function(event) {
                 console.log(`🔄 旋转: ${event.detail.degree}°`);
+                updateZoomPct();
             },
         };
 
@@ -287,8 +287,9 @@
                 }
             });
 
-            // 插入到工具栏末尾
+            // 插入位置交给 layoutToolbar 统一排（它会把整条胶囊按固定顺序重排一遍）
             toolbar.appendChild(li);
+            layoutToolbar();
         }, 300);
     }
 
@@ -375,10 +376,7 @@
             li.setAttribute('tabindex', '0');
             li.setAttribute('aria-label', '全屏');
             li.title = '全屏 (F)';
-            li.style.backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='15 3 21 3 21 9'/%3E%3Cpolyline points='9 21 3 21 3 15'/%3E%3Cline x1='21' y1='3' x2='14' y2='10'/%3E%3Cline x1='3' y1='21' x2='10' y2='14'/%3E%3C/svg%3E")`;
-            li.style.backgroundSize = '60%';
-            li.style.backgroundPosition = 'center';
-            li.style.backgroundRepeat = 'no-repeat';
+            // 图标由 viewer-tweak.css 的 mask 统一给，这里不要再写内联 background-image
 
             li.addEventListener('click', function(e) {
                 e.stopPropagation();
@@ -386,6 +384,7 @@
             });
 
             toolbar.appendChild(li);
+            layoutToolbar();
         }, 500);
     }
 
@@ -446,15 +445,108 @@
         });
     }
 
-    // ===== 更新工具栏状态 =====
-    function updateToolbarState() {
-        // 可在此添加播放状态等更新
+    // ===== 工具栏排版：把原生按钮、页码、百分比、分隔线排成一条胶囊 =====
+    // 结构固定为：
+    //   ‹ | 1/3 | › ｜ 缩小 | 百分比 | 放大 | 适应 ｜ 旋转 | 全屏 | 下载
+    // 每次排版都按顺序 appendChild（已在 DOM 里的节点会被「移动」），所以可重复调用，
+    // 下载/全屏那两枚按钮是延时插的，插完再排一次即可，不需要各自维护插入位置。
+    function layoutToolbar() {
+        const ul = document.querySelector('.viewer-toolbar ul');
+        if (!ul) return;
+
+        // ⚠️ viewer.min.css 给所有工具栏按钮挂了 viewer-hide-md-down（<1200px 全部隐藏），
+        // 结果手机上压根没有工具栏。这套胶囊本来就是给窄屏做的，统一摘掉这个类。
+        ul.querySelectorAll('.viewer-hide-md-down').forEach(li => li.classList.remove('viewer-hide-md-down'));
+
+        const ensure = (cls, text) => {
+            let li = ul.querySelector('.' + cls);
+            if (!li) {
+                li = document.createElement('li');
+                li.className = cls;
+                li.setAttribute('role', 'button');
+                li.setAttribute('tabindex', '0');
+                if (text) li.textContent = text;
+                ul.appendChild(li);
+            }
+            return li;
+        };
+
+        const page = ensure('viewer-page', `1/${imageCount || 1}`);
+        const pct = ensure('viewer-zoom-pct', '100%');
+        const sepA = ensure('viewer-sep-a');
+        const sepB = ensure('viewer-sep-b');
+        sepA.classList.add('viewer-sep');
+        sepB.classList.add('viewer-sep');
+
+        const q = sel => ul.querySelector(sel);
+        [
+            q('.viewer-prev'), page, q('.viewer-next'),
+            sepA,
+            q('.viewer-zoom-out'), pct, q('.viewer-zoom-in'), q('.viewer-reset'),
+            sepB,
+            q('.viewer-rotate-right'), q('.viewer-fullscreen'), q('.viewer-download'),
+        ].filter(Boolean).forEach(node => ul.appendChild(node));
+
+        // 点百分比 = 切到原始尺寸（等价于原来的「1:1」按钮）
+        if (!pct.dataset.bound) {
+            pct.dataset.bound = '1';
+            pct.title = '原始尺寸（100%）';
+            pct.setAttribute('aria-label', '缩放到原始尺寸');
+            const toActual = () => { if (viewerInstance) viewerInstance.zoomTo(1, true); };
+            pct.addEventListener('click', e => { e.stopPropagation(); toActual(); });
+            pct.addEventListener('keydown', e => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toActual(); }
+            });
+        }
+
+        // ⚠️ viewer 的「适应窗口」(reset) 不发 zoomed 事件，只靠事件的话按完百分比会停在旧值。
+        // 这里补一层兜底：胶囊上任何点击、画布上滚轮/抬手之后都重算一次。
+        if (!ul.dataset.zoomWatch) {
+            ul.dataset.zoomWatch = '1';
+            ul.addEventListener('click', () => setTimeout(updateZoomPct, 80));
+            const canvasBox = document.querySelector('.viewer-container');
+            if (canvasBox) {
+                let timer = null;
+                const later = () => {
+                    clearTimeout(timer);
+                    timer = setTimeout(updateZoomPct, 140);
+                };
+                canvasBox.addEventListener('wheel', later, { passive: true });
+                canvasBox.addEventListener('pointerup', later);
+                canvasBox.addEventListener('touchend', later);
+            }
+        }
     }
 
-    // ===== 更新缩放信息 =====
-    function updateZoomInfo(ratio) {
-        // 可在此添加缩放百分比显示
+    // ===== 页码 =====
+    function updatePageLabel(index) {
+        const el = document.querySelector('.viewer-page');
+        if (el) el.textContent = `${index + 1}/${imageCount || 1}`;
     }
+
+    // ===== 缩放百分比 =====
+    // ⚠️ 不能用 Viewer 内部的 ratio：库给大图加了 `.viewer-canvas>img{max-width:90%}`，
+    // 于是 transform 的 scale=1 并不等于「原图原始尺寸」。这里直接比
+    // 「实际渲染宽度 ÷ 原图宽度」；旋转 90°/270° 时渲染宽对应的是原图高，得换过来算。
+    function updateZoomPct() {
+        const el = document.querySelector('.viewer-zoom-pct');
+        const img = document.querySelector('.viewer-canvas > img');
+        if (!el || !img || !img.naturalWidth) return;
+
+        const rect = img.getBoundingClientRect();
+        let rotated = false;
+        try {
+            const m = new DOMMatrixReadOnly(getComputedStyle(img).transform);
+            rotated = Math.abs(m.b) > 1e-3;
+        } catch (e) {
+            rotated = (img.style.transform || '').indexOf('matrix') > -1;
+        }
+        const base = rotated ? img.naturalHeight : img.naturalWidth;
+        el.textContent = Math.round((rect.width / base) * 100) + '%';
+    }
+
+    // 窗口尺寸变化时 Viewer 会重新适配，百分比跟着刷一次
+    window.addEventListener('resize', () => setTimeout(updateZoomPct, 150));
 
     // ===== 刷新查看器 =====
     
