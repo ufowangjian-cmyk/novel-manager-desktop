@@ -7260,7 +7260,11 @@ CONTROL_RE = re.compile(r'[\x01-\x08\x0b\x0c\x0e-\x1f]')
 ZERO_WIDTH_RE = re.compile(r'[\u200b\u200c\u200d\ufeff]')
 # 双重编码乱码：UTF-8 被按 latin1/gbk 解读后的典型残留。
 # 要求至少连续两组匹配，避免把正常文本里单个 Ã/Â 误判为乱码。
-MOJIBAKE_RE = re.compile(r'(?:锟斤拷|烫烫烫|屯屯屯|ï»¿|[\x80-\xff]{3,})')
+# ⚠️ 0xA0（不换行空格 NBSP）必须排除：老的 [\x80-\xff]{3,} 会把「连续 3 个以上 NBSP」
+# 当成双重编码乱码，而 NBSP 在编辑器里和普通空格长得一样 —— 用户在体检页看到报「典型乱码」，
+# 回文件里却怎么也搜不到（2026-11-17 剑哥报的就是这个，实际是 4 组 U+00A0×3）。
+# 真正的 UTF-8→latin1 残留一定含 0x81~0x9F 或 0xA1~0xFF 的字节，缩小范围不影响检出。
+MOJIBAKE_RE = re.compile(r'(?:锟斤拷|烫烫烫|屯屯屯|ï»¿|[\x81-\x9f\xa1-\xff]{3,})')
 UNICODE_LINE_SEP_RE = re.compile(r'[\u2028\u2029]')
 PRIVATE_USE_RE = re.compile(r'[\ue000-\uf8ff]')
 ASCII_PRINTABLE_RE = re.compile(r'[\x20-\x7e]')
@@ -7281,6 +7285,19 @@ SUSPICIOUS_SCAN_RE = re.compile(
 )
 # 采样字节数（受字符边界对齐，避免误判大文件）
 ENCODING_SAMPLE_LIMIT = 2 * 1024 * 1024
+
+
+def _mojibake_label(seg):
+    """把一段命中的乱码变成体检页上能看懂的标签。
+
+    能看见的直接显示原文（锟斤拷 / 烫烫烫）；整段都是不可见字符（控制符、NBSP 之类）时
+    显示码位，否则体检页会渲染成一串空白，用户拿着它去文件里搜必然搜不到。
+    """
+    if not seg:
+        return ''
+    if all((not c.isprintable()) or c.isspace() for c in seg):
+        return 'U+%04X ×%d' % (ord(seg[0]), len(seg))
+    return seg
 
 
 def _score_candidate_text(text):
@@ -7980,7 +7997,7 @@ def check_txt_health(file_path, checks=None):
             if mojibake_matches:
                 result['suspicious_chars'].append({
                     'name': '典型乱码',
-                    'code': '、'.join(mojibake_matches[:5]),
+                    'code': '、'.join(_mojibake_label(x) for x in mojibake_matches[:5]),
                     'count': len(mojibake_matches),
                     'severity': 'error',
                     'description': '检测到锟斤拷、烫烫烫等常见编码转换乱码',
