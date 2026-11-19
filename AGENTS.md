@@ -18,6 +18,7 @@ Windows 桌面单机的本地小说管理器。Flask + **单文件主程序** + 
 |---|---|
 | 只是想跑起来 | `README.md` → 快速开始 |
 | 改代码、二次开发 | `DEVELOPMENT.md`（`data/` 各文件语义、扫描机制、常见改动位置都在里面） |
+| 要写 / 校对书的元数据 | `DEVELOPMENT.md` → 「TXT 元数据书写规范」（三条硬约束、全角冒号、封面来源；全量细则在 Docker 版同名章节） |
 | 改阅读页排版 | 不在本仓库。规则与 Docker 版同源，见 Docker 版仓库 `DEVELOPMENT.md` 的「阅读页渲染」一节 |
 | 被要求部署 | `DEVELOPMENT.md` 末节「自动化部署（给 AI 助手）」 |
 
