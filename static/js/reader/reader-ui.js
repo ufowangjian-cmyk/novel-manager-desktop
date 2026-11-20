@@ -689,7 +689,7 @@ window.novelPatchConfig = (function () {
         const lines = document.querySelectorAll('.content-line');
 
         const level1Pattern = /^\s*(第(?:\d+|[〇零一二三四五六七八九十百千万]+)[册集卷部]|[上下前后中终序][册集卷部])\s*[：:·\s]*(.*)$/;
-        const level2Pattern = /^\s*(第(?:\d+|[〇零一二三四五六七八九十百千万]+)[篇章]|[上下前后中终序][篇章]|楔子|引子|引言|前传|前言|正文|外传|番外|间幕|序言|后记|尾声)\s*[：:·\s]*(.*)$/;
+        const level2Pattern = /^\s*(第(?:\d+|[〇零一二三四五六七八九十百千万]+)[篇章]|[上下前后中终序][篇章]|楔子|引子|引言|前言|前传|外传|后传|序言|正文|番外|间幕|后记|尾声)\s*[：:·\s]*(.*)$/;
         const level3Pattern = /^\s*(第(?:\d+|[〇零一二三四五六七八九十百千万]+)[节回幕目]|[上下前后中终序][节回幕目])\s*[：:·\s]*(.*)$/;
 
         lines.forEach(line => {
