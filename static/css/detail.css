@@ -1480,3 +1480,64 @@ body.dark-mode .detail-grid > .detail-card {
 body.dark-mode .detail-grid > .detail-card:first-child {
     border-right: 1px solid var(--color-green-dark-bg);
 }
+
+/* ---- 桌面端头部重排（2026-11-21）----
+   原来封面和「h1 + 全部信息 + 按钮」并排，标签和按钮只能从封面右侧开始，
+   封面下方那一竖条永远是空的。改成 grid：h1 留在封面旁，标签与按钮跨整宽。
+
+   ⚠️ 头部背景图是 common.js 在 setTimeout(300ms) 后插入的绝对定位层
+   （.header-bg-container，z-index: 0），display: contents 拆掉 .header-main 后
+   内容项会掉到它下面（表现为刷新时闪一下就消失），所以每条内容规则都要 z-index: 1。 */
+@media (min-width: 769px) {
+    .hero {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        column-gap: 18px;
+        row-gap: 10px;
+    }
+
+    .hero .hero-backbar,
+    .hero .hero-cover,
+    .hero .hero-main h1,
+    .hero .meta-info,
+    .hero .action-buttons {
+        position: relative;
+        z-index: 1;
+    }
+
+    .hero .hero-backbar {
+        grid-column: 1 / -1;
+    }
+
+    .hero .hero-cover {
+        grid-column: 1;
+        grid-row: 2;
+    }
+
+    .hero .hero-main {
+        display: contents;
+    }
+
+    .hero .hero-main h1 {
+        grid-column: 2;
+        grid-row: 2;
+        align-self: center;
+        margin-bottom: 0;
+    }
+
+    /* 标签与按钮跨整宽，封面下方不再是空白 */
+    .hero .meta-info {
+        grid-column: 1 / -1;
+        margin: 0;
+    }
+
+    /* 标签独占一行并撑满，不跟在作者/日期胶囊后面挤成半行 */
+    .hero .meta-tags {
+        flex-basis: 100%;
+    }
+
+    .hero .action-buttons {
+        grid-column: 1 / -1;
+        margin-top: 0;
+    }
+}
