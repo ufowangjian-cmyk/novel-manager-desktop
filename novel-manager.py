@@ -2992,6 +2992,11 @@ def parse_file_content_fast(file_path):
     
     meta_keywords = [
         '书名：', '作者：', '链接：', '标签：', '内容简介：', '说明：',
+        # 封面/配图行也是元数据。漏了它，封面行会走 else 分支把元数据块判成结束
+        # （含冒号 → meta_ended=True），写在它后面的「2026-01-02首发于：xxx」
+        # 整行读不到，站点与日期全变成「未知」。与 Docker 版 510268a 同修。
+        '封面：', '封面:', '封面图：', '封面图:', '配图：', '配图:',
+        '插图：', '插图:', '图片：', '图片:',
         '首发于：', '首发于', '发布于：', '发布于', '发表于：', '发表于',
         '发布：', '发布', '首发：', '首发', '发表：', '转发：', '独发于', '转发于'
     ]
@@ -3181,6 +3186,20 @@ def parse_file_content_fast(file_path):
     # 前端在卡片上展示时更丰富，且两边缓存字段才能对齐。
     preview = extract_preview_clean(lines)
     
+    # 「封面：https://…」声明行：补封面工具写在「作者：」的下一行。
+    # 这一行属于元数据、不进简介段，所以不能靠 intro/preview 去找，
+    # 必须单独扫一遍文件头（与 Docker 版 parse_file_content_fast 同款）。
+    # 正则内联：COVER_URL_RE 定义在本文件后半段，这里引用会 NameError。
+    cover_url = ''
+    for _line in lines[:200]:
+        _t = _line.strip(' \t\r\n\u3000')
+        if not _t.startswith('封面'):
+            continue
+        _m = re.search(r'https?://\S+', _t)
+        if _m:
+            cover_url = _m.group(0)
+            break
+
     result = {
         'title': title[:50] + '...' if len(title) > 50 else title,
         'author': author,
@@ -3192,7 +3211,8 @@ def parse_file_content_fast(file_path):
         'link': link,
         'file_path': file_path,
         'intro': intro,
-        'preview': preview   # 🔥 新增
+        'preview': preview,   # 🔥 新增
+        'cover_url': cover_url
     }
     
     tag_parse_cache[file_path] = (current_hash, result)
@@ -4427,6 +4447,12 @@ def resolve_cover_url(novel):
         if picked:
             sub_folder, name = picked
             return f"/api/local_image?folder={quote(sub_folder)}&name={quote(name)}"
+
+    # 文件里声明的「封面：https://…」（parse_file_content_fast 扫头部取到的），
+    # 优先于简介/预览里的图：它在元数据区，不会混进简介正文。
+    declared = str(novel.get('cover_url') or '').strip()
+    if declared:
+        return declared
 
     text = (novel.get('intro') or '') + '\n' + (novel.get('preview') or '')
     match = COVER_URL_RE.search(text)
