@@ -4876,6 +4876,7 @@ def novel_detail(file_path):
 
     return render_template('novel_detail.html',
         title=base_info['title'],
+        cover_url=resolve_cover_url(base_info),
         author=base_info['author'],
         author_main=detail_main_author,
         author_links=detail_author_links,

@@ -1098,3 +1098,257 @@ body.dark-mode .similar-reason {
 body.dark-mode .similar-item:hover {
     background: rgba(151, 196, 89, 0.1);
 }
+
+/* ============================================
+   封面信息头 + 简介/相似书两栏（2026-11-21）
+   结构：hero（封面 + 标题/元信息/返回）→ 两栏（简介 | 相似书）→ 目录（全宽）
+   轮播背景层由 common.js 注入到 .hero 内部（absolute + z-index 0），
+   所以 .hero 必须 position: relative，子内容抬到 z-index 2。
+   ============================================ */
+
+.hero {
+    display: flex;
+    gap: 18px;
+    align-items: flex-start;
+    padding: 18px 20px;
+    margin-bottom: 18px;
+    border-radius: 15px;
+    color: #fff;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+    position: relative;
+    z-index: 1;
+    /* 没有轮播图时的兜底色，保证白字仍然可读 */
+    background: var(--color-green-dark-bg);
+}
+
+.hero > * {
+    position: relative;
+    z-index: 2;
+}
+
+.hero-cover {
+    width: 96px;
+    aspect-ratio: 3 / 4;
+    flex: none;
+    border-radius: 8px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.28);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.hero-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* 占位态：底图 + 书名首字，与 .random-cover-empty 同一套降级 */
+.hero-cover-empty {
+    background:
+        url('/static/images/cover-placeholder.webp') center / cover no-repeat,
+        linear-gradient(150deg, var(--color-green-primary), var(--color-green-darkest-bg));
+    color: #fff;
+    font-size: 2.2rem;
+    font-weight: 700;
+    line-height: 1;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+}
+
+.hero-cover-initial {
+    user-select: none;
+    pointer-events: none;
+}
+
+.hero-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.hero-main h1 {
+    margin: 0;
+    font-family: '京華老宋体v3.0', 'KingHwaOldSong', '京华老宋体内置', 'Segoe UI', '微软雅黑', sans-serif;
+    font-size: 2.1rem;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.hero-main .meta-info {
+    margin: 0;
+}
+
+.hero-main .back-btn {
+    margin-top: 2px;
+}
+
+/* 简介与相似书并排：两者体量接近，右侧不会空。
+   两栏之间用一条竖线分隔、不留 gap，与整页「分区不卡片」的观感一致 */
+.detail-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.85fr) minmax(0, 1fr);
+    gap: 0;
+    margin-bottom: 0;
+    border-top: 1px solid #DCE4CB;
+}
+
+.detail-grid > .detail-card {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    margin-bottom: 0;
+}
+
+.detail-grid > .detail-card:first-child {
+    border-right: 1px solid #DCE4CB;
+}
+
+/* 只有一块时（无简介也无相似书）铺满整行，不留半张空位 */
+.detail-grid:has(> :only-child) {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+@media (max-width: 980px) {
+    .detail-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .hero {
+        gap: 14px;
+        padding: 14px 16px;
+    }
+
+    .hero-cover {
+        width: 76px;
+    }
+
+    .hero-main h1 {
+        font-size: 1.6rem;
+    }
+}
+
+/* ============================================
+   简洁化（2026-11-21 第二轮）：去圆角、去边框、去装饰线
+   整页变成「一张白纸上的分区」，靠细线与间距分隔，不再是一叠卡片。
+   配色不动：绿仍在标签、链接、章节条目的底色上。
+   ============================================ */
+
+.detail-card {
+    background: #FFFFFF;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 20px 24px;
+    margin-bottom: 0;
+    border-top: 1px solid #DCE4CB;
+}
+
+/* 卡片标题：去掉那条 2px 绿色装饰线，改由字号 + 颜色承担层级 */
+.card-title {
+    font-size: 0.92em;
+    font-weight: 600;
+    color: #5A6B3E;
+    letter-spacing: 0.03em;
+    margin-bottom: 10px;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+/* 简介区不再是一块内嵌底色，直接排在白纸上 */
+.intro-content {
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+    border: none;
+    font-size: 0.98em;
+}
+
+/* 目录统计条：保留淡底，圆角收平 */
+.stats {
+    border-radius: 4px;
+    border-color: #DCE4CB;
+    background: #F7F9F2;
+}
+
+/* 章节条目与相似书条目：圆角收平 */
+.chapter-item,
+.similar-item {
+    border-radius: 4px;
+}
+
+/* ---- 顶部按钮：与主页「每日推荐」的 .random-btn 同一套
+       （7px 16px / 8px 圆角 / 0.84rem；普通=浅绿底深绿字，主=深绿底白字）。
+       唯一区别：这里用不透明底色代替 rgba，否则在轮播图上会透出背景看不清 ---- */
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 0;
+    flex-wrap: wrap;
+}
+
+.action-btn {
+    padding: 7px 16px;
+    border-radius: 8px;
+    font-size: 0.84rem;
+    font-weight: 400;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--tool-green-dark, #728B47);
+    background: #EAF0E1;
+    border: none;
+    transition: background-color .2s;
+}
+
+.action-btn:hover {
+    background: #DCE7C9;
+    color: var(--tool-green-dark, #728B47);
+    transform: none;
+    box-shadow: none;
+}
+
+.action-btn.primary {
+    color: #FFFFFF;
+    background: var(--tool-green-dark, #728B47);
+    font-weight: 400;
+}
+
+.action-btn.primary:hover {
+    background: #5D7339;
+    color: #FFFFFF;
+}
+
+/* 工具类按钮不再另起样式，与普通按钮保持一致 */
+.action-btn.ghost {
+    color: var(--tool-green-dark, #728B47);
+    background: #EAF0E1;
+    border: none;
+}
+
+.action-btn.ghost:hover {
+    background: #DCE7C9;
+    color: var(--tool-green-dark, #728B47);
+}
+
+/* 窄屏：两栏改为上下堆叠，竖线撤掉，改横线 */
+@media (max-width: 980px) {
+    .detail-grid > .detail-card:first-child {
+        border-right: none;
+        border-bottom: 1px solid #DCE4CB;
+    }
+}
+
+/* 暗色主题下，简洁化的分隔线要跟着变深，否则深底上一条亮线非常刺眼 */
+body.dark-mode .detail-grid,
+body.dark-mode .detail-grid > .detail-card,
+body.dark-mode .detail-grid > .detail-card:first-child,
+body.dark-mode .detail-card {
+    border-color: var(--color-green-dark-bg);
+}
