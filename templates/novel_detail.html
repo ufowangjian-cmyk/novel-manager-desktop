@@ -19,6 +19,10 @@
            为空时退回占位样式；cover_initial 由后端 pick_cover_initial() 算好，
            会跳过数字与标点（「2012春之文祭」→「春」） #}
         <div class="hero">
+            {# 返回列表独立成顶部一条：导航动作放内容起点，别混进读书按钮堆 #}
+            <div class="hero-backbar">
+                <a href="{{ list_back_url() }}" class="hero-back">← 返回列表</a>
+            </div>
             <div class="hero-cover{% if not cover_url %} hero-cover-empty{% endif %}" data-initial="{{ cover_initial }}">
                 {% if cover_url %}
                 <img src="{{ cover_url }}" alt="{{ title }} 封面" loading="lazy" referrerpolicy="no-referrer"
@@ -93,7 +97,6 @@
                         📁 打开配图文件夹
                     </a>
                     {% endif %}
-                    <a href="{{ list_back_url() }}" class="action-btn ghost">🔙 返回列表</a>
                 </div>
             </div>
         </div>
