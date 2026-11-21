@@ -4384,6 +4384,24 @@ def _pick_cover_image(folder, max_depth=2, limit=60):
     return min(candidates, key=rank)
 
 
+def pick_cover_initial(title, fallback='书'):
+    """取书名首字用于占位封面。
+
+    跳过数字、标点、空白和符号：「2012春之文祭」取「春」，「《暗河》」取「暗」，
+    「2024」这种纯数字书名则退回第一个非空白字符（数字总比空着强）。
+    """
+    text = (title or '').strip()
+    if not text:
+        return fallback
+    for ch in text:
+        if ch.isalnum() and not ch.isdigit():
+            return ch
+    for ch in text:
+        if not ch.isspace():
+            return ch
+    return fallback
+
+
 def resolve_cover_url(novel):
     """决定「每日推荐」卡片用什么封面，没有可用封面时返回空字符串。
 
@@ -4884,6 +4902,7 @@ def novel_detail(file_path):
     return render_template('novel_detail.html',
         title=base_info['title'],
         cover_url=resolve_cover_url(base_info),
+        cover_initial=pick_cover_initial(base_info.get('title')),
         resume_line=resume_line,
         resume_label=resume_label,
         author=base_info['author'],
