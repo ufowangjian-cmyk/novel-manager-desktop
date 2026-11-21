@@ -65,7 +65,7 @@
                     <div class="meta-item meta-tags">
                         <span class="meta-tags-label">🏷️</span>
                         <span class="meta-tags-body">
-                            {% for tag in tags.split(',') %}<a href="/?tag={{ tag }}" class="tag-badge">#{{ tag }}</a>{% endfor %}
+                            {% for tag in tags.replace('，', ',').replace('、', ',').split(',') %}{% set clean = tag.strip(' 、，,;；·') %}{% if clean %}<a href="/?tag={{ clean }}" class="tag-badge">#{{ clean }}</a>{% endif %}{% endfor %}
                         </span>
                     </div>
                     {% endif %}
