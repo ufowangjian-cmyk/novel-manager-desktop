@@ -1391,3 +1391,33 @@ body.dark-mode .detail-card {
         font-size: 0.8rem;
     }
 }
+
+/* ---- 详情页头部标签：参考 uaa 的小标签（小字号 / 4px 圆角 / # 前缀）
+   只作用于 .hero 内，首页表格和每日推荐卡的 .tag-badge 保持原样
+   （那些在白底上，需要原来的对比度） ---- */
+.hero .tag-badge {
+    padding: 1px 7px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    line-height: 1.7;
+    background: rgba(0, 0, 0, 0.34);
+    color: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    transform: none;
+    box-shadow: none;
+}
+
+.hero .tag-badge:hover {
+    background: rgba(0, 0, 0, 0.42);
+    color: #FFFFFF;
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: none;
+    box-shadow: none;
+}
+
+/* 头部是图片背景，不随主题变色，暗色下保持同一套 */
+body.dark-mode .hero .tag-badge {
+    background: rgba(0, 0, 0, 0.34);
+    color: rgba(255, 255, 255, 0.96);
+    border-color: rgba(255, 255, 255, 0.22);
+}
