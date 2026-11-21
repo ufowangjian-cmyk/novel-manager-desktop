@@ -21,7 +21,7 @@
         <div class="hero">
             {# 返回列表独立成顶部一条：导航动作放内容起点，别混进读书按钮堆 #}
             <div class="hero-backbar">
-                <a href="{{ list_back_url() }}" class="hero-back">← 返回列表</a>
+                <a href="{{ list_back_url() }}" class="hero-back">🔙 返回列表</a>
             </div>
             <div class="hero-cover{% if not cover_url %} hero-cover-empty{% endif %}" data-initial="{{ cover_initial }}">
                 {% if cover_url %}
@@ -81,7 +81,7 @@
                     </a>
                     <a href="{{ url_for('read_chapter', file_path=file_path, line_number=(all_chapters[0].line_number if all_chapters else 1), list_page=back_page, search=search_text, author=search_author, tag=search_tag, site=search_site, sort=sort_by, order=sort_order) }}"
                         class="action-btn">
-                        ↩ 从头阅读
+                        🔁 从头阅读
                     </a>
                     {% else %}
                     <a href="{{ url_for('read_chapter', file_path=file_path, line_number=(all_chapters[0].line_number if all_chapters else 1), list_page=back_page, search=search_text, author=search_author, tag=search_tag, site=search_site, sort=sort_by, order=sort_order) }}"
