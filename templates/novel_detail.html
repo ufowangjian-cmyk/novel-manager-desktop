@@ -67,20 +67,30 @@
                     </div>
                     {% endif %}
                 </div>
-                {# 操作按钮统一放头部：先读、再看目录，工具类弱化；
-                   返回列表沿用 list_back_url()，不手拼 query 串 #}
+                {# 操作按钮统一放头部：有阅读记录时「继续阅读」当主操作，
+                   没有就退化成「从头阅读」。返回列表沿用 list_back_url()。 #}
                 <div class="action-buttons">
+                    {% if resume_line %}
+                    <a href="{{ url_for('read_chapter', file_path=file_path, line_number=resume_line, list_page=back_page, search=search_text, author=search_author, tag=search_tag, site=search_site, sort=sort_by, order=sort_order) }}"
+                        class="action-btn primary">
+                        📖 继续阅读{% if resume_label %} · {{ resume_label[:10] }}{% endif %}
+                    </a>
+                    <a href="{{ url_for('read_chapter', file_path=file_path, line_number=(all_chapters[0].line_number if all_chapters else 1), list_page=back_page, search=search_text, author=search_author, tag=search_tag, site=search_site, sort=sort_by, order=sort_order) }}"
+                        class="action-btn">
+                        ↩ 从头阅读
+                    </a>
+                    {% else %}
                     <a href="{{ url_for('read_chapter', file_path=file_path, line_number=(all_chapters[0].line_number if all_chapters else 1), list_page=back_page, search=search_text, author=search_author, tag=search_tag, site=search_site, sort=sort_by, order=sort_order) }}"
                         class="action-btn primary">
                         📖 从头阅读
                     </a>
-                    <a href="#chapters" class="action-btn">📑 目录</a>
+                    {% endif %}
                     <a href="javascript:void(0);" class="action-btn ghost open-btn" data-file-path="{{ file_path|urlencode }}">
                         📝 编辑器打开
                     </a>
                     {% if has_images %}
                     <a href="javascript:void(0);" class="action-btn ghost folder-btn" data-file-path="{{ file_path }}">
-                        📁 配图文件夹
+                        📁 打开配图文件夹
                     </a>
                     {% endif %}
                     <a href="{{ list_back_url() }}" class="action-btn ghost">🔙 返回列表</a>
@@ -206,34 +216,26 @@
             }
         }
 
-        // ===== 绑定按钮事件 =====
-        document.addEventListener('DOMContentLoaded', function () {
-            // 编辑器打开按钮
-            const openBtn = document.querySelector('.open-btn');
-            if (openBtn) {
-                openBtn.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    const filePath = this.getAttribute('data-file-path');
-                    if (filePath) {
-                        openFile(filePath);
-                    }
-                });
+        // ===== 绑定按钮事件（事件委托）=====
+        // 以前用 querySelector 只绑第一个，且依赖 DOMContentLoaded 时序；
+        // 改成委托后按钮数量、渲染时机都不影响，主页跳转回来也不会丢绑定。
+        document.addEventListener('click', function (e) {
+            const folderBtn = e.target.closest('.folder-btn');
+            if (folderBtn) {
+                e.preventDefault();
+                let target = folderBtn.getAttribute('data-file-path') || '';
+                // file_path 现在是未编码的原始路径；老缓存里可能是 %XX 形态，
+                // 解码一次兼容两种（文件名带 % 时 decodeURIComponent 会抛错，兜底用原值）
+                try { target = decodeURIComponent(target); } catch (err) { /* 保持原值 */ }
+                if (target) openFolder(target);
+                return;
             }
 
-            // 🔥 配图文件夹按钮
-            const folderBtn = document.querySelector('.folder-btn');
-            if (folderBtn) {
-                folderBtn.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    const filePath = this.getAttribute('data-file-path');
-                    if (filePath) {
-                        // file_path 现在是未编码的原始路径；老缓存里可能是 %XX 形态，
-                        // 解码一次兼容两种（文件名带 % 时 decodeURIComponent 会抛错，兜底用原值）
-                        let target = filePath;
-                        try { target = decodeURIComponent(filePath); } catch (e) { target = filePath; }
-                        openFolder(target);
-                    }
-                });
+            const openBtn = e.target.closest('.open-btn');
+            if (openBtn) {
+                e.preventDefault();
+                const filePath = openBtn.getAttribute('data-file-path');
+                if (filePath) openFile(filePath);
             }
         });
 

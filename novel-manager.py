@@ -4874,9 +4874,18 @@ def novel_detail(file_path):
     detail_author_links = [{'name': detail_main_author, 'is_alias': False}]
     detail_author_links += [{'name': a, 'is_alias': True} for a in detail_aliases]
 
+    # 继续阅读：阅读记录的键是「正斜杠绝对路径」，与 actual_path 归一化后比对
+    _read_key = (actual_path or '').replace('\\', '/')
+    _reading = load_reading_records().get(_read_key) or {}
+    resume_line = _reading.get('line_number')
+    # 章节名常带尾部标点（如「第4节·」），按钮上看着脏，掐掉
+    resume_label = (_reading.get('chapter_text') or '').strip().strip('·・.。、-—_ ')
+
     return render_template('novel_detail.html',
         title=base_info['title'],
         cover_url=resolve_cover_url(base_info),
+        resume_line=resume_line,
+        resume_label=resume_label,
         author=base_info['author'],
         author_main=detail_main_author,
         author_links=detail_author_links,
