@@ -60,11 +60,13 @@
                     <div class="meta-item">📝 {{ "{:,}".format(word_count) }}字</div>
 
                     {% if tags and tags != '无' %}
-                    <div class="meta-item" style="display: flex; flex-wrap: wrap; gap: 4px; align-items: center;">
-                        <span style="font-weight: 600; margin-right: 3px;">🏷️</span>
-                        {% for tag in tags.split(',') %}
-                        <a href="/?tag={{ tag }}" class="tag-badge">#{{ tag }}</a>
-                        {% endfor %}
+                    {# 标签包一层 .meta-tags-body：直接做 flex 项时换行会回到容器左边缘，
+                       绕过左侧图标，第二行看起来就歪了（与 Docker 版同一处修复） #}
+                    <div class="meta-item meta-tags">
+                        <span class="meta-tags-label">🏷️</span>
+                        <span class="meta-tags-body">
+                            {% for tag in tags.split(',') %}<a href="/?tag={{ tag }}" class="tag-badge">#{{ tag }}</a>{% endfor %}
+                        </span>
                     </div>
                     {% endif %}
                 </div>
