@@ -4415,6 +4415,13 @@ def resolve_cover_url(novel):
     from urllib.parse import quote
 
     folder = novel.get('image_folder') or ''
+    if not folder or not os.path.isdir(folder):
+        # 详情页传进来的 base_info 来自 parse_file_content_fast()，只有从正文
+        # 解析出的字段，**不含 image_folder**；这里按文件名现查一次
+        # （与 Docker 版 find_cover_url 的做法一致），否则详情页永远没有封面。
+        filename = novel.get('filename') or os.path.basename(str(novel.get('file_path') or ''))
+        folder = (get_image_folder_for_novel(filename) if filename else None) or ''
+
     if folder and os.path.isdir(folder):
         picked = _pick_cover_image(folder)
         if picked:
