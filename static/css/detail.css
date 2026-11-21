@@ -53,14 +53,14 @@
     flex-direction: column;
     align-items: flex-start;
     /* 左对齐 */
-    gap: 15px;
-    margin-bottom: 30px;
+    gap: 12px;
+    margin-bottom: 22px;
 }
 
 .header h1 {
     margin: 0;
     font-family: '京華老宋体v3.0', 'KingHwaOldSong', '京华老宋体内置', 'Segoe UI', '微软雅黑', sans-serif;
-    font-size: 2.4rem;
+    font-size: 2.1rem;
     font-weight: 700;
 }
 
@@ -77,15 +77,15 @@
 .meta-info {
     display: flex;
     flex-wrap: wrap;
-    gap: 15px;
-    margin-bottom: 20px;
+    gap: 11px;
+    margin-bottom: 14px;
 }
 
 .meta-item {
     background: rgba(255, 255, 255, 0.2);
-    padding: 8px 18px;
+    padding: 6px 14px;
     border-radius: 30px;
-    font-size: 0.95em;
+    font-size: 0.92em;
     backdrop-filter: blur(5px);
     border: 1px solid rgba(255, 255, 255, 0.3);
 }
@@ -96,7 +96,7 @@
     display: inline-block;
     background: #d97706;
     color: var(--color-white);
-    padding: 10px 25px;
+    padding: 8px 20px;
     border-radius: 30px;
     text-decoration: none;
     transition: all 0.3s;
@@ -116,8 +116,8 @@
 .detail-card {
     background: var(--color-green-light);
     border-radius: 20px;
-    padding: 30px;
-    margin-bottom: 25px;
+    padding: 24px 26px;
+    margin-bottom: 18px;
     box-shadow: 0 10px 25px -5px var(--shadow-dark);
     border: 1px solid var(--color-green-border);
 }
@@ -139,11 +139,11 @@
 }
 
 .card-title {
-    font-size: 1.4em;
+    font-size: 1.25em;
     font-weight: 600;
     color: var(--color-text-primary);
-    margin-bottom: 20px;
-    padding-bottom: 12px;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
     border-bottom: 2px solid var(--color-green-border);
     display: flex;
     align-items: center;
@@ -187,12 +187,12 @@
 
 .intro-content {
     background: var(--color-green-lighter);
-    padding: 25px;
+    padding: 20px 22px;
     border-radius: 15px;
     white-space: pre-wrap;
-    font-size: 1.05em;
+    font-size: 1em;
     color: var(--color-text-secondary);
-    line-height: 1.8;
+    line-height: 1.75;
     max-height: 300px;
     overflow-y: auto;
     border: 1px solid var(--color-green-border);
@@ -202,8 +202,9 @@
 .chapter-item {
     display: flex;
     align-items: center;
-    padding: 10px 15px;
+    padding: 6px 13px;
     border-radius: 8px;
+    line-height: 1.55;
     transition: all 0.2s;
     cursor: pointer;
     text-decoration: none;
@@ -221,7 +222,7 @@
     border-left-color: var(--color-green-border);
     font-weight: 600;
     font-size: 1.05em;
-    margin-top: 8px;
+    margin-top: 6px;
 }
 
 .chapter-level1:first-child {
@@ -238,7 +239,7 @@
 .chapter-level2 {
     background: var(--color-green-lighter);
     border-left-color: var(--color-green-border);
-    margin-left: 25px;
+    margin-left: 20px;
     font-weight: 500;
 }
 
@@ -269,10 +270,10 @@
 }
 
 .chapter-line {
-    font-size: 0.8em;
+    font-size: 0.78em;
     color: var(--color-green-border);
     background: var(--color-green-light);
-    padding: 2px 10px;
+    padding: 2px 9px;
     border-radius: 20px;
     margin-left: 10px;
     white-space: nowrap;
@@ -396,9 +397,9 @@
     background: var(--color-green-lighter);
     border: 1px solid var(--color-green-border);
     color: var(--color-green-dark);
-    padding: 10px 15px;
+    padding: 8px 13px;
     border-radius: 10px;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
     display: flex;
     flex-wrap: wrap;
     gap: 15px;
@@ -1037,7 +1038,7 @@ body.dark-mode .preview-hint {
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    padding: 10px 12px;
+    padding: 8px 11px;
     border-radius: 10px;
     text-decoration: none;
     color: inherit;
