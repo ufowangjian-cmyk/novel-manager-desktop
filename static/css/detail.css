@@ -1541,3 +1541,30 @@ body.dark-mode .detail-grid > .detail-card:first-child {
         margin-top: 0;
     }
 }
+
+/* ---- 相似书限高（2026-11-22）----
+   简介本来就 max-height: 300px，相似书却没有限制：书一多右栏被撑高，
+   .detail-grid 默认 align-items: stretch 会把左栏一起拉长，简介下面出现大块空白。
+   这里按简介的口径限高，两栏高度接近；超出在区块内滚动。 */
+@media (min-width: 769px) {
+    .similar-list {
+        max-height: 300px;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(114, 139, 71, 0.45) transparent;
+        padding-right: 2px;
+    }
+}
+
+/* 手机端单栏，口径与 Docker 版一致（3 条 = 80 x 3 + 2 x 2） */
+@media (max-width: 768px) {
+    .similar-list {
+        max-height: 244px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(114, 139, 71, 0.45) transparent;
+    }
+}
