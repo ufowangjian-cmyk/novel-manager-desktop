@@ -1448,7 +1448,8 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             loadIgnoreList();
-            setTimeout(startFullScan, 2000);
+            // 不自动扫描：进入页面只加载忽略列表，扫描由「全量扫描」按钮手动触发
+            // （原先这里有 setTimeout(startFullScan, 2000)，进页面 2 秒就自动开扫）
             if (typeof initCarousel === 'function') {
                 initCarousel('.media-header', {
                     autoSlideshow: true,
