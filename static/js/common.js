@@ -561,6 +561,40 @@
     window.loadAndApplyTheme = loadAndApplyTheme;
     window.watchSystemTheme = watchSystemTheme;
 
+    // ===== 首屏主题自动应用（2026-11-23）=====
+    // 以前只有首页 / 详情 / 阅读 / 配置 / 标签 / 日志自己调了主题，
+    // 媒体检测、文本体检、章节检测、重复检测等页面根本没初始化，深色下永远是浅色。
+    // 这里统一兜底：先按 localStorage / 系统偏好同步上色（不闪烁），
+    // DOM 就绪后再向服务器确认一次（服务器配置优先）。
+    (function autoInitTheme() {
+        var root = document.documentElement;
+        var cached = null;
+        try { cached = localStorage.getItem('theme'); } catch (e) { cached = null; }
+        var isDark = cached === 'dark'
+            || (!cached && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+        function paintBody() {
+            if (!document.body) return;
+            document.body.classList.toggle('dark-mode', isDark);
+            document.body.classList.toggle('light-mode', !isDark);
+        }
+
+        root.classList.toggle('dark-mode', isDark);
+        root.classList.toggle('light-mode', !isDark);
+
+        function settle() {
+            paintBody();
+            loadAndApplyTheme();
+            watchSystemTheme();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', settle);
+        } else {
+            settle();
+        }
+    })();
+
     // 通知 & 加载 & 文件
     window.showNotification = showNotification;
     window.showLoading = showLoading;
