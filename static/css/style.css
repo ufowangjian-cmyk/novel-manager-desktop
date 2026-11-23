@@ -2642,3 +2642,9 @@ body.dark-mode .open-btn:hover {
     color: var(--color-primary, #728B47);
     font-weight: 600;
 }
+
+/* ---- 分页统计在深色下的文字色（2026-11-23）----
+   .pagination-stats 写死了 #333333，深色背景上几乎看不见。 */
+body.dark-mode .pagination-stats {
+    color: #cbd5e1;
+}
