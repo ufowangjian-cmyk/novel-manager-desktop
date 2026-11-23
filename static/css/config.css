@@ -1848,3 +1848,21 @@ body.light-mode .expand-icon-small {
     .hl-font-grid .form-group { grid-template-columns: 1fr; }
     .hl-font-grid .form-group > label { justify-self: start; }
 }
+/* ---- 高亮词胶囊改为 button（2026-11-23）----
+   胶囊本身就是按钮，点开弹窗改/删，不再挂 ×。 */
+.hlw-chip {
+    font-family: inherit;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.hlw-chip:focus-visible {
+    outline: 2px solid rgba(114, 139, 71, 0.7);
+    outline-offset: 2px;
+}
+
+/* 不再有 ×，右侧内边距恢复对称 */
+.form-group .hlw-chip {
+    padding: 3px 11px;
+}
