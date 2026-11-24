@@ -2290,3 +2290,14 @@ body.dark-mode .chip-modal-label {
         justify-self: start;
     }
 }
+
+/* 字体区的下拉不收满整列，收到 220px，B/I 靠右排列（2026-11-24） */
+.card-content .hl-font-grid .form-group > .set-font-ctrl {
+    justify-content: flex-end;
+}
+
+.card-content .hl-font-grid .form-group > .set-font-ctrl select {
+    flex: 0 1 auto;
+    max-width: 220px;
+    min-width: 0;
+}

@@ -5435,7 +5435,7 @@ def get_css_version():
     改 reader-core.js 这类脚本同样必须换 URL，否则浏览器会按缓存跑旧代码。
     """
     now = time.time()
-    if _css_version_cache['value'] and now - _css_version_cache['ts'] < 300:
+    if _css_version_cache['value'] and now - _css_version_cache['ts'] < 30:
         return _css_version_cache['value']
     latest = 0
     for sub in ('css', 'js'):
