@@ -2171,3 +2171,27 @@ body.dark-mode .chip-modal-label {
         margin-bottom: 0;
     }
 }
+
+/* ============================================
+   说明文字恢复显示（2026-11-24）
+   项目里有一条 .form-hint.hint-as-title { display: none }：
+   说明被搬进 label 的 title 属性，只在悬停时出现。
+   手机上根本没有 hover，等于看不到；一律恢复为可见。
+   ============================================ */
+.card-content .form-group > .form-hint.hint-as-title,
+.card-content .form-group .form-hint.hint-as-title {
+    display: block;
+}
+
+/* 纵向间距再放宽一档 */
+.card-content .form-group-inline {
+    gap: 28px 26px;
+}
+
+.card-content .form-group {
+    margin-bottom: 24px;
+}
+
+.card-content .form-group-inline .form-group {
+    margin-bottom: 6px;
+}
