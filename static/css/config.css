@@ -2195,3 +2195,41 @@ body.dark-mode .chip-modal-label {
 .card-content .form-group-inline .form-group {
     margin-bottom: 6px;
 }
+
+/* ============================================
+   卡片网格改为固定两列（2026-11-24）
+   原先 .card-content 是 repeat(auto-fit, minmax(300px, 1fr))，
+   1280px 宽下自动排成 3 列，字段之间几乎没有空隙；
+   而 .form-group-inline 是 display: contents，子项直接进这个网格，
+   所以给 .form-group-inline 设 flex 完全无效（父级不是 flex 容器）。
+   ============================================ */
+.card-content {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px 28px;
+}
+
+/* 这些元素必须独占整行，否则会挤进某一列 */
+.card-content > h3,
+.card-content > .form-hint,
+.card-content > .button-group,
+.card-content > .switch-grid,
+.card-content > hr,
+.card-content > .user-records-container,
+.card-content > .user-records-header,
+.card-content > .memory-management {
+    grid-column: 1 / -1;
+}
+
+/* 字段之间的纵向留白交给 grid gap，取消自身 margin 避免叠加 */
+.card-content > .form-group,
+.card-content > .form-group-inline > .form-group {
+    margin-bottom: 0;
+}
+
+/* 手机端：回到单列 */
+@media (max-width: 768px) {
+    .card-content {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 18px;
+    }
+}
