@@ -2141,3 +2141,33 @@ body.dark-mode .chip-modal-label {
     display: block;
     margin-top: 2px;
 }
+
+/* ============================================
+   内联组：一行两个 + 拉开间距（2026-11-24）
+   原来是 flex: 1 1 320px，宽屏下会挤进三个，标签和下拉边框几乎贴在一起。
+   ============================================ */
+.card-content .form-group-inline {
+    gap: 22px 26px;
+}
+
+.card-content .form-group-inline .form-group {
+    flex: 1 1 calc(50% - 26px);
+    min-width: 0;
+    margin-bottom: 4px;
+}
+
+.card-content .form-group {
+    margin-bottom: 20px;
+}
+
+/* 手机仍然一行一个 */
+@media (max-width: 768px) {
+    .card-content .form-group-inline {
+        gap: 16px;
+    }
+
+    .card-content .form-group-inline .form-group {
+        flex: 1 1 100%;
+        margin-bottom: 0;
+    }
+}
