@@ -53,3 +53,4 @@ _local_backup/
 .pat
 *.pat
 *.token
+_backup/
