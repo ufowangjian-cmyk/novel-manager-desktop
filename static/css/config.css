@@ -2272,8 +2272,14 @@ body.dark-mode .chip-modal-label {
 
 .card-content .hl-font-grid .form-group > .form-hint {
     grid-row: 2;
-    grid-column: 1 / -1;
+    grid-column: 1;
     margin: 0;
+}
+
+/* 控件跨两行并垂直居中：让「标题 + 注释」这个组合整体与下拉对齐 */
+.card-content .hl-font-grid .form-group > .set-font-ctrl {
+    grid-row: 1 / span 2;
+    align-self: center;
 }
 
 @media (max-width: 768px) {
