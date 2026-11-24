@@ -2233,3 +2233,47 @@ body.dark-mode .chip-modal-label {
         gap: 18px;
     }
 }
+
+/* ============================================
+   字体设置区也改为两列（2026-11-24）
+   原来 auto-fit minmax(320px, 1fr)，1158px 宽下排成 3 列，
+   而之前为了「控件含下拉+B/I」给了 display:block，label 被挤到右上角。
+   现在每项有 565px 宽，足够「label + 下拉 + B/I」横排。
+   ============================================ */
+.card-content .hl-font-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 26px;
+}
+
+.card-content .hl-font-grid .form-group {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: 10px;
+    align-items: center;
+    margin-bottom: 0;
+}
+
+.card-content .hl-font-grid .form-group > label {
+    justify-self: end;
+    white-space: nowrap;
+    margin: 0;
+}
+
+.card-content .hl-font-grid .form-group > .set-font-ctrl {
+    justify-self: start;
+}
+
+@media (max-width: 768px) {
+    .card-content .hl-font-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .card-content .hl-font-grid .form-group {
+        grid-template-columns: minmax(0, 1fr);
+        row-gap: 4px;
+    }
+
+    .card-content .hl-font-grid .form-group > label {
+        justify-self: start;
+    }
+}
