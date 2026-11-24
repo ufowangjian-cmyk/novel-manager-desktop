@@ -2259,6 +2259,7 @@ body.dark-mode .chip-modal-label {
     grid-row: 1;
     grid-column: 1;
     align-self: center;
+    justify-self: start;   /* 与下方注释左对齐，形成「标题+说明」的组合 */
     white-space: nowrap;
     margin: 0;
 }
