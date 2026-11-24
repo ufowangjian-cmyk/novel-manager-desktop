@@ -2043,3 +2043,78 @@ body.dark-mode .chip-modal-cancel {
 body.dark-mode .chip-modal-label {
     color: #9DAF8C;
 }
+
+/* ============================================
+   设置项左右结构（2026-11-24 同步自 NAS 版）
+   左：标题 + 小字说明；右：控件
+   只作用于卡片内的字段，弹窗里的 .form-group 保持原样（弹窗宽度有限）
+   ============================================ */
+.card-content .form-group {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 14px;
+    row-gap: 2px;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.card-content .form-group > label {
+    grid-column: 1;
+    grid-row: 1;
+    margin-bottom: 0;
+    align-self: end;
+}
+
+.card-content .form-group > .form-hint {
+    grid-column: 1;
+    grid-row: 2;
+    margin: 2px 0 0;
+    font-size: 0.72rem;
+    line-height: 1.4;
+    color: var(--text-tertiary, #8a9a78);
+    align-self: start;
+}
+
+.card-content .form-group > input,
+.card-content .form-group > select,
+.card-content .form-group > textarea {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.card-content .form-group select {
+    width: 152px;
+    max-width: none;
+}
+
+/* 内联组：每项给足宽度，内部才是左右结构 */
+.card-content .form-group-inline .form-group {
+    flex: 1 1 320px;
+    min-width: 260px;
+    margin-bottom: 12px;
+}
+
+/* 字体网格内的项保持上下（控件含下拉 + B/I 三件） */
+.card-content .hl-font-grid .form-group {
+    display: block;
+}
+
+/* 手机：左右仍保留，但下拉收窄 */
+@media (max-width: 768px) {
+    .card-content .form-group {
+        grid-template-columns: minmax(0, 1fr) 130px;
+        column-gap: 10px;
+    }
+
+    .card-content .form-group select {
+        width: 130px;
+    }
+
+    .card-content .form-group-inline .form-group {
+        flex: 1 1 100%;
+        min-width: 0;
+    }
+}
