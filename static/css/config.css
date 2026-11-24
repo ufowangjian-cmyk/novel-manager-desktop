@@ -2308,3 +2308,12 @@ body.dark-mode .chip-modal-label {
     max-width: 220px;
     min-width: 0;
 }
+
+/* 间距再放大一档（2026-11-24）：卡片 33×42 → 44×56 */
+.card-content {
+    gap: 44px 56px;
+}
+
+.card-content .hl-font-grid {
+    gap: 28px 48px;
+}

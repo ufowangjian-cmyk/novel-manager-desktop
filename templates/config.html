@@ -495,14 +495,17 @@
                         </div>
                     </div>
                     
-                    <div class="form-group">
+                    <div class="form-group full-width">
                         <label>🚫 排除文件模式</label>
-                        <input type="text" id="exclude_patterns" name="exclude_patterns" 
-                               value="{{ config.exclude_patterns | join(', ') }}" 
-                               placeholder="【废弃】, 【备份】, temp_">
+                        <div class="hlw-editor" id="exclude-editor">
+                            <input type="text" class="hlw-input" id="exclude-input"
+                                   placeholder="输入关键词，回车或逗号添加" autocomplete="off">
+                        </div>
+                        <input type="hidden" id="exclude_patterns" name="exclude_patterns"
+                               value="{{ config.exclude_patterns | join(', ') }}">
                         <div class="form-hint">
-                            💡 包含这些关键词的文件将被忽略（多个用逗号分隔）
-                            <span class="example">示例: 【废弃】, 【备份】, temp_</span>
+                            💡 文件名包含这些关键词的会被忽略
+                            <span class="example">示例：【废弃】、【备份】、temp_</span>
                         </div>
                     </div>
                 </div>

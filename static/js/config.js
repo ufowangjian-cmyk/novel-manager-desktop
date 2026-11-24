@@ -55,30 +55,32 @@ function parseHighlightWords(raw) {
 
 // ===== 书名高亮词：胶囊式编辑器 =====
 // 真正的数据存在隐藏域 #title_highlight_words（JSON 数组），界面上编辑的是 #hlw-editor 里的胶囊。
-var HLW = (function () {
+function createChipEditor(opts) {
     var words = [];
     var SPLIT = /[\n\r,，、;；]+/;
+    var O = opts || {};
 
-    function hidden() { return document.getElementById('title_highlight_words'); }
-    function box() { return document.getElementById('hlw-editor'); }
-    function field() { return document.getElementById('hlw-input'); }
+    function hidden() { return document.getElementById(O.hidden); }
+    function box() { return document.getElementById(O.box); }
+    function field() { return document.getElementById(O.input); }
 
     function sync() {
         var h = hidden();
-        if (h) h.value = JSON.stringify(words);
+        if (!h) return;
+        // json=true 存 JSON 数组（书名高亮词），false 存逗号分隔字符串（排除模式）
+        h.value = O.json ? JSON.stringify(words) : words.join(', ');
     }
 
     function makeChip(w) {
-        // 胶囊本身当按钮：点开弹窗改/删（2026-11-23，与标签管理同一套逻辑）
         var s = document.createElement('button');
         s.type = 'button';
         s.className = 'hlw-chip';
         s.textContent = w;
         s.addEventListener('click', function () {
             openChipEditor({
-                title: '编辑书名高亮词',
+                title: O.title || '编辑词条',
                 value: w,
-                hint: '改完点保存；也可以直接删除。长词建议放前面，避免「番外篇」被「番外」先切开。',
+                hint: O.hint || '',
                 onSave: function (v) {
                     if (v === w) return;
                     if (words.indexOf(v) !== -1) {
@@ -119,19 +121,18 @@ var HLW = (function () {
     function init() {
         var el = box();
         if (!el || el.dataset.bound === '1') return;
-        el.dataset.bound = '1';
         var inp = field();
+        if (!inp) return;
+        el.dataset.bound = '1';
 
         inp.addEventListener('keydown', function (e) {
-            // 输入法正在选词（中文/日文/韩文）时，回车是"确认候选"，不是提交。
-            // Firefox 也在其中：不判断 isComposing 会把拼音里的回车当成加标签。
+            // 输入法选词时的回车是确认候选，不是提交
             if (e.isComposing || e.keyCode === 229) return;
             if (e.key === 'Enter' || e.key === ',' || e.key === '，') {
                 e.preventDefault();
                 add(inp.value);
                 inp.value = '';
             } else if (e.key === 'Backspace' && !inp.value && words.length) {
-                // 输入框空着时退格删掉最后一个词（和常见标签输入框一致）
                 words.pop();
                 render();
             }
@@ -139,16 +140,16 @@ var HLW = (function () {
         inp.addEventListener('blur', function () {
             if (inp.value.trim()) { add(inp.value); inp.value = ''; }
         });
-        // 点在空白处也能聚焦到输入框——整块看着像输入框，行为也要像
         el.addEventListener('click', function (e) {
             if (e.target === el) inp.focus();
         });
 
+        var raw = (hidden() && hidden().value) || '';
         var initWords = [];
-        try {
-            initWords = JSON.parse((hidden() && hidden().value) || '[]');
-        } catch (err) {
-            initWords = [];
+        if (O.json) {
+            try { initWords = JSON.parse(raw || '[]'); } catch (err) { initWords = []; }
+        } else {
+            initWords = raw.split(SPLIT).map(function (x) { return x.trim(); }).filter(Boolean);
         }
         words = Array.isArray(initWords) ? initWords.slice() : [];
         render();
@@ -159,12 +160,28 @@ var HLW = (function () {
         get: function () { return words.slice(); },
         set: function (list) { words = Array.isArray(list) ? list.slice() : []; render(); }
     };
-})();
+}
+
+// 书名高亮词：隐藏域存 JSON 数组
+var HLW = createChipEditor({
+    hidden: 'title_highlight_words', box: 'hlw-editor', input: 'hlw-input', json: true,
+    title: '编辑书名高亮词',
+    hint: '改完点保存；也可以直接删除。长词建议放前面，避免「番外篇」被「番外」先切开。'
+});
+
+// 排除文件模式：隐藏域存逗号分隔字符串，沿用原有的 parseCommaString 读写
+var EXCLUDE = createChipEditor({
+    hidden: 'exclude_patterns', box: 'exclude-editor', input: 'exclude-input', json: false,
+    title: '编辑排除关键词',
+    hint: '包含这些关键词的文件会在扫描时被忽略。'
+});
+
+function initChipEditors() { HLW.init(); EXCLUDE.init(); }
 
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', HLW.init);
+    document.addEventListener('DOMContentLoaded', initChipEditors);
 } else {
-    HLW.init();
+    initChipEditors();
 }
 
 // ============================================
