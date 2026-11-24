@@ -2246,27 +2246,30 @@ body.dark-mode .chip-modal-label {
 }
 
 .card-content .hl-font-grid .form-group {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+        "label ctrl"
+        "hint  hint";
+    column-gap: 10px;
+    row-gap: 4px;
     align-items: center;
-    gap: 4px 10px;
     margin-bottom: 0;
 }
 
 .card-content .hl-font-grid .form-group > label {
-    flex: 0 0 auto;
+    grid-area: label;
     white-space: nowrap;
     margin: 0;
 }
 
 .card-content .hl-font-grid .form-group > .set-font-ctrl {
-    flex: 1 1 auto;
+    grid-area: ctrl;
     min-width: 0;
 }
 
-/* 说明文字独占一行，不再和 label 抢同一个 grid 行 */
 .card-content .hl-font-grid .form-group > .form-hint {
-    flex: 1 1 100%;
+    grid-area: hint;
     margin: 0;
 }
 
