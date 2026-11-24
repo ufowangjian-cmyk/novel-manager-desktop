@@ -2097,6 +2097,13 @@ body.dark-mode .chip-modal-label {
     margin-bottom: 12px;
 }
 
+/* 通栏字段（书名高亮词这类内容编辑区）：标题在上，内容区跨满整行。
+   不加这条的话编辑器会被塞进 right 列（auto 宽），胶囊挤成一条。 */
+.card-content .form-group.full-width > *:not(label):not(.form-hint) {
+    grid-column: 1 / -1;
+    grid-row: auto;
+}
+
 /* 字体网格内的项保持上下（控件含下拉 + B/I 三件） */
 .card-content .hl-font-grid .form-group {
     display: block;
