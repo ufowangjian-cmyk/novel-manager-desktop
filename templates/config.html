@@ -426,8 +426,8 @@
     <option value="48" {% if config.scan_interval_hours|int == 48 %}selected{% endif %}>48 小时</option>
 </select>
                         <div class="form-hint">
-                            💡 单位：小时，0 表示不自动扫描
-                            <span class="example">示例: 24 (每天扫描一次)</span>
+                            💡 自动扫描的间隔，例如 24 小时＝每天扫一次
+                            <span class="example">示例：24 小时（每天扫一次）、6 小时（每 6 小时扫一次）</span>
                         </div>
                     </div>
                     
@@ -441,8 +441,8 @@
     <option value="100" {% if config.max_file_size_mb|int == 100 %}selected{% endif %}>100 MB</option>
 </select>
                         <div class="form-hint">
-                            💡 单位：MB，超过此大小的文件将被跳过
-                            <span class="example">示例: 100 (只扫描100MB以下的文件)</span>
+                            💡 单位：MB，超过此大小的文件会被跳过
+                            <span class="example">示例：100（只扫描 100MB 以下的文件）</span>
                         </div>
                     </div>
                     

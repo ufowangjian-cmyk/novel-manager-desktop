@@ -2125,3 +2125,19 @@ body.dark-mode .chip-modal-label {
         min-width: 0;
     }
 }
+
+/* ============================================
+   卡片内提示文字改回块级（2026-11-24）
+   .form-hint 原来是 display:flex，文字和 .example 并排成两个 flex 项，
+   长文案被挤在窄条里、和「示例」粘在一起。
+   ============================================ */
+.card-content .form-group > .form-hint {
+    display: block;
+    margin-top: 4px;
+    line-height: 1.5;
+}
+
+.card-content .form-group > .form-hint .example {
+    display: block;
+    margin-top: 2px;
+}
