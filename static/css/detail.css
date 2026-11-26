@@ -59,7 +59,7 @@
 
 .header h1 {
     margin: 0;
-    font-family: '京華老宋体v3.0', 'KingHwaOldSong', '京华老宋体内置', 'Segoe UI', '微软雅黑', sans-serif;
+    font-family: '京華老宋体v3.0', 'KingHwaOldSong', '京华老宋体内置', 'SimSun', 'Segoe UI', '微软雅黑', sans-serif;
     font-size: 2.1rem;
     font-weight: 700;
 }
@@ -148,7 +148,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    font-family: '京華老宋体v3.0', 'KingHwaOldSong', '京华老宋体内置', 'Segoe UI', '微软雅黑', sans-serif;
+    font-family: '京華老宋体v3.0', 'KingHwaOldSong', '京华老宋体内置', 'SimSun', 'Segoe UI', '微软雅黑', sans-serif;
 }
 
 .meta-info {
@@ -196,7 +196,7 @@
     max-height: 300px;
     overflow-y: auto;
     border: 1px solid var(--color-green-border);
-    font-family: '霞鹜文楷等宽 Medium', 'LXGWWenKaiMono-Medium', sans-serif
+    font-family: '霞鹜文楷等宽 Medium', 'LXGWWenKaiMono-Medium', 'SimSun', sans-serif
 }
 
 .chapter-item {
@@ -1174,7 +1174,7 @@ body.dark-mode .similar-item:hover {
 
 .hero-main h1 {
     margin: 0;
-    font-family: '京華老宋体v3.0', 'KingHwaOldSong', '京华老宋体内置', 'Segoe UI', '微软雅黑', sans-serif;
+    font-family: '京華老宋体v3.0', 'KingHwaOldSong', '京华老宋体内置', 'SimSun', 'Segoe UI', '微软雅黑', sans-serif;
     font-size: 2.1rem;
     font-weight: 700;
     line-height: 1.25;

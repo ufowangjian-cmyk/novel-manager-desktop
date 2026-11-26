@@ -73,7 +73,7 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-family: '京華老宋体v3.0', 'KingHwaOldSong', 'Segoe UI', '微软雅黑', sans-serif;
+    font-family: '京華老宋体v3.0', 'KingHwaOldSong', 'SimSun', 'Segoe UI', '微软雅黑', sans-serif;
 }
 
 .reader-subtitle {
