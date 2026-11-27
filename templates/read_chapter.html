@@ -587,7 +587,6 @@
 
         // ===== 页面加载初始化 =====
         document.addEventListener('DOMContentLoaded', async function () {
-            console.log('📖 阅读页初始化开始...');
 
             // 1. 主题（common.js）
             if (typeof loadAndApplyTheme === 'function') {
@@ -637,7 +636,6 @@
                     }
                 });
 
-                console.log(`✅ 转换完成，${convertedCount} 行有变化`);
 
                 // ===== 5.5 连续配图合并为画廊（reader-core.js）=====
                 // 必须在第 7 步 initViewerJS() 之前：Viewer 按 DOM 顺序收集图片，
@@ -701,7 +699,6 @@
                 initDragScroll();
             }
 
-            console.log('✅ 阅读页初始化完成');
         });
     </script>
 </body>

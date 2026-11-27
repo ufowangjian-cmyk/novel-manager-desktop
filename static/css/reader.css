@@ -145,12 +145,6 @@ body.dark-mode .reader-container {
   z-index: 100;
 }
 
-.book-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
 
 .book-title {
   font-size: 1.1rem;
@@ -158,44 +152,8 @@ body.dark-mode .reader-container {
   color: var(--color-text-secondary);
 }
 
-.book-author {
-  font-size: 0.9rem;
-  color: var(--color-text-quaternary);
-}
 
-.nav-links {
-  display: flex;
-  gap: 12px;
-}
 
-.nav-link {
-  padding: 6px 16px;
-  border-radius: 30px;
-  text-decoration: none;
-  font-size: 0.9rem;
-  color: var(--color-text-secondary);
-  background: var(--color-bg-tertiary);
-  transition: var(--transition-base);
-}
-
-.nav-link:hover {
-  background: var(--color-bg-quaternary);
-  color: var(--color-btn-text-hover);
-}
-
-/* 章节头部 */
-.chapter-header {
-  background: var(--color-bg-secondary);
-  padding: 15px 25px;
-  border-bottom: 1px solid var(--color-border-primary);
-  text-align: center;
-}
-
-.chapter-name {
-  font-size: 1.3rem;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-}
 
 /* 顶部控制栏 */
 .top-controls {
@@ -211,12 +169,6 @@ body.dark-mode .reader-container {
 
 /* ===== 5. 控件样式 ===== */
 /* 5.1 字体控制 */
-.font-controls {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-}
 
 .font-btn {
   padding: 4px 12px;
@@ -239,16 +191,6 @@ body.dark-mode .reader-container {
   border-color: var(--color-btn-active);
 }
 
-.font-select {
-  padding: 4px 12px;
-  border-radius: 20px;
-  border: 1px solid var(--color-border-primary);
-  background: var(--color-bg-primary);
-  cursor: pointer;
-  font-size: 0.9rem;
-  min-width: 120px;
-  color: var(--color-text-secondary);
-}
 
 /* 5.2 行跳转控件 */
 .line-jump {
@@ -331,49 +273,6 @@ body.dark-mode .speech-controls {
   animation: pulse 1s infinite;
 }
 
-/* 下拉菜单 */
-.speech-select-wrapper {
-  position: relative;
-  display: inline-block;
-}
-
-.speech-select {
-  padding: 5px 24px 5px 10px;
-  border-radius: 20px;
-  border: 1px solid var(--color-border-primary);
-  background: var(--color-bg-primary);
-  color: var(--color-text-primary);
-  font-size: 0.8rem;
-  cursor: pointer;
-  outline: none;
-  appearance: none;
-  min-width: 90px;
-  transition: var(--transition-base);
-}
-
-.speech-select:hover {
-  border-color: var(--color-speech-primary);
-}
-
-.speech-select:focus {
-  border-color: var(--color-speech-primary);
-  box-shadow: 0 0 0 2px rgba(114, 139, 71, 0.2);
-}
-
-.speech-select-wrapper::after {
-  content: '▼';
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--color-text-quaternary);
-  font-size: 10px;
-  pointer-events: none;
-}
-
-body.dark-mode .speech-select-wrapper::after {
-  color: var(--color-text-tertiary);
-}
 
 /* ============================================
    按住拖动翻页（抓手）
@@ -441,11 +340,6 @@ body.is-drag-holding #contentWrapper {
   text-indent: var(--reader-text-indent, 2em);
 }
 
-/* 智能换行后的每个句子都首行缩进 */
-.content-sentence {
-    text-indent: var(--reader-text-indent, 2em);
-    margin-bottom: 0.6rem;
-}
 
 /* 图片行不缩进 */
 .content-line:has(.local-image-figure),
@@ -461,8 +355,7 @@ body.is-drag-holding #contentWrapper {
    内部的居中文字会继承 2em 缩进而整体偏右。以后新增这类组件请加进这里。 */
 .local-image-error,
 .image-fallback-placeholder,
-.error-hint,
-.image-error-hint {
+.error-hint {
   text-indent: 0;
 }
 
@@ -629,10 +522,6 @@ body.dark-mode .separator[data-type="line"]::before {
   line-height: var(--reader-line-height, 1.8);
 }
 
-.reading-content.font-size-20 { font-size: 20px; }
-.reading-content.font-size-24 { font-size: 24px; }
-.reading-content.font-size-28 { font-size: 28px; }
-.reading-content.font-size-32 { font-size: 32px; }
 
 /* 6.4 朗读高亮 */
 .content-line.speech-highlight {
@@ -689,10 +578,6 @@ body.dark-mode .separator[data-type="line"]::before {
   color: var(--color-highlight-hollow-bracket);
 }
 
-.highlight-boldface-square-brackets {
-  font-weight: normal;
-  color: var(--color-highlight-bold-bracket);
-}
 
 .highlight-book {
   color: var(--color-highlight-book);
@@ -764,11 +649,6 @@ body.dark-mode .separator[data-type="line"]::before {
   padding: 5px 12px;
 }
 
-.progress-info {
-  color: var(--color-text-quaternary);
-  font-size: 0.9rem;
-  margin: 0 15px;
-}
 
 /* 8.1 悬浮透明底栏 */
 .bottom-bar.transparent {
@@ -879,32 +759,6 @@ body.dark-mode .local-image:not(.loaded) {
   position: relative;
 }
 
-/* 备选链接 */
-.image-fallback-link {
-  display: inline-block;
-  margin-top: 5px;
-  font-size: 0.9rem;
-  background: var(--color-bg-tertiary);
-  padding: 4px 12px;
-  border-radius: 20px;
-  text-decoration: none;
-  color: var(--color-text-tertiary);
-  border: 1px solid var(--color-border-primary);
-}
-
-.image-fallback-link:hover {
-  background: var(--color-bg-tertiary);
-  color: var(--color-text-secondary);
-  text-decoration: none;
-}
-
-body.dark-mode .image-fallback-link {
-  background: var(--color-bg-tertiary);
-}
-
-body.dark-mode .image-fallback-link:hover {
-  background: var(--color-bg-quaternary);
-}
 
 /* 9.2 本地配图 */
 .local-image-figure {
@@ -941,22 +795,6 @@ body.dark-mode .image-fallback-link:hover {
   display: block;
 }
 
-/* 图片缺失提示 */
-.local-image-missing {
-  display: inline-block;
-  padding: 2px 8px;
-  background: var(--color-highlight-bold-bracket);
-  border: 1px dashed var(--color-highlight-bracket);
-  border-radius: 4px;
-  color: var(--color-text-secondary);
-  font-size: 0.9rem;
-  cursor: help;
-}
-
-body.dark-mode .local-image-missing {
-  background: rgba(251, 146, 60, 0.2);
-  border-color: var(--color-highlight-bracket);
-}
 
 .local-image-error {
   padding: 20px;
@@ -1046,27 +884,6 @@ body.dark-mode .reading-content a:hover {
   display: inline-block;
 }
 
-/* ===== 11. 空状态与提示 ===== */
-.no-chapter-tip {
-  text-align: center;
-  padding: 30px;
-  background: var(--color-bg-secondary);
-  border-radius: 12px;
-  margin: 20px 0;
-  color: var(--color-text-quaternary);
-}
-
-.image-error-hint {
-  display: inline-block;
-  background: var(--color-speech-highlight);
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 0.8rem;
-}
-
-body.dark-mode .image-error-hint {
-  background: var(--color-speech-highlight-gradient);
-}
 
 /* ===== 12. 动画定义 ===== */
 @keyframes starGlow {

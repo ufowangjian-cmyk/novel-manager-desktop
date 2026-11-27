@@ -356,34 +356,8 @@
   font-weight: 500;
 }
 
-.tag-edit, .tag-delete, .alias-edit, .alias-delete, .rule-delete {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 12px;
-  padding: 2px 4px;
-  border-radius: 4px;
-  transition: all 0.2s;
-}
-
-.tag-edit, .alias-edit {
-  color: var(--color-orange);
-}
-
-.tag-edit:hover, .alias-edit:hover {
-  background: var(--color-orange-opacity-10);
-}
-
-.tag-delete, .alias-delete, .rule-delete {
-  color: var(--color-error);
-}
-
-.tag-delete:hover, .alias-delete:hover, .rule-delete:hover {
-  background: var(--color-error-opacity-10);
-}
-
 /* ---------- 识别关键词：紧凑胶囊（对齐配置页「书名高亮词」的观感） ----------
-   只有关键词列表用 .tag-item / .tag-items / .tag-name / .tag-delete，
+   只有关键词列表用 .tag-item / .tag-items / .tag-name，
    别名走 .alias-*、派生规则走 .rule-*，互不影响，所以这里可以放心收紧。 */
 .tag-items {
   gap: 6px;
@@ -403,26 +377,6 @@
   line-height: 1.7;
 }
 
-/* 删除按钮做成小圆点，emoji ✖ 居中 */
-.tag-delete {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  padding: 0;
-  border-radius: 50%;
-  background: var(--color-error-opacity-10);
-  color: var(--color-error);
-  font-size: 11px;
-  line-height: 1;
-  opacity: 0.8;
-}
-
-.tag-delete:hover {
-  background: rgba(231, 76, 60, 0.2);
-  opacity: 1;
-}
 
 .empty-hint {
   text-align: center;
@@ -743,87 +697,6 @@ body.dark-mode .notification.info {
   width: 100%;
 }
 
-/* 编辑状态下的别名项 - 占满整行 */
-.alias-item:has(.inline-edit-wrapper) {
-  width: 100%;
-  display: flex;
-  background: transparent;
-  border-color: transparent;
-  padding: 0;
-}
-
-/* 编辑状态的外框 - 填满 */
-.inline-edit-wrapper {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  flex-wrap: nowrap;
-  background: rgba(0, 0, 0, 0.03);
-  padding: 8px 12px;
-  border-radius: 20px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* 输入框 - 占满剩余空间 */
-.inline-edit-input {
-  flex: 1;
-  min-width: 0;
-  padding: 10px 14px;
-  border-radius: 24px;
-  border: 1px solid var(--color-border-medium);
-  background: var(--color-bg-white);
-  font-size: 14px;
-  box-sizing: border-box;
-}
-
-.inline-edit-input:focus {
-  outline: none;
-  border-color: var(--color-orange-light);
-  box-shadow: 0 0 0 2px rgba(243, 156, 18, 0.2);
-}
-
-body.dark-mode .inline-edit-input {
-  background: var(--dark-bg-secondary);
-  border-color: var(--dark-border-medium);
-  color: var(--dark-text-primary);
-}
-
-.inline-edit-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.inline-save-btn {
-  color: var(--color-success-light);
-  cursor: pointer;
-  padding: 6px 10px;
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 500;
-  transition: all 0.2s;
-}
-
-.inline-save-btn:hover {
-  background: rgba(46, 204, 113, 0.15);
-  transform: scale(1.02);
-}
-
-.inline-cancel-btn {
-  color: var(--color-error);
-  cursor: pointer;
-  padding: 6px 10px;
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 500;
-  transition: all 0.2s;
-}
-
-.inline-cancel-btn:hover {
-  background: var(--color-error-opacity-10);
-  transform: scale(1.02);
-}
 
 /* 别名可点击编辑区域 */
 .alias-display-text {

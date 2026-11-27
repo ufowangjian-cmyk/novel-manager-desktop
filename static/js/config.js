@@ -45,14 +45,6 @@ function onThemeChange() {
     }
 }
 
-// ============================================
-// 书名高亮词：换行 / 逗号 / 顿号 / 分号 都能分隔
-// ============================================
-function parseHighlightWords(raw) {
-    if (!raw) return [];
-    return raw.split(/[\n\r,，、;；]+/).map(function (s) { return s.trim(); }).filter(Boolean);
-}
-
 // ===== 书名高亮词：胶囊式编辑器 =====
 // 真正的数据存在隐藏域 #title_highlight_words（JSON 数组），界面上编辑的是 #hlw-editor 里的胶囊。
 function createChipEditor(opts) {
@@ -188,7 +180,6 @@ if (document.readyState === 'loading') {
 // 保存配置
 // ============================================
 async function saveAllConfig() {
-    console.log('🔍 saveAllConfig 被调用');
     showLoading(true);
 
     const formData = {

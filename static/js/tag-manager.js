@@ -396,27 +396,6 @@ async function addDerivedRule() {
 }
 
 
-// 编辑关键词
-async function editKeyword(index) {
-    const keyword = prompt('请输入新的关键词:');
-    if (!keyword) return;
-    
-    const response = await fetch('/api/tag/keyword/edit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ index, keyword })
-    });
-    
-    const result = await response.json();
-    if (result.success) {
-        showNotification('关键词已修改', 'success');
-        loadTagRules();
-    } else {
-        showNotification(result.message, 'error');
-    }
-}
-
-
 // 删除别名（原地编辑版本，接收 mainTag）
 async function deleteAlias(mainTag, skipConfirm) {
     if (!skipConfirm && !confirm('确定要删除这个别名映射吗？')) return;

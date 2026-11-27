@@ -295,57 +295,6 @@ body {
     font-weight: 500;
 }
 
-/* 日志按钮 */
-.logs-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 18px;
-    background: rgba(255, 255, 255, 0.25);
-    backdrop-filter: blur(10px);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 20px;
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 500;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    transition: all 0.2s ease;
-}
-
-.logs-btn:hover {
-    background: rgba(255, 255, 255, 0.4);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    color: white;
-    border-color: rgba(255, 255, 255, 0.5);
-}
-
-/* 配置按钮 */
-.config-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 18px;
-    background: rgba(255, 255, 255, 0.25);
-    backdrop-filter: blur(10px);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 20px;
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 500;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    transition: all 0.2s ease;
-}
-
-.config-btn:hover {
-    background: rgba(255, 255, 255, 0.4);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    color: white;
-    border-color: rgba(255, 255, 255, 0.5);
-}
 
 /* ============================================
    3.5 抽屉按钮（整合 日志 / 标签管理 / 配置）
@@ -1466,18 +1415,7 @@ body.dark-mode .tags-wrapper a.tag-badge:focus-visible {
 /* ============================================
    7. 选项卡 & 折叠功能
    ============================================ */
-.tabs-header-wrapper {
-    margin-bottom: 20px;
-}
 
-.tabs-nav {
-    display: flex;
-    gap: 5px;
-    background: var(--tool-green-light);
-    border-radius: 15px 15px 0 0;
-    padding: 5px 5px 0 5px;
-    box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
-}
 
 .tab-btn {
     padding: 12px 24px;
@@ -1502,34 +1440,6 @@ body.dark-mode .tags-wrapper a.tag-badge:focus-visible {
     border-bottom: 3px solid #728B47;
 }
 
-/* 折叠按钮 - 靠右对齐 */
-.tabs-nav .tabs-collapse-btn {
-    margin-left: auto;
-    background: transparent;
-    border: none;
-    color: #333333;
-    font-size: 18px;
-    cursor: pointer;
-    padding: 8px 12px;
-    border-radius: 12px;
-    transition: transform 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 44px;
-    min-height: 44px;
-    font-weight: bold;
-}
-
-.tabs-nav .tabs-collapse-btn:hover {
-    background: rgba(0, 0, 0, 0.1);
-    color: var(--tool-green-dark);
-}
-
-/* 折叠状态 - 箭头向下旋转 */
-.tabs-nav .tabs-collapse-btn.collapsed {
-    transform: rotate(180deg);
-}
 
 /* 选项卡内容包装器 */
 .tabs-content-wrapper {
@@ -2423,10 +2333,6 @@ body.dark-mode .author-link {
     border-bottom-color: #3a4d3a;
 }
 
-/* 选项卡深色模式 */
-body.dark-mode .tabs-nav {
-    background: #1e2a1e;
-}
 
 body.dark-mode .tab-btn {
     color: #94a3b8;
@@ -2443,14 +2349,6 @@ body.dark-mode .tab-btn.active {
     border-bottom-color: #5a8f4c;
 }
 
-body.dark-mode .tabs-nav .tabs-collapse-btn {
-    color: #94a3b8;
-}
-
-body.dark-mode .tabs-nav .tabs-collapse-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #9AB87A;
-}
 
 /* 最近阅读深色模式 */
 body.dark-mode .recent-card {
@@ -2522,17 +2420,6 @@ body.dark-mode .pagination-jump button:hover {
     background: #4a7a3a;
 }
 
-body.dark-mode .config-btn,
-body.dark-mode .logout-btn {
-    background: #2a3a2a;
-    color: #cbd5e1;
-    border-color: #3a4d3a;
-}
-
-body.dark-mode .config-btn:hover,
-body.dark-mode .logout-btn:hover {
-    background: #3a4d3a;
-}
 
 body.dark-mode .search-btn {
     background: #5a8f4c;
@@ -2542,17 +2429,6 @@ body.dark-mode .search-btn:hover {
     background: #4a7a3a;
 }
 
-body.dark-mode .logs-btn,
-body.dark-mode .config-btn {
-    background: rgba(0, 0, 0, 0.4);
-    border-color: rgba(255, 255, 255, 0.15);
-}
-
-body.dark-mode .logs-btn:hover,
-body.dark-mode .config-btn:hover {
-    background: rgba(0, 0, 0, 0.6);
-    border-color: rgba(255, 255, 255, 0.3);
-}
 
 body.dark-mode .stats-badge .dir-info,
 body.dark-mode .stats-badge .count-info {

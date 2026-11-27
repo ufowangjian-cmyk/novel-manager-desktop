@@ -454,7 +454,6 @@
         
         const header = document.querySelector(selector);
         if (!header) {
-            console.log('未找到轮播图容器');
             return;
         }
         
@@ -472,9 +471,6 @@
                 if (autoSlideshow) {
                     startSlideshow(header, images, intervalTime);
                 }
-                console.log(`轮播图已启动，共 ${images.length} 张图片`);
-            } else {
-                console.log('未找到背景图片');
             }
         } catch (error) {
             console.error('初始化轮播图失败:', error);
@@ -607,13 +603,11 @@
 
     // 其他
     window.toggleCard = toggleCard;
-    // window.openFile = openFile;  // ← 删除这一行（重复了）
     window.exportConfig = exportConfig;
     window.importConfig = importConfig;
     window.parseCommaString = parseCommaString;
     window.escapeHtml = escapeHtml;
 
-    console.log('✅ common.js 已加载');
 
 })();
 

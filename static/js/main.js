@@ -1001,7 +1001,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    console.log('主页初始化完成');
 });
 
 // 在 index.html 的 script 标签中添加

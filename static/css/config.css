@@ -317,109 +317,6 @@ body.dark-mode .btn.btn-back-home:hover {
 }
 
 
-/* 用户记录管理样式 */
-.user-records-container {
-    background: rgba(0, 0, 0, 0.048);
-    border-radius: 12px;
-    padding: 5px;
-    max-height: 400px;
-    overflow-y: auto;
-}
-
-.user-record-item {
-    background: var(--record-bg-item);
-    border-radius: 10px;
-    margin-bottom: 8px;
-    overflow: hidden;
-    transition: all 0.2s;
-}
-
-.user-record-item:hover {
-    background: var(--record-bg-item-hover);
-}
-
-.user-record-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 15px;
-    cursor: pointer;
-    user-select: none;
-}
-
-.user-record-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.user-record-name {
-    font-weight: 600;
-    font-size: 14px;
-}
-
-.user-record-stats {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 13px;
-    color: var(--text-secondary);
-}
-
-.expand-icon-small {
-    font-size: 12px;
-    transition: transform 0.2s;
-}
-
-.user-record-detail {
-    padding: 12px 15px;
-    border-top: 1px solid var(--border-secondary);
-    background: var(--record-bg-detail);
-}
-
-.records-list {
-    max-height: 200px;
-    overflow-y: auto;
-}
-
-.empty-records-small {
-    text-align: center;
-    padding: 20px;
-    color: var(--text-secondary);
-    font-style: italic;
-}
-
-.loading-small {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border: 2px solid #f3f3f3;
-    border-top: 2px solid var(--color-primary);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-}
-
-/* 浅色模式适配 */
-body.light-mode .user-record-item {
-    background: var(--light-record-bg-item);
-}
-
-body.light-mode .user-record-item:hover {
-    background: var(--light-record-bg-item-hover);
-}
-
-body.light-mode .user-record-stats {
-    color: var(--light-text-secondary);
-}
-
-body.light-mode .user-record-detail {
-    border-top-color: var(--light-border-secondary);
-}
-
-body.light-mode .empty-records-small {
-    color: var(--light-expand-icon);
-}
 
 /* 配置卡片 */
 .config-card {
@@ -562,27 +459,6 @@ body.dark-mode .form-group .hlw-editor {
     background: rgba(114, 139, 71, 0.18);
     border: 1px solid rgba(114, 139, 71, 0.38);
     color: inherit;
-}
-.form-group .hlw-x {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 15px;
-    height: 15px;
-    padding: 0;
-    border: none;
-    border-radius: 50%;
-    background: rgba(128, 128, 128, 0.28);
-    color: inherit;
-    font-size: 12px;
-    line-height: 1;
-    cursor: pointer;
-    opacity: 0.8;
-    transition: all 0.2s;
-}
-.form-group .hlw-x:hover {
-    background: rgba(128, 128, 128, 0.45);
-    opacity: 1;
 }
 .form-group .hlw-input {
     flex: 1 1 140px;
@@ -787,9 +663,6 @@ body.dark-mode .form-group .hlw-editor {
 }
 
 /* 工具类 */
-.text-muted {
-    color: var(--text-muted);
-}
 
 .text-warning {
     color: var(--color-warning-alt);
@@ -799,9 +672,6 @@ body.dark-mode .form-group .hlw-editor {
     color: var(--color-danger);
 }
 
-.text-success {
-    color: var(--color-success);
-}
 
 hr {
     border: none;
@@ -809,239 +679,7 @@ hr {
     margin: 20px 0;
 }
 
-/* 标签管理样式 */
-.stats-row {
-    display: flex;
-    gap: 20px;
-    margin-bottom: 25px;
-    flex-wrap: wrap;
-}
 
-.stat-item {
-    background: var(--bg-stat-item);
-    border-radius: 12px;
-    padding: 12px 20px;
-    flex: 1;
-    min-width: 100px;
-    text-align: center;
-}
-
-.stat-label {
-    display: block;
-    font-size: 12px;
-    color: var(--text-secondary);
-    margin-bottom: 5px;
-}
-
-.stat-value {
-    display: block;
-    font-size: 24px;
-    font-weight: bold;
-    color: var(--color-primary);
-}
-
-/* 标签列表容器 */
-.tag-list-container {
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 12px;
-    padding: 15px;
-    max-height: 300px;
-    overflow-y: auto;
-}
-
-.tag-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--bg-tag-item);
-    border: 1px solid var(--border-tag);
-    border-radius: 20px;
-    padding: 6px 12px;
-    margin: 5px;
-    transition: all 0.2s;
-}
-
-.tag-item:hover {
-    background: var(--bg-tag-item-hover);
-    transform: translateY(-1px);
-}
-
-.tag-name {
-    font-size: 13px;
-    color: var(--text-secondary);
-    cursor: pointer;
-}
-
-.tag-name.editing {
-    background: rgba(0, 0, 0, 0.5);
-    padding: 2px 6px;
-    border-radius: 4px;
-}
-
-.tag-edit-input {
-    background: #0f172a;
-    border-color: var(--color-primary);
-    border-radius: 4px;
-    color: white;
-    padding: 2px 6px;
-    font-size: 12px;
-    width: 100px;
-}
-
-.tag-count {
-    font-size: 11px;
-    color: var(--text-secondary);
-    background: rgba(0, 0, 0, 0.3);
-    padding: 2px 6px;
-    border-radius: 12px;
-}
-
-.tag-actions {
-    display: inline-flex;
-    gap: 4px;
-}
-
-.tag-edit,
-.tag-delete {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 12px;
-    padding: 2px 4px;
-    border-radius: 4px;
-    transition: all 0.2s;
-}
-
-.tag-edit {
-    color: var(--color-warning-alt);
-}
-
-.tag-edit:hover {
-    background: rgba(255, 170, 102, 0.2);
-}
-
-.tag-delete {
-    color: var(--color-danger);
-}
-
-.tag-delete:hover {
-    background: rgba(255, 107, 107, 0.2);
-}
-
-/* 派生规则容器 - 标签式紧凑布局 */
-.derived-rules-container {
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 12px;
-    padding: 15px;
-    max-height: 300px;
-    overflow-y: auto;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.rule-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--bg-rule-item);
-    border: 1px solid var(--border-tag);
-    border-radius: 24px;
-    padding: 6px 12px;
-    transition: all 0.2s;
-}
-
-.rule-item:hover {
-    background: var(--bg-rule-item-hover);
-    transform: translateY(-1px);
-}
-
-.rule-content {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: nowrap;
-}
-
-.rule-source {
-    background: var(--color-primary);
-    color: white;
-    padding: 2px 10px;
-    border-radius: 16px;
-    font-size: 12px;
-    font-weight: 500;
-}
-
-.rule-arrow {
-    color: var(--text-secondary);
-    font-size: 12px;
-}
-
-.rule-derived {
-    background: var(--color-secondary);
-    color: white;
-    padding: 2px 10px;
-    border-radius: 16px;
-    font-size: 12px;
-    font-weight: 500;
-}
-
-.rule-delete {
-    background: none;
-    border: none;
-    color: var(--color-danger);
-    cursor: pointer;
-    font-size: 14px;
-    padding: 2px 6px;
-    border-radius: 50%;
-    transition: all 0.2s;
-    margin-left: 4px;
-}
-
-.rule-delete:hover {
-    background: rgba(255, 107, 107, 0.2);
-    transform: scale(1.1);
-}
-
-/* 添加标签/规则输入组 */
-.add-tag-group,
-.add-rule-group {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    flex-wrap: wrap;
-}
-
-.add-tag-group input,
-.add-rule-group input {
-    flex: 1;
-    min-width: 150px;
-}
-
-.arrow {
-    color: var(--text-secondary);
-    font-size: 18px;
-}
-
-/* 批量操作按钮组 */
-.batch-buttons {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.batch-buttons .btn {
-    flex: 1;
-    min-width: 120px;
-}
-
-/* 加载状态 */
-.loading-tags,
-.loading-rules {
-    text-align: center;
-    padding: 20px;
-    color: var(--text-secondary);
-}
 
 /* ==================== 浅色主题样式 ==================== */
 body.light-mode {
@@ -1121,30 +759,6 @@ body.light-mode .form-hint .example {
 
 
 
-body.light-mode .stat-item {
-    background: var(--light-bg-stat-item);
-}
-
-body.light-mode .stat-label {
-    color: var(--light-text-tertiary);
-}
-
-body.light-mode .tag-item {
-    background: var(--light-bg-tag-item);
-    border: 1px solid var(--border-tag);
-}
-
-body.light-mode .rule-item {
-    background: var(--light-bg-rule-item);
-}
-
-body.light-mode .tag-name {
-    color: var(--color-primary);
-}
-
-body.light-mode .empty-hint {
-    color: var(--light-expand-icon);
-}
 
 body.light-mode .text-warning {
     color: var(--color-warning-light-alt);
@@ -1154,9 +768,6 @@ body.light-mode .text-danger {
     color: var(--color-danger-light);
 }
 
-body.light-mode .text-success {
-    color: var(--color-success-light);
-}
 
 /* ==================== 深色模式（田园绿主题） ==================== */
 body.dark-mode {
@@ -1233,82 +844,11 @@ body.dark-mode .form-hint {
 }
 
 
-body.dark-mode .stat-item {
-    background: var(--dark-bg-stat-item);
-}
-
-body.dark-mode .stat-label {
-    color: var(--dark-text-secondary);
-}
-
-body.dark-mode .stat-value {
-    color: var(--dark-border-input-focus);
-}
-
-body.dark-mode .tag-list-container {
-    background: var(--dark-bg-tag-list);
-}
-
-body.dark-mode .tag-item {
-    background: var(--dark-bg-tag-item);
-    border-color: var(--border-tag);
-}
-
-body.dark-mode .tag-item:hover {
-    background: var(--dark-bg-tag-item-hover);
-}
-
-body.dark-mode .tag-name {
-    color: var(--dark-text-secondary);
-}
-
-body.dark-mode .tag-count {
-    color: var(--dark-text-secondary);
-    background: var(--dark-bg-header);
-}
-
-body.dark-mode .derived-rules-container {
-    background: var(--dark-bg-rule-container);
-}
-
-body.dark-mode .rule-item {
-    background: var(--dark-bg-rule-item);
-    border-color: var(--border-tag);
-}
-
-body.dark-mode .rule-item:hover {
-    background: var(--dark-bg-rule-item-hover);
-}
-
-body.dark-mode .rule-source {
-    background: var(--dark-rule-source);
-}
-
-body.dark-mode .rule-arrow {
-    color: var(--dark-text-secondary);
-}
-
-body.dark-mode .rule-derived {
-    background: var(--dark-rule-derived);
-    color: var(--text-light);
-}
-
-body.dark-mode .arrow {
-    color: var(--dark-text-secondary);
-}
-
-body.dark-mode .text-muted {
-    color: var(--dark-text-secondary);
-}
 
 body.dark-mode hr {
     border-top-color: var(--dark-border-tertiary);
 }
 
-body.dark-mode .loading-tags,
-body.dark-mode .loading-rules {
-    color: var(--dark-text-secondary);
-}
 
 /* 模态框深色模式 */
 body.dark-mode .modal-content {
@@ -1343,43 +883,6 @@ body.dark-mode .modal-footer {
     background: #152015;
 }
 
-/* 用户记录深色模式 */
-body.dark-mode .user-record-item {
-    background: var(--dark-record-bg-item);
-}
-
-body.dark-mode .user-record-item:hover {
-    background: var(--dark-record-bg-item-hover);
-}
-
-body.dark-mode .user-record-header:hover {
-    background: var(--dark-record-bg-header-hover);
-}
-
-body.dark-mode .user-record-stats {
-    color: var(--dark-text-secondary);
-}
-
-body.dark-mode .user-record-detail {
-    border-top-color: var(--dark-border-tertiary);
-    background: var(--dark-record-bg-detail);
-}
-
-body.dark-mode .record-item {
-    background: var(--dark-record-bg-record-item);
-}
-
-body.dark-mode .record-item:hover {
-    background: var(--dark-record-bg-record-item-hover);
-}
-
-body.dark-mode .record-title {
-    color: var(--dark-text-secondary);
-}
-
-body.dark-mode .expand-icon-small {
-    color: var(--dark-text-secondary);
-}
 
 /* 添加过渡动画 */
 body {
@@ -1567,165 +1070,6 @@ body.light-mode .modal-footer {
     background: var(--light-bg-modal-footer);
 }
 
-/* ==================== 用户记录管理详细样式 ==================== */
-.user-records-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.user-record-item {
-    background: var(--record-bg-item);
-    border-radius: 8px;
-    overflow: hidden;
-    transition: all 0.2s;
-}
-
-.user-record-item:hover {
-    background: var(--record-bg-item-hover);
-}
-
-.user-record-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 16px;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.user-record-header:hover {
-    background: var(--record-bg-header-hover);
-}
-
-.user-record-info {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-.user-record-name {
-    font-weight: 600;
-    font-size: 14px;
-}
-
-.record-badge {
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 11px;
-}
-
-.record-badge.admin {
-    background: var(--record-badge-admin);
-    color: var(--text-secondary);
-}
-
-.record-badge.user {
-    background: var(--record-badge-user);
-    color: var(--record-badge-user-text);
-}
-
-.record-count-badge {
-    background: var(--record-count-badge);
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 11px;
-}
-
-.expand-icon-small {
-    font-size: 12px;
-    transition: transform 0.2s;
-    color: var(--text-secondary);
-}
-
-.user-record-detail {
-    padding: 12px 16px;
-    border-top: 1px solid var(--border-secondary);
-    background: var(--record-bg-detail);
-}
-
-.records-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    max-height: 300px;
-    overflow-y: auto;
-}
-
-.record-item {
-    padding: 10px 12px;
-    background: var(--record-bg-record-item);
-    border-radius: 8px;
-    transition: background 0.2s;
-}
-
-.record-item:hover {
-    background: var(--record-bg-record-item-hover);
-}
-
-.record-title {
-    font-size: 13px;
-    font-weight: 500;
-    margin-bottom: 6px;
-    color: var(--record-text-title);
-}
-
-.record-meta {
-    font-size: 11px;
-    opacity: 0.7;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.empty-records-small {
-    text-align: center;
-    padding: 20px;
-    font-size: 12px;
-    opacity: 0.6;
-}
-
-.empty-records {
-    text-align: center;
-    padding: 40px;
-    font-size: 14px;
-    opacity: 0.6;
-}
-
-/* 浅色模式适配 */
-body.light-mode .user-record-item {
-    background: var(--light-record-bg-item);
-}
-
-body.light-mode .user-record-item:hover {
-    background: var(--light-record-bg-item-hover);
-}
-
-body.light-mode .user-record-header:hover {
-    background: var(--light-record-bg-header-hover);
-}
-
-body.light-mode .user-record-detail {
-    border-top-color: var(--light-border-secondary);
-    background: var(--light-record-bg-detail);
-}
-
-body.light-mode .record-item {
-    background: var(--light-record-bg-record-item);
-}
-
-body.light-mode .record-item:hover {
-    background: var(--light-record-bg-record-item-hover);
-}
-
-body.light-mode .record-title {
-    color: var(--light-record-text-title);
-}
-
-body.light-mode .expand-icon-small {
-    color: var(--light-expand-icon);
-}
 
 /* ============================================
    轮播图背景层级修复
@@ -2212,11 +1556,7 @@ body.dark-mode .chip-modal-label {
 .card-content > h3,
 .card-content > .form-hint,
 .card-content > .button-group,
-.card-content > .switch-grid,
-.card-content > hr,
-.card-content > .user-records-container,
-.card-content > .user-records-header,
-.card-content > .memory-management {
+.card-content > hr {
     grid-column: 1 / -1;
 }
 

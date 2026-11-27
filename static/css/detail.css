@@ -70,9 +70,6 @@
     /* 左对齐 */
 }
 
-.back-btn {
-    align-self: flex-start;
-}
 
 .meta-info {
     display: flex;
@@ -90,27 +87,6 @@
     border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-/* 返回列表：琥珀橙实心，与 Docker 版 .btn-nav.btn-back-home 同一套色
-   （#d97706 / hover #b45309），头部绿底上一眼能看到 */
-.back-btn {
-    display: inline-block;
-    background: #d97706;
-    color: var(--color-white);
-    padding: 8px 20px;
-    border-radius: 30px;
-    text-decoration: none;
-    transition: all 0.3s;
-    border: 1px solid #b45309;
-    font-weight: 500;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
-}
-
-.back-btn:hover {
-    background: #b45309;
-    border-color: #92400e;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
-}
 
 /* 详情卡片 - 移除固定高度，让内容自然撑开 */
 .detail-card {
@@ -507,20 +483,6 @@ body.dark-mode .action-btn.secondary:hover {
     box-shadow: 0 8px 15px -5px var(--color-green-deeper);
 }
 
-/* 深色主题保持同一套橙色，只把描边换成更亮的 #f59e0b（和 Docker 版一致）。
-   文字必须写死白色：原先用的 --color-text-light 是灰绿，压在橙底上发灰。 */
-body.dark-mode .back-btn {
-    background: #d97706;
-    border-color: #f59e0b;
-    color: #fff;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.30);
-}
-
-body.dark-mode .back-btn:hover {
-    background: #b45309;
-    border-color: #f59e0b;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.38);
-}
 
 /* 深色主题下的滚动条（标准属性：Chrome 121+/Firefox 64+ 都认；
    以前只用 ::-webkit-scrollbar，Firefox 上等于没写） */
@@ -694,16 +656,6 @@ body.dark-mode .intro-content .local-image-caption {
     border-color: var(--color-green-dark);
 }
 
-.intro-content .fallback-icon {
-    font-size: 2rem;
-    opacity: 0.6;
-}
-
-.intro-content .fallback-text {
-    font-size: 0.9rem;
-    color: var(--color-text-secondary);
-    font-weight: 500;
-}
 
 .intro-content .fallback-link {
     margin-top: 2px;
@@ -761,9 +713,6 @@ body.dark-mode .intro-content .image-fallback-placeholder:hover {
     border-color: var(--color-green-deeper);
 }
 
-body.dark-mode .intro-content .fallback-text {
-    color: var(--color-text-light);
-}
 
 body.dark-mode .intro-content .fallback-link {
     background: var(--color-green-deeper);
@@ -830,15 +779,6 @@ body.dark-mode .intro-content .image-wrapper {
     margin-right: 2px;
 }
 
-/* 移除外层 span 的干扰 */
-.pretty-link .link-icon {
-    display: none;
-    /* 隐藏 icon span，用伪元素替代 */
-}
-
-.pretty-link .link-text {
-    display: inline;
-}
 
 .pretty-link:hover {
     background: var(--color-btn-active);
@@ -849,15 +789,6 @@ body.dark-mode .intro-content .image-wrapper {
     text-decoration: none;
 }
 
-/* 限制链接文本宽度 */
-.pretty-link .link-text {
-    max-width: 300px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    display: inline-block;
-    vertical-align: bottom;
-}
 
 /* 深色模式 */
 body.dark-mode .pretty-link {
@@ -878,9 +809,6 @@ body.dark-mode .pretty-link:hover {
     padding: 4px 10px 4px 6px;
 }
 
-.content-line:has(.pretty-link:only-child) .pretty-link .link-text {
-    max-width: 500px;
-}
 
 /* ===== 详情页分隔符样式 ===== */
 
@@ -973,32 +901,7 @@ body.dark-mode .separator[data-type="line"] {
             var(--color-highlight-quote, #ff8a6f), var(--color-text-quaternary, #9ca3af), transparent);
 }
 
-/* 修复按钮样式 */
-.action-btn.repair-btn {
-    background: #ed8936;
-    color: white;
-}
 
-.action-btn.repair-btn:hover {
-    background: #dd6b20;
-    transform: translateY(-2px);
-    box-shadow: 0 10px 15px -5px rgba(237, 137, 54, 0.4);
-}
-
-.action-btn.repair-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-}
-
-/* 深色模式 */
-body.dark-mode .action-btn.repair-btn {
-    background: #c05621;
-}
-
-body.dark-mode .action-btn.repair-btn:hover {
-    background: #9c4221;
-}
 
 /* ===== 正文预览样式 ===== */
 .preview-content {
@@ -1184,9 +1087,6 @@ body.dark-mode .similar-item:hover {
     margin: 0;
 }
 
-.hero-main .back-btn {
-    margin-top: 2px;
-}
 
 /* 简介与相似书并排：两者体量接近，右侧不会空。
    两栏之间用一条竖线分隔、不留 gap，与整页「分区不卡片」的观感一致 */

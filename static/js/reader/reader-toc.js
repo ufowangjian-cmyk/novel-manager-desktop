@@ -23,7 +23,6 @@
         // 打开时自动滚动到当前章节
         scrollToCurrent();
 
-        console.log('📑 目录抽屉已打开');
     }
 
     // ===== 关闭 =====
@@ -33,7 +32,6 @@
         drawerEl.classList.remove('active');
         maskEl.classList.remove('active');
         document.body.style.overflow = '';
-        console.log('📑 目录抽屉已关闭');
     }
 
     // ===== 高亮 + 滚动到当前章节 =====
@@ -97,7 +95,6 @@
             }
         });
 
-        console.log('✅ 目录抽屉已就绪，共 ' + bodyEl.querySelectorAll('.toc-item').length + ' 章');
     }
 
     // ===== 暴露全局 =====
@@ -105,5 +102,4 @@
     window.closeTocDrawer = closeTocDrawer;
     window.initTocDrawer = initTocDrawer;
 
-    console.log('✅ reader-toc.js 已加载');
 })();
