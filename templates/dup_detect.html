@@ -280,6 +280,104 @@
         }
         .open-btn:hover { background: #728B47; border-color: #728B47; color: white; }
 
+        /* ===== 忽略功能（与章节检测页同一套版式） ===== */
+        .btn-ignore {
+            background: #9b59b6;
+            color: white;
+        }
+        .btn-ignore:hover { background: #8e44ad; }
+        .btn-sm { padding: 5px 12px !important; font-size: 0.85em; }
+        .ignored-tag {
+            flex: none;
+            font-size: 0.78em;
+            color: #805ad5;
+            background: #f3e8ff;
+            padding: 2px 9px;
+            border-radius: 10px;
+        }
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: #fff;
+            border-radius: 15px;
+            max-width: 900px;
+            width: 90%;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 25px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .modal-header h2 { margin: 0; font-size: 1.4em; color: #2d3748; }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+            padding: 0 8px;
+            line-height: 1;
+        }
+        .modal-close:hover { color: #333; }
+        .modal-body { padding: 20px 25px; overflow-y: auto; flex: 1; }
+        .ignore-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            background: #f7fafc;
+            border-radius: 8px;
+            color: #4a5568;
+        }
+        .ignore-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        .ignore-table th {
+            text-align: left;
+            padding: 10px 12px;
+            background: #f7fafc;
+            border-bottom: 2px solid #e2e8f0;
+            font-weight: 600;
+            color: #2d3748;
+        }
+        .ignore-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #edf2f7;
+            vertical-align: middle;
+            color: #4a5568;
+            word-break: break-all;
+        }
+        .ignore-table td:last-child { white-space: nowrap; word-break: normal; }
+        .ignore-table td .btn-sm { margin-right: 6px; }
+        .ignore-table tr:hover td { background: #f7fafc; }
+        .ignore-table th:nth-child(1) { width: 24%; }
+        .ignore-table th:nth-child(2) { width: 30%; }
+        .ignore-table th:nth-child(3) { width: 18%; }
+        .ignore-table th:nth-child(4) { width: 16%; }
+        .ignore-table th:nth-child(5) { width: 12%; }
+        .ignore-reason {
+            color: #718096;
+            font-size: 0.9em;
+            max-width: 220px;
+            display: inline-block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .ignore-reason-empty { color: #cbd5e0; font-size: 0.9em; }
+
         /* 平铺：一对一行 */
         .pair-row {
             background: white;
@@ -331,6 +429,19 @@
         body.dark-mode .book-cover { background: #3a4a2a; color: #b7d18a; }
         body.dark-mode .open-btn { color: #cbd5e1; border-color: #4a5568; }
         body.dark-mode .open-btn:hover { background: #728B47; border-color: #728B47; color: white; }
+        body.dark-mode .modal-content { background: #2d3748; }
+        body.dark-mode .modal-header { border-color: #4a5568; }
+        body.dark-mode .modal-header h2 { color: #e2e8f0; }
+        body.dark-mode .modal-body { color: #e2e8f0; }
+        body.dark-mode .ignore-stats { background: rgba(255, 255, 255, 0.06); color: #cbd5e0; }
+        body.dark-mode .ignore-table th {
+            background: rgba(255, 255, 255, 0.06);
+            color: #e2e8f0;
+            border-color: #4a5568;
+        }
+        body.dark-mode .ignore-table td { color: #cbd5e0; border-color: #3a4556; }
+        body.dark-mode .ignore-table tr:hover td { background: rgba(255, 255, 255, 0.04); }
+        body.dark-mode .ignored-tag { background: #44337a; color: #d6bcfa; }
         body.dark-mode .check-items-bar { background: rgba(102, 126, 234, 0.14); }
         body.dark-mode .check-items-label,
         body.dark-mode .check-item { color: #cbd5e1; }
@@ -356,6 +467,7 @@
                     <span>📁 小说总数: <span class="num" id="totalNovels">{{ novel_data|length }}</span></span>
                     <span>🔗 检出书对: <span class="num" id="pairCount">—</span></span>
                     <span>📚 涉及本数: <span class="num" id="bookCount">—</span></span>
+                    <span>🚫 已忽略: <span class="num" id="ignoredCount">0</span></span>
                 </div>
             </div>
         </div>
@@ -375,6 +487,7 @@
         <div class="control-bar">
             <button class="btn btn-primary" id="scanBtn" onclick="scanAll()">🔍 开始检测</button>
             <button class="btn btn-outline" onclick="toggleExplain()">📖 判定说明</button>
+            <button class="btn btn-ignore" onclick="openIgnoreManager()">🚫 忽略管理</button>
             <span style="flex:1;"></span>
             <button class="btn btn-danger" onclick="clearResult()">🗑️ 清空结果</button>
         </div>
@@ -434,12 +547,156 @@
         </div>
     </div>
 
+    <!-- 忽略管理弹窗 -->
+    <div class="modal-overlay" id="ignoreModal" style="display:none;"
+         onclick="if (event.target === this) closeIgnoreModal()">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🚫 忽略列表管理</h2>
+                <button class="modal-close" onclick="closeIgnoreModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="ignore-stats">
+                    <span>已忽略: <strong id="ignoreModalCount">0</strong> 本 · 这些书在「开始检测」时会被直接跳过</span>
+                    <button class="btn btn-danger btn-sm" onclick="clearAllIgnores()">清空全部</button>
+                </div>
+                <div id="ignoreListContainer"></div>
+            </div>
+        </div>
+    </div>
+
 <script>
 let RESULT = null;
 let CUR_KIND = '';
 let scanning = false;
 let scanSeq = 0;   // 防止上一次扫描的延时收起影响下一次
 const KIND_LABEL = { rename: '同一本改名', contain: '版本包含', rewrite: '扩写/改写', weak: '弱信号' };
+
+// ---------- 忽略列表 ----------
+let ignoreList = [];
+
+function isIgnored(path) {
+    const norm = String(path || '').toLowerCase();
+    return ignoreList.some(i => String(i.file_path || '').toLowerCase() === norm);
+}
+
+async function loadIgnoreList() {
+    try {
+        const resp = await fetch('/api/dup/ignore/list');
+        const data = await resp.json();
+        if (data.success) ignoreList = data.ignore_list || [];
+    } catch (error) {
+        console.error('加载忽略列表失败:', error);
+    }
+    const topEl = document.getElementById('ignoredCount');
+    if (topEl) topEl.textContent = ignoreList.length;
+    const modalEl = document.getElementById('ignoreModalCount');
+    if (modalEl) modalEl.textContent = ignoreList.length;
+}
+
+async function ignoreBook(filePath, title) {
+    if (isIgnored(filePath)) {
+        if (typeof showNotification === 'function') showNotification('这本书已在忽略列表中', 'warning');
+        return;
+    }
+    const reason = prompt(`忽略「${title || filePath}」\n原因（可留空，方便以后想起为什么忽略）：`) ?? null;
+    if (reason === null) return;   // 用户取消
+    try {
+        const resp = await fetch('/api/dup/ignore/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ file_path: filePath, title: title || '', reason: reason.trim() })
+        });
+        const data = await resp.json();
+        if (typeof showNotification === 'function') {
+            showNotification(data.message || (data.success ? '已忽略' : '操作失败'), data.success ? 'success' : 'error');
+        }
+        if (data.success) {
+            await loadIgnoreList();
+            renderResult();          // 被忽略的书立即从当前结果里隐藏
+            if (document.getElementById('ignoreModal').style.display !== 'none') renderIgnoreList();
+        }
+    } catch (error) {
+        console.error('忽略失败:', error);
+    }
+}
+
+async function openIgnoreManager() {
+    document.getElementById('ignoreModal').style.display = 'flex';
+    await loadIgnoreList();
+    renderIgnoreList();
+}
+
+function closeIgnoreModal() {
+    document.getElementById('ignoreModal').style.display = 'none';
+}
+
+function renderIgnoreList() {
+    const container = document.getElementById('ignoreListContainer');
+    if (!ignoreList || ignoreList.length === 0) {
+        container.innerHTML = '<p style="text-align:center;color:#a0aec0;padding:30px 0;">暂无忽略项</p>';
+        return;
+    }
+    const rows = ignoreList.map(item => {
+        const encoded = encodeURIComponent(item.file_path);
+        const reason = item.reason
+            ? `<span class="ignore-reason" title="${esc(item.reason)}">${esc(item.reason)}</span>`
+            : `<span class="ignore-reason-empty">未填写</span>`;
+        const addedAt = item.added_at ? esc(item.added_at.slice(0, 10)) : `<span class="ignore-reason-empty">—</span>`;
+        return `<tr>
+            <td title="${esc(item.title)}">${esc(item.title)}</td>
+            <td title="${esc(item.file_path)}" style="font-size:0.85em;color:#8a94a6;">${esc(item.file_path)}</td>
+            <td>${reason}</td>
+            <td>${addedAt}</td>
+            <td><button class="btn btn-danger btn-sm" onclick="removeIgnore('${encoded}')">取消忽略</button></td>
+        </tr>`;
+    }).join('');
+    container.innerHTML = `<table class="ignore-table">
+        <thead><tr><th>书名</th><th>路径</th><th>忽略原因</th><th>加入时间</th><th>操作</th></tr></thead>
+        <tbody>${rows}</tbody>
+    </table>`;
+}
+
+async function removeIgnore(filePath) {
+    const decoded = decodeURIComponent(filePath);
+    try {
+        const resp = await fetch('/api/dup/ignore/remove', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ file_path: decoded })
+        });
+        const data = await resp.json();
+        if (typeof showNotification === 'function') {
+            showNotification(data.message || (data.success ? '已取消忽略' : '操作失败'), data.success ? 'success' : 'error');
+        }
+        if (data.success) {
+            await loadIgnoreList();
+            renderIgnoreList();
+            renderResult();
+        }
+    } catch (error) {
+        console.error('取消忽略失败:', error);
+    }
+}
+
+async function clearAllIgnores() {
+    if (!ignoreList.length) return;
+    if (!confirm(`确定清空全部 ${ignoreList.length} 条忽略记录吗？下次检测它们会重新参与比对。`)) return;
+    try {
+        const resp = await fetch('/api/dup/ignore/clear', { method: 'POST' });
+        const data = await resp.json();
+        if (typeof showNotification === 'function') {
+            showNotification(data.message || '已清空', data.success ? 'success' : 'error');
+        }
+        if (data.success) {
+            await loadIgnoreList();
+            renderIgnoreList();
+            renderResult();
+        }
+    } catch (error) {
+        console.error('清空忽略列表失败:', error);
+    }
+}
 
 function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, c => (
@@ -515,7 +772,8 @@ async function scanAll() {
         renderResult();
         document.getElementById('progressFill').style.width = '100%';
         document.getElementById('progressText').textContent =
-            `完成：扫描 ${data.scanned_books} 本，共享段落 ${data.shared_paras} 条，耗时 ${data.elapsed}s`;
+            `完成：扫描 ${data.scanned_books} 本，共享段落 ${data.shared_paras} 条，耗时 ${data.elapsed}s`
+            + (data.ignored_count ? `（已跳过忽略 ${data.ignored_count} 本）` : '');
         if (typeof showNotification === 'function') {
             showNotification(`检出 ${(data.pairs || []).length} 对疑似重复`, 'success');
         }
@@ -559,8 +817,8 @@ function pickKind(kind) {
     document.getElementById('viewGroups').classList.toggle('btn-primary', kind === '');
     document.getElementById('viewGroups').classList.toggle('btn-outline', kind !== '');
     document.getElementById('viewHint').textContent = kind
-        ? `正在只看「${KIND_LABEL[kind]}」，共 ${(RESULT.pairs || []).filter(p => p.kind === kind).length} 对；点 📂 用编辑器打开核对`
-        : '组长书按段落数排序，最长的那本标为「建议保留」；点 📂 直接用编辑器打开核对';
+        ? `正在只看「${KIND_LABEL[kind]}」，共 ${(RESULT.pairs || []).filter(p => p.kind === kind && !isIgnored(p.a_path) && !isIgnored(p.b_path)).length} 对；点 📂 用编辑器打开核对，点 🚫 忽略`
+        : '组长书按段落数排序，最长的那本标为「建议保留」；点 📂 打开核对，点 🚫 忽略（忽略的书立即隐藏，下次检测直接跳过）';
     renderResult();
 }
 
@@ -582,7 +840,8 @@ function renderResult() {
     }
 
     if (CUR_KIND) {
-        const list = (RESULT.pairs || []).filter(p => p.kind === CUR_KIND);
+        const list = (RESULT.pairs || []).filter(p =>
+            p.kind === CUR_KIND && !isIgnored(p.a_path) && !isIgnored(p.b_path));
         if (!list.length) {
             area.innerHTML = emptyState('这一档没有结果', `「${KIND_LABEL[CUR_KIND]}」没有检出的书对`);
             return;
@@ -593,6 +852,8 @@ function renderResult() {
                     <div class="t" title="${esc(p.a_title)}">${esc(p.a_title)}</div>
                     <div class="m">${p.a_paras} 段 · 覆盖 ${pct(p.cover_a)}
                         <button class="open-btn" data-path="${esc(p.a_path)}" title="用编辑器打开">📂</button>
+                        <button class="open-btn" data-ignore="1" data-path="${esc(p.a_path)}" data-title="${esc(p.a_title)}"
+                                title="加入忽略列表，以后检测跳过这本书">🚫</button>
                     </div>
                 </div>
                 <div class="pair-mid">
@@ -603,13 +864,18 @@ function renderResult() {
                     <div class="t" title="${esc(p.b_title)}">${esc(p.b_title)}</div>
                     <div class="m">${p.b_paras} 段 · 覆盖 ${pct(p.cover_b)}
                         <button class="open-btn" data-path="${esc(p.b_path)}" title="用编辑器打开">📂</button>
+                        <button class="open-btn" data-ignore="1" data-path="${esc(p.b_path)}" data-title="${esc(p.b_title)}"
+                                title="加入忽略列表，以后检测跳过这本书">🚫</button>
                     </div>
                 </div>
             </div>`).join('');
         return;
     }
 
-    const groups = RESULT.groups || [];
+    const groups = (RESULT.groups || []).map(g => ({
+        ...g,
+        books: g.books.filter(b => !isIgnored(b.path))
+    })).filter(g => g.books.length >= 2);
     if (!groups.length) {
         area.innerHTML = emptyState('没有发现成组的重复书', '全库比对完成，未找到正文高度重合的书');
         return;
@@ -628,6 +894,8 @@ function renderResult() {
                     <span class="book-cover">${pct(b.best)}</span>
                     ${bi === 0 ? '<span class="keep-tag">建议保留</span>' : ''}
                     <button class="open-btn" data-path="${esc(b.path)}" title="用编辑器打开">📂</button>
+                    <button class="open-btn" data-ignore="1" data-path="${esc(b.path)}" data-title="${esc(b.title)}"
+                            title="加入忽略列表，以后检测跳过这本书">🚫</button>
                 </div>`).join('')}
         </div>`).join('');
 }
@@ -666,10 +934,21 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 });
 
-// 打开按钮统一走事件委托，避免把 Windows 路径拼进 onclick 字符串
+// 打开 / 忽略按钮统一走事件委托，避免把 Windows 路径拼进 onclick 字符串
 document.addEventListener('click', e => {
+    const igBtn = e.target.closest('.open-btn[data-ignore]');
+    if (igBtn && igBtn.dataset.path) {
+        ignoreBook(igBtn.dataset.path, igBtn.dataset.title || '');
+        return;
+    }
     const btn = e.target.closest('.open-btn');
     if (btn && btn.dataset.path) openBookFile(btn.dataset.path);
+});
+
+window.addEventListener('load', () => {
+    const ov = document.getElementById('loadingOverlay');
+    if (ov) ov.style.display = 'none';
+    loadIgnoreList();   // 页面加载即拉忽略列表，头部「已忽略」计数要用
 });
 </script>
 </body>

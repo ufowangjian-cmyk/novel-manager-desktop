@@ -8797,6 +8797,94 @@ def chapter_check_page():
 # 只统计完全相同的段落，所以不会把「同题材」误判成同一本；
 # 必须双向覆盖率都高才算改名，否则「小书被大书收录」也会被当成重复。
 DUP_SCAN_LOCK_FILE = os.path.join(tempfile.gettempdir(), 'novel_manager_dup_scan.lock')
+# ==================== 重复检测忽略列表 ====================
+# 和章节检测的忽略列表分开存：这边忽略的整本书不参与段落指纹比对。
+DUP_IGNORE_FILE = os.path.join(DATA_DIR, 'dup_ignore.json')
+
+
+def load_dup_ignore_list():
+    """加载重复检测忽略列表（保证返回 list）。"""
+    data = load_json_file(DUP_IGNORE_FILE, [])
+    if not isinstance(data, list):
+        return []
+    return [item for item in data if isinstance(item, dict) and item.get('file_path')]
+
+
+def save_dup_ignore_list(items):
+    """保存重复检测忽略列表。"""
+    return save_json_file(DUP_IGNORE_FILE, list(items or []))
+
+
+def dup_ignore_keys():
+    """忽略列表的路径指纹集合，扫描时用它跳文件。"""
+    return {_media_path_key(item.get('file_path'))
+            for item in load_dup_ignore_list()}
+
+
+@app.route('/api/dup/ignore/list')
+def api_dup_ignore_list():
+    """忽略列表"""
+    items = load_dup_ignore_list()
+    for item in items:
+        item['title'] = item.get('title') or os.path.splitext(
+            os.path.basename(item.get('file_path') or ''))[0]
+    return jsonify({'success': True, 'ignore_list': items})
+
+
+@app.route('/api/dup/ignore/add', methods=['POST'])
+def api_dup_ignore_add():
+    """忽略某本书（以后重复检测直接跳过）"""
+    data = request.get_json(silent=True) or {}
+    file_path = str(data.get('file_path', '') or '').strip()
+    reason = str(data.get('reason', '') or '').strip()
+    title = str(data.get('title', '') or '').strip()
+
+    if not file_path:
+        return jsonify({'success': False, 'message': '文件路径不能为空'})
+
+    real_path = os.path.realpath(file_path)
+    if not is_path_within(NOVEL_DIR, real_path):
+        return jsonify({'success': False, 'message': '路径不合法'})
+
+    items = load_dup_ignore_list()
+    key = _media_path_key(real_path)
+    for item in items:
+        if _media_path_key(item.get('file_path')) == key:
+            return jsonify({'success': False, 'message': '已在忽略列表中'})
+
+    items.append({
+        'file_path': real_path,
+        'title': title or os.path.splitext(os.path.basename(real_path))[0],
+        'reason': reason,            # 为什么忽略：比如「正版原书」「已知误判」
+        'added_at': datetime.now().isoformat(),
+    })
+    save_dup_ignore_list(items)
+    return jsonify({'success': True, 'message': '已加入忽略列表'})
+
+
+@app.route('/api/dup/ignore/remove', methods=['POST'])
+def api_dup_ignore_remove():
+    """取消忽略"""
+    data = request.get_json(silent=True) or {}
+    file_path = str(data.get('file_path', '') or '').strip()
+    if not file_path:
+        return jsonify({'success': False, 'message': '文件路径不能为空'})
+
+    target = _media_path_key(file_path)
+    items = load_dup_ignore_list()
+    save_dup_ignore_list(
+        [item for item in items if _media_path_key(item.get('file_path')) != target]
+    )
+    return jsonify({'success': True, 'message': '已取消忽略'})
+
+
+@app.route('/api/dup/ignore/clear', methods=['POST'])
+def api_dup_ignore_clear():
+    """清空忽略列表"""
+    save_dup_ignore_list([])
+    return jsonify({'success': True, 'message': '已清空忽略列表'})
+
+
 _DUP_META_LINE_RE = re.compile(r'^\s*(书名|作者|简介|标签|链接|封面|内容简介|文案|状态|自序)\s*[:：]')
 _DUP_HAN_RE = re.compile(r'[^\u4e00-\u9fff]')
 _DUP_CHAP_PREFIX_RE = re.compile(r'^第[0-9一二三四五六七八九十百千零两]+[章节回话][·\.、:：\-—]?')
@@ -8864,10 +8952,20 @@ def run_dup_scan_task(task_id, min_paras=12):
     lock.acquire()
     started = time.time()
     try:
+        ignore = dup_ignore_keys()
         novels = [
             n for n in list(novel_data)
             if n.get('file_path') and os.path.exists(n.get('file_path'))
         ]
+        ignored_count = 0
+        if ignore:
+            kept = []
+            for n in novels:
+                if _media_path_key(n.get('file_path')) in ignore:
+                    ignored_count += 1
+                else:
+                    kept.append(n)
+            novels = kept
         total = len(novels)
         update_background_task(task_id, total=total, current=0, message='正在提取段落指纹...')
 
@@ -8972,6 +9070,7 @@ def run_dup_scan_task(task_id, min_paras=12):
         finish_background_task(task_id, result={
             'success': True,
             'total_books': total,
+            'ignored_count': ignored_count,
             'scanned_books': len(items),
             'shared_paras': len(shared_paras),
             'elapsed': elapsed,
